@@ -94,6 +94,30 @@ Scope: layer-1+
 - [ ] Use the tab's registered IView and DocumentController for document commands. Capture document ID, buffer, and revision for save and apply results through the Avalonia UI dispatcher.
 - [ ] Project diagnostics and debugger locations into the source view. Route gutter requests through the view owner, CQRS, and the selected adapter capability.
 
+## TR-RETRO-EXPLORER-012
+
+**Workspace tree and editor routing** — Implement the dockable project and folder tree using the registered Explorer ViewModel, shared CQRS dispatch, and the existing editor lifecycle.
+**Covered by:** FR: FR-RETRO-012; TEST: TEST-RETRO-012
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Persist project or folder root kind and stable root identity. Address tree items and selected documents by workspace root and path.
+- [ ] Route explorer commands and queries through the main controller registration and CQRS. Return directory and open-document outcomes on the Avalonia UI thread. Open or activate the correct AvaloniaEdit tab.
+- [ ] Load children on expansion and refresh affected branches on external file changes. Apply async results only to their originating workspace and root. Report missing or inaccessible paths locally.
+
+## TR-RETRO-GIT-013
+
+**Native Git execution and workspace state** — Use native Git from typed MVC and CQRS requests with explicit repository and worktree context, usable outcomes and integration with the editor state.
+**Covered by:** FR: FR-RETRO-013; TEST: TEST-RETRO-013
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Discover or configure the installed Git executable and invoke it asynchronously with argument arrays and a captured working directory. Respect native credentials, SSH, hooks, and signing, and omit secrets from logs.
+- [ ] Parse stable NUL-delimited state, account for separate worktree indexes and shared Git refs, scope file selection literally, and apply async results to the captured context.
+- [ ] Respect Git locking, serialize overlapping IDE writes, refresh after external changes, and revalidate hunk preimages. Keep unsaved buffers distinct from disk and index state.
+- [ ] Expose typed outcomes and Git diagnostics. Detect merge and rebase state, verify conflict stages, and refresh authoritative status after success, errors, or cancellation.
+- [ ] Start the integrated terminal in the selected worktree using the user's Git environment so advanced Git operations remain accessible and state changes are reflected in the IDE.
+
 ## TR-RETRO-LOCALIZATION-008
 
 **Command descriptors and typed locale catalogs** — Attach label and icon slugs and a default keyboard gesture to every ICommand registration. Use one localizer for typed text and image lookup, locale-aware formatting, fallback, and live presentation updates.
@@ -106,6 +130,32 @@ Scope: layer-1+
 - [ ] Lookup tries exact and parent locales, then bundled English, independently for each resource. An unresolved slug produces a placeholder string or fallback icon and a diagnostic identifying the slug and type.
 - [ ] The resolver supports named typed arguments, plural and select forms, and culture-aware number and date formatting. It applies plural rules from the resolved translation's locale.
 - [ ] Validation checks resource kinds, paths, message arguments, command IDs, and required descriptor fields. The MVC controller dispatches a typed language change through the CQRS Unit of Work to persist and publish culture changes, and open views update bindings and layout direction.
+
+## TR-RETRO-LSP-014
+
+**Versioned editor synchronization and LSP lifecycle** — Implement an LSP client against the 3.18 reference with capability-based interoperability for 3.17 servers.
+**Covered by:** FR: FR-RETRO-014; TEST: TEST-RETRO-014
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Route installed servers by workspace root and language. Exchange framed JSON-RPC over stdio with initialize, shutdown, and exit. Handle supported configuration, workspace folders, and capability registrations.
+- [ ] Synchronize open, changed, saved, and closed documents according to capabilities. Use monotonic document versions, correct file URIs, and the negotiated character encoding with UTF-16 fallback.
+- [ ] Correlate requests and results by server session, workspace, and versioned document. Cancel superseded work, discard stale replies, and deliver results only to the originating registered editor on the Avalonia UI thread.
+- [ ] Validate workspace edit targets and document versions before routing supported changes through the owning controller and CQRS. Preserve unsaved buffers and advertise only supported edit and failure-handling capabilities.
+
+## TR-RETRO-MCP-015
+
+**Official MCP .NET hosting and shared CQRS tool contract** — Use ModelContextProtocol, ModelContextProtocol.AspNetCore, and Microsoft hosting extensions for IDE tools. Use the Tasks extension when negotiated.
+**Covered by:** FR: FR-RETRO-015; TEST: TEST-RETRO-015
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Host the desktop endpoint with ModelContextProtocol.AspNetCore Streamable HTTP and provide a ModelContextProtocol stdio attachment to the same IDE instance. Validate transport and client scope.
+- [ ] Generate tool names and input and output schemas from typed IDE feature registrations. Verify registry coverage and observe supported tool discovery notifications.
+- [ ] Validate arguments, workspace, target and capabilities before dispatch through the main MVC controller and CQRS. Return the result to the calling tool, and deliver affected model updates on the Avalonia UI thread.
+- [ ] Enforce workspace and capability grants independently of transport. Validate expected versions where the operation depends on prior state. Return stable result codes, contextual IDs, and audit outcomes.
+- [ ] Propagate cancellation and report progress for requested long operations. Use an operation handle with status and cancel tools, and MCP Tasks when negotiated. Support bounded reads and stream or cursor handles for large data.
+- [ ] Derive MCP context schemas and snapshots from explicitly exposed public ViewModel members. Capture UI-bound values on the Avalonia UI thread. Resolve the authorized live registration and expected revision before dispatching the typed CQRS request. Keep internal commands and services outside the tool context.
 
 ## TR-RETRO-PROFILE-002
 

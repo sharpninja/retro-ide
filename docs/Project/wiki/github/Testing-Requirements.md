@@ -120,3 +120,42 @@ Verify AvaloniaEdit, its tab lifecycle and controller routing, and source naviga
 - [ ] Edit two files, select and navigate within each, undo and redo independently, search and replace, and float and redock a tab while retaining its state.
 - [ ] Verify successful and failed saves and edits made during a pending save. Open a source diagnostic and resolve its line and column.
 - [ ] Open a mapped debugger stop, exercise a supported gutter breakpoint request, and confirm the reported marker. Verify raw debugging remains available for an unmapped source location.
+
+### TEST-RETRO-012
+
+Verify the project and folder tree, document routing, persistence, and error handling on Windows and Linux.
+
+**Acceptance Criteria:**
+- [ ] Open a folder-only workspace and a mixed workspace. Expand both root types and open same-name files in different roots by keyboard and pointer. Verify repeat opens activate the right tab and Reveal selects the correct item.
+- [ ] Reopen a workspace and verify roots, expansion, and selection restore. Verify tree operations use the current workspace when switching while a listing is pending.
+- [ ] Create, rename, and remove files outside the IDE while browsing. Verify targeted refresh and confirm a missing or inaccessible root leaves another root usable.
+
+### TEST-RETRO-013
+
+Test native Git integrations on Windows and Linux with isolated repositories, a local bare remote, and controlled credential and extension fixtures.
+
+**Acceptance Criteria:**
+- [ ] Exercise clone, init, nested roots, linked worktrees, same-name files, and unusual paths. Verify repo selection and worktree-specific status and indexing.
+- [ ] Verify partial staging and unstaging, commit and amend, history and blame, tags, branches, fetch, pull and push including divergence, rejected updates, and configured authentication and signing.
+- [ ] Exercise stash and patches, merge and rebase conflicts, start an operation externally, edit and stage resolutions, and use native continue, abort and reset. Verify stale hunks, canceled operations, and dirty buffers.
+- [ ] Verify submodule and linked-worktree management, installed LFS integration, and IDE refresh after native terminal or external Git changes.
+
+### TEST-RETRO-014
+
+Verify deterministic LSP fixtures and real clangd and rust-analyzer interoperability on Windows and Linux.
+
+**Acceptance Criteria:**
+- [ ] Exercise initialize and shutdown, static and dynamic capability changes, multi-root routing, unsupported features, and restart after process failure.
+- [ ] Verify URI and Unicode positions, full and incremental sync from unsaved buffers, dirty files, cancellation, late replies, and server generation changes.
+- [ ] Exercise completion, hover, diagnostics, navigation, code actions, and accepted and rejected workspace edits with a fixture. Verify live clangd and rust-analyzer behavior in small projects.
+
+### TEST-RETRO-015
+
+Verify the official SDK integration, complete tool inventory, equivalent desktop effects, and scoped requests on Windows and Linux.
+
+**Acceptance Criteria:**
+- [ ] Compare supported IDE registrations and tool schemas. Invoke representative tools from every feature area in the coverage matrix and verify every supported action is registered.
+- [ ] Attach through stdio and Streamable HTTP to one IDE instance and exercise discovery and typed invocation. Compare UI and MCP effects and verify changes reach the correct attached view.
+- [ ] Reject an unauthorized client, wrong workspace, stale revision, or missing backend capability. Confirm rejected calls have no unintended effect, and verify Git and emulator operations preserve domain permissions.
+- [ ] Verify async progress, operation retrieval, cancellation, and bounded diagnostic or image results. Exercise clients with and without the negotiated Tasks extension.
+- [ ] Compare discovered MCP context schemas with the public ViewModel contract, round-trip a captured context into a tool call, and verify closed registrations, mismatched workspace or target, stale revisions, and undeclared ViewModel members are handled correctly.

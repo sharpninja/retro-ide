@@ -103,3 +103,42 @@ Scope: layer-1+
 - [ ] Save the captured document revision. Later edits remain dirty after an older save completes. Failed saves preserve the buffer and report the error to the originating view.
 - [ ] Go to the project file, line, and column from build diagnostics or debugger source location, and show the reported state of breakpoint requests from the editor gutter.
 
+## FR-RETRO-012 Explore workspace projects and folders
+
+Use a dockable Project Explorer to browse a workspace containing project and folder roots and navigate between the tree and the editor.
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Open a project or folder and browse project and folder roots together in one expandable tree. A plain folder opens for editing without requiring project metadata.
+- [ ] Open a selected file by keyboard or pointer, activate its existing tab on repeat open, and reveal an open document in the tree. Same-name files under different roots open their correct documents.
+- [ ] Restore workspace roots, expanded paths, and selection when reopening. Refresh externally changed branches and display unavailable roots while other roots remain usable.
+
+## FR-RETRO-013 Complete workspace Git integration
+
+Use Git from the Source Control pane, Project Explorer, editor, and integrated terminal across workspace repositories and worktrees.
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Discover or open repositories, initialize or clone a workspace root, select the repository and worktree visibly, and decorate the project tree with current Git status.
+- [ ] Review staged and unstaged diffs, stage and unstage files or hunks, commit or amend, inspect history and blame, and manage branches, tags, upstream tracking, fetch, pull, and push.
+- [ ] Support stash and patch workflows, merge, rebase, cherry-pick, revert and reset. Detect conflicts and ongoing operations, edit and stage resolutions, and expose continue, skip, and abort where applicable.
+- [ ] Manage linked worktrees and submodules. Honor Git LFS configuration where installed and allow advanced Git commands in the repository-scoped integrated terminal.
+
+## FR-RETRO-014 Language server support
+
+Use standard LSP servers in AvaloniaEdit for editing assistance, navigation, diagnostics, and refactoring across workspace roots.
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Configure and select installed language servers by language and workspace root. Enable supported features after the server initializes.
+- [ ] Use available completion, hover, symbols, references, definition navigation, diagnostics, formatting, rename, and code actions from the editor and Problems view.
+- [ ] Keep source editing available if a language server is missing or fails. Show server status and allow restart and resynchronization of open buffers.
+
+## FR-RETRO-015 Expose all Retro IDE features as MCP tools
+
+Use the official .NET MCP SDK and Microsoft hosting extensions to expose every supported IDE feature through MCP, including workbench operations.
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Every supported IDE feature operation has a discoverable MCP tool with stable identity and typed parameters, including the workbench, editor, language servers, Git, terminal, build and test, emulators, provider-dependent debugging, media, and agent operations.
+- [ ] CLI and desktop agent clients attach to the same selected IDE instance using stdio and loopback Streamable HTTP. Calls operate in their granted workspace and capability context.
+- [ ] A supported tool produces the same modeled effect and domain result as its desktop feature. The client gets a structured result and affected workbench state is updated.
+- [ ] Long-running features expose progress, status, result, and cancellation. Large results provide readable chunks or supported MCP media content.
+- [ ] An MCP client can discover and read the public context of a registered IDE ViewModel and reuse it to address the same workspace, document, or view in a tool invocation.
+

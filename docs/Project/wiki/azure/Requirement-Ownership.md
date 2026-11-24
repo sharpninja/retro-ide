@@ -15,5 +15,9 @@ The QBrain workspace at `/home/sharpninja/github/retro-ide` owns the desktop and
 | FR-RETRO-009 | Emulator bundle discovery, publishing manifests, installation, versions, and adapter resolution through the Emulators manager | UAE Developer owns the UAE worker and control behavior included in the UAE bundle. |
 | FR-RETRO-010 | Versioned emulator adapter contract, session lifecycle, capability ports, command results, events, and streams | UAE Developer owns the backend protocol, worker, and host-side capability and authorization behavior. |
 | FR-RETRO-011 | AvaloniaEdit source editor, document buffer and save behavior, and source and breakpoint navigation | The selected adapter supplies debugger capabilities and results. Retro IDE owns source presentation and navigation. |
+| FR-RETRO-012 | Dockable Project Explorer for project and folder roots, workspace tree state, and opening and revealing documents | Retro IDE owns workspace navigation and file browsing. |
+| FR-RETRO-013 | Git menu, Source Control pane, repository and worktree operations, editor integration, and terminal workflows | Retro IDE owns workspace Git workflows and invokes native Git. |
+| FR-RETRO-014 | Language Server Protocol client, per-root configuration, and editor features such as completion, diagnostics, navigation, and workspace edits | Retro IDE owns editor integration. Configured language servers supply language analysis. |
+| FR-RETRO-015 | MCP tool coverage for all Retro IDE features, public ViewModel context contracts, typed dispatch, and scoped client attachment | Retro IDE owns its MCP tool host. The selected emulator backend owns its native authorization and control operations. |
 
 Retained UAE requirements describe what the headless control or adapter boundary must expose. Retro IDE requirements cover presentation and interaction across adapters. Implementation evidence stays with the repository and requirement it verifies.

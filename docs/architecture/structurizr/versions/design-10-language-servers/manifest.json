@@ -1,0 +1,96 @@
+{
+  "snapshotId": "design-10-language-servers",
+  "previousSnapshot": "../design-09-git-integration/manifest.json",
+  "capturedAtLocal": "2026-11-24T12:22:22-06:00",
+  "state": "Design snapshot. The language-server client and source editor integration are planned.",
+  "workspace": {
+    "path": "workspace.dsl",
+    "sha256": "6f5b72fabc44510844777b6d711954944ceac436e2b417884af25e9b297e2fdc"
+  },
+  "design": {
+    "architecture": "../../../../architecture.md",
+    "languageServers": "../../../../language-servers.md",
+    "requirementOwnership": "../../../../requirement-ownership.md",
+    "requirements": [
+      "FR-RETRO-014",
+      "TR-RETRO-LSP-014",
+      "TEST-RETRO-014"
+    ]
+  },
+  "validation": {
+    "cliImage": "structurizr/cli:2025.11.09",
+    "cliImageId": "sha256:0399ac8e24c16e41277cfcec22caa29e4775013e5395c0720016828426d62749",
+    "workspaceValidation": "passed",
+    "mermaidExport": "passed"
+  },
+  "exports": [
+    {
+      "path": "exports/mermaid/structurizr-AdapterComponents.mmd",
+      "sha256": "95d40cfe406346d1597afc29d0d7ec953157521ff99b3368383e7ce0c0ce4070"
+    },
+    {
+      "path": "exports/mermaid/structurizr-BuildLaunchDebug.mmd",
+      "sha256": "85f65bdae7167e77a10a5b748f4d0d0cd96e0a63bfa9b5d022f5ea62c93efd40"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandDispatch.mmd",
+      "sha256": "4184b91b302159713d02df4bdbb7245ddd89b6ab26aa6c72be98d3a144f6182b"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandLocalization.mmd",
+      "sha256": "b0c20545394f2b6933aa3e1bb2912e3b403be77ecb135353f44b3436543efcb1"
+    },
+    {
+      "path": "exports/mermaid/structurizr-Containers.mmd",
+      "sha256": "c24db6f9e4157825ec9baf8fdadcc15a06145cb970cd8d0fc25e5f05158b36bc"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DesktopComponents.mmd",
+      "sha256": "e8f565bf44e5892f9e201e65e98668832454ded970b6023faca0dfa4ba55ee83"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DocumentMdiSave.mmd",
+      "sha256": "e9d60efcb190ef018079461088d42078dc38ec07a4b9c59881182e15f9678fad"
+    },
+    {
+      "path": "exports/mermaid/structurizr-EmulatorBundleInstall.mmd",
+      "sha256": "c784b807faf283d165f49fc4c234a226f25f32206f4bb33597fc6af7fc990889"
+    },
+    {
+      "path": "exports/mermaid/structurizr-EmulatorSessionContract.mmd",
+      "sha256": "222241e79f8e7da95d195a38c8fe7fd7a8600b678d33f3b599fde6a889f91ae9"
+    },
+    {
+      "path": "exports/mermaid/structurizr-GitStageCommitPush.mmd",
+      "sha256": "678c40917c4b789654bb7625bfdb361d6c8f6e47a63f8aca71d8b9ea4d42f490"
+    },
+    {
+      "path": "exports/mermaid/structurizr-LanguageServerCompletion.mmd",
+      "sha256": "7f9e182ead77051c9a195265ef29d0b3eb283189671cb826b3100c5c0926cdec"
+    },
+    {
+      "path": "exports/mermaid/structurizr-LinuxDeployment.mmd",
+      "sha256": "dc118de6ad6b59d7fd31c1560b372f6d0fadedbacc7ec5d6ce470857e41604bd"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SourceEditorWorkflow.mmd",
+      "sha256": "aafe63f6747e164475b661cbb862591be9414653a04f0d3856b38c9aeb718d90"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemContext.mmd",
+      "sha256": "601ce046130acf0efec8ce5245aaad29eb57eea9c2016a91a189b7c3344651a6"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemWaitCursor.mmd",
+      "sha256": "8bd2c569ae0e1b13c02e017d2d5e9590077488f5633bf45d32e7228aed902c72"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WindowsDeployment.mmd",
+      "sha256": "6f16c639580b38950867d0c611c8feec5b40775df6e25316f50a2b96b41051c3"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WorkspaceExplorerOpen.mmd",
+      "sha256": "54bf380ac80f25a89f5bac15cc256825570315507ec70659a2274dab540aeb1f"
+    }
+  ]
+}

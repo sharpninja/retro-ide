@@ -1,7 +1,7 @@
 {
   "schema": "mcp-requirements-wiki/v1",
   "platform": "github",
-  "generatedAtUtc": "2026-11-24T17:55:17.3006854+00:00",
+  "generatedAtUtc": "2026-11-24T19:34:31.8946376+00:00",
   "documents": [
     "Home.md",
     "Functional-Requirements.md",
@@ -15,6 +15,9 @@
     "C4-Model.md",
     "Wireframes-and-Storyboards.md",
     "Shared-SVG-Components.md",
-    "Requirement-Ownership.md"
+    "Requirement-Ownership.md",
+    "Git-Integration.md",
+    "Language-Server-Support.md",
+    "MCP-Tools.md"
   ]
 }

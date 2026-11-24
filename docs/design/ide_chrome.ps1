@@ -149,7 +149,7 @@ function New-Frame {
         Add-IdeText $svg 1060 306 'Memory: boot_status' 'label'
         Add-IdeText $svg 1060 331 'Screen region hash' 'label'
     } elseif ($Frame.p -match 'empty-workspace') {
-        Add-IdeText $svg 1041 $start 'Open a UAE project to view files.' 'label' '#a8b5bb'
+        Add-IdeText $svg 1041 $start 'Open a project or folder to browse files.' 'label' '#a8b5bb'
     } else {
         $tree = if ($isUae) {
             @('▾  A1200 OS','    ▾  kernel','         ▾  src','              mmu.rs','              main.rs','    ▸  bootrom','    ▸  artifacts','    ▾  profiles','         uae40.dev','    ▸  scenarios')

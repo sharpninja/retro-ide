@@ -93,6 +93,27 @@ documents:
     platforms:
       - github
       - azure
+  - id: git-integration
+    title: Git Integration
+    source: docs/git-integration.md
+    target: Git-Integration.md
+    platforms:
+      - github
+      - azure
+  - id: language-servers
+    title: Language Server Support
+    source: docs/language-servers.md
+    target: Language-Server-Support.md
+    platforms:
+      - github
+      - azure
+  - id: mcp-tools
+    title: MCP Tools
+    source: docs/mcp-tools.md
+    target: MCP-Tools.md
+    platforms:
+      - github
+      - azure
 navigation:
   - document: home
   - document: project-overview
@@ -104,6 +125,9 @@ navigation:
       - document: c4-model
       - document: storyboards
       - document: svg-components
+      - document: git-integration
+      - document: language-servers
+      - document: mcp-tools
   - document: functional
   - document: technical
   - document: testing

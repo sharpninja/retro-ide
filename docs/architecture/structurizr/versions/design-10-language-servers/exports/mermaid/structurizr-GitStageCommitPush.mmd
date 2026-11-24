@@ -1,0 +1,79 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    44("<div style='font-weight: bold'>Git Remotes</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosts workspace repositories<br />for clone, fetch, pull, and<br />push using the user's<br />configured Git<br />authentication.</div>")
+    style 44 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#d9a669,color:#d9a669
+
+        10("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 10 fill:#275c60,stroke:#d9a669,color:#ffffff
+        11("<div style='font-weight: bold'>IDE ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.ComponentModel and SimpleMVC]</div><div style='font-size: 80%; margin-top:10px'>Implement IView with a stable<br />ViewKey. Raise<br />CommandRequested, receive<br />correlated results on the UI<br />thread, and expose observable<br />properties through<br />ObservableObject.</div>")
+        style 11 fill:#275c60,stroke:#d9a669,color:#ffffff
+        15("<div style='font-weight: bold'>Source Control</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia and Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Dockable repository and<br />worktree view for status,<br />diffs, staging, history,<br />branches, remotes, and<br />conflict workflows. Binds<br />registered Git commands.</div>")
+        style 15 fill:#275c60,stroke:#d9a669,color:#ffffff
+        16("<div style='font-weight: bold'>Git Service</div><div style='font-size: 70%; margin-top: 0px'>[Component: Native Git CLI]</div><div style='font-size: 80%; margin-top:10px'>Runs native Git for a<br />captured repository and<br />worktree. Projects status and<br />diffs, dispatches mutations<br />in context, and reports Git<br />outcomes and operation state.</div>")
+        style 16 fill:#275c60,stroke:#d9a669,color:#ffffff
+        19("<div style='font-weight: bold'>Avalonia UI Dispatcher</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia Dispatcher.UIThread]</div><div style='font-size: 80%; margin-top:10px'>Schedules callbacks on the UI<br />thread. The dispatch owner<br />checks its originating<br />registration inside the<br />callback before applying the<br />result.</div>")
+        style 19 fill:#275c60,stroke:#d9a669,color:#ffffff
+        20("<div style='font-weight: bold'>IDE State (Model)</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Provides observable<br />workspace, presentation<br />culture, active document and<br />target, selected session,<br />availability, operation<br />state, interaction blocks by<br />scope, and diagnostics.</div>")
+        style 20 fill:#275c60,stroke:#d9a669,color:#ffffff
+        4("<div style='font-weight: bold'>Workbench and Docking (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia and Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Hosts menus, command bars,<br />keyboard bindings, documents,<br />and docked tools. Presents<br />command metadata and<br />localization, and applies the<br />system wait cursor to<br />logically blocked UI.</div>")
+        style 4 fill:#275c60,stroke:#d9a669,color:#ffffff
+        5("<div style='font-weight: bold'>Predefined Command Catalog</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.Input (ICommand)]</div><div style='font-size: 80%; margin-top:10px'>Pairs a shared RelayCommand<br />or AsyncRelayCommand with a<br />stable ID, label slug, icon<br />slug, and default keyboard<br />gesture. Exposes availability<br />and execution state and<br />raises requests on registered<br />views.</div>")
+        style 5 fill:#275c60,stroke:#d9a669,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch and result<br />delivery for views registered<br />directly with it. Provides<br />the shared execution entry<br />point for typed requests from<br />all controllers into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#d9a669,color:#ffffff
+      end
+
+      35[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, and<br />Git worktrees and metadata<br />where present.</div>")]
+      style 35 fill:#275c60,stroke:#1b4043,color:#ffffff
+    end
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+    35[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, and<br />Git worktrees and metadata<br />where present.</div>")]
+    style 35 fill:#275c60,stroke:#1b4043,color:#ffffff
+    44("<div style='font-weight: bold'>Git Remotes</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosts workspace repositories<br />for clone, fetch, pull, and<br />push using the user's<br />configured Git<br />authentication.</div>")
+    style 44 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    1-. "<div>1. Review changes and choose<br />Stage for the selected hunk</div><div style='font-size: 70%'></div>" .->4
+    4-. "<div>2. Show the selected worktree<br />and its changes</div><div style='font-size: 70%'></div>" .->15
+    15-. "<div>3. Execute the shared Stage<br />command for the captured hunk</div><div style='font-size: 70%'></div>" .->5
+    5-. "<div>4. Raise the request on the<br />registered Source Control<br />view</div><div style='font-size: 70%'>[RelayCommand or AsyncRelayCommand]</div>" .->11
+    11-. "<div>5. Send the staging event<br />with repository and worktree<br />context</div><div style='font-size: 70%'>[IView events]</div>" .->8
+    8-. "<div>6. Dispatch the typed Stage<br />Hunk request</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>7. Recheck the patch preimage<br />and stage the hunk</div><div style='font-size: 70%'></div>" .->16
+    16-. "<div>8. Update the selected<br />worktree index using Git</div><div style='font-size: 70%'></div>" .->35
+    10-. "<div>9. Refresh the staged and<br />unstaged changes</div><div style='font-size: 70%'></div>" .->20
+    1-. "<div>10. Review staged changes and<br />choose Commit</div><div style='font-size: 70%'></div>" .->4
+    4-. "<div>11. Show the current staging<br />and commit message</div><div style='font-size: 70%'></div>" .->15
+    15-. "<div>12. Execute the registered<br />Commit command</div><div style='font-size: 70%'></div>" .->5
+    5-. "<div>13. Raise the captured commit<br />request</div><div style='font-size: 70%'>[RelayCommand or AsyncRelayCommand]</div>" .->11
+    11-. "<div>14. Submit the commit event<br />through the registered<br />controller</div><div style='font-size: 70%'>[IView events]</div>" .->8
+    8-. "<div>15. Dispatch the typed Commit<br />request</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>16. Commit the selected index<br />using native Git</div><div style='font-size: 70%'></div>" .->16
+    16-. "<div>17. Create the commit and<br />update the checked-out ref</div><div style='font-size: 70%'></div>" .->35
+    1-. "<div>18. Choose Push for the<br />selected branch and remote</div><div style='font-size: 70%'></div>" .->4
+    4-. "<div>19. Show the branch,<br />upstream, and remote</div><div style='font-size: 70%'></div>" .->15
+    15-. "<div>20. Execute the registered<br />Push command</div><div style='font-size: 70%'></div>" .->5
+    5-. "<div>21. Raise the push request on<br />the same registered view</div><div style='font-size: 70%'>[RelayCommand or AsyncRelayCommand]</div>" .->11
+    11-. "<div>22. Submit the push event<br />with the captured branch and<br />remote</div><div style='font-size: 70%'>[IView events]</div>" .->8
+    8-. "<div>23. Dispatch the typed Push<br />request</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>24. Invoke native Git with<br />the captured remote and ref</div><div style='font-size: 70%'></div>" .->16
+    16-. "<div>25. Push the selected ref<br />using configured<br />authentication</div><div style='font-size: 70%'>[HTTPS or SSH]</div>" .->44
+    10-. "<div>26. Refresh upstream status<br />and publish the outcome</div><div style='font-size: 70%'></div>" .->20
+    8-. "<div>27. Schedule the outcome for<br />the originating Source<br />Control view</div><div style='font-size: 70%'></div>" .->19
+    19-. "<div>28. Deliver the push result<br />on the UI thread</div><div style='font-size: 70%'></div>" .->11
+
+  end

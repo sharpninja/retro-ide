@@ -6,7 +6,7 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
 
         retro = softwareSystem "Retro IDE" "Shared cross-platform development environment and capability-driven emulator integrations." {
             properties {
-                "Baseline" "design-07-source-editor"
+                "Baseline" "design-12-mcp-viewmodel-context"
                 "Implementation status" "Wireframes and target presets exist. Desktop and runtime adapter components are planned."
                 "QBrain workspace" "/home/sharpninja/github/retro-ide"
             }
@@ -18,7 +18,7 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
                         "Storyboard" "STB01 Arrange tool windows and restore an IDE workspace"
                     }
                 }
-                commands = component "Predefined Command Catalog" "Pairs a shared RelayCommand or AsyncRelayCommand with a stable ID, label slug, icon slug, and default keyboard gesture. Exposes availability and execution state and raises requests on registered views." "CommunityToolkit.Mvvm.Input (ICommand)" "Planned" {
+                commands = component "Predefined Command Catalog" "Registers typed IDE commands and queries with stable IDs and required capabilities. Pairs UI commands with Toolkit bindings and localized metadata. Supplies the MCP tool registry." "CommunityToolkit.Mvvm and typed .NET requests" "Planned" {
                     properties {
                         "Requirements" "FR-RETRO-007, TR-RETRO-COMMAND-007, FR-RETRO-008, TR-RETRO-LOCALIZATION-008"
                     }
@@ -46,7 +46,25 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
                         "Requirements" "TR-RETRO-COMMAND-007#ac-simplemvc-views, TR-RETRO-COMMAND-007#ac-toolkit-viewmodels"
                     }
                 }
-                documentViews = component "Editor Tab ViewModels (View)" "One observable IView per editor tab. Each registers directly with the document controller and raises events for the document captured at invocation." "CommunityToolkit.Mvvm.ComponentModel and SimpleMVC" "Planned"
+                documentViews = component "Editor Tab ViewModels (View)" "One observable IView per editor tab. The ViewModel defines the public MCP context for its workspace, document, view key, and revision." "CommunityToolkit.Mvvm.ComponentModel and SimpleMVC" "Planned"
+                languageServices = component "Language Services" "Manages configured language server sessions by workspace and language. Synchronizes versioned editor buffers, negotiates capabilities, and correlates completion, navigation, diagnostics, and edits." ".NET, LSP JSON-RPC client" "Planned" {
+                    properties {
+                        "Requirements" "FR-RETRO-014, TR-RETRO-LSP-014"
+                    }
+                }
+                workspaceExplorer = component "Project Explorer" "Dockable tree of project and folder roots. Loads children on demand, shows changes, and offers Open and Reveal commands for the active workspace." "Avalonia and Dock.Avalonia" "Planned" {
+                    properties {
+                        "Requirements" "FR-RETRO-012, TR-RETRO-EXPLORER-012"
+                        "Storyboards" "STB01 Workspace layout and STB14 Source editing"
+                    }
+                }
+                sourceControl = component "Source Control" "Dockable repository and worktree view for status, diffs, staging, history, branches, remotes, and conflict workflows. Binds registered Git commands." "Avalonia and Dock.Avalonia" "Planned" {
+                    properties {
+                        "Requirements" "FR-RETRO-013, TR-RETRO-GIT-013"
+                    }
+                }
+                gitIntegration = component "Git Service" "Runs native Git for a captured repository and worktree. Projects status and diffs, dispatches mutations in context, and reports Git outcomes and operation state." "Native Git CLI" "Planned"
+                terminal = component "Integrated Terminal" "Opens an interactive shell in the selected repository or worktree for advanced Git commands and extensions." "Interactive terminal" "Planned"
                 sourceEditor = component "Source Editor" "Renders the per-tab buffer, caret, selection, undo history, highlighting, diagnostics links, and breakpoint markers. Keeps document and debugger commands on the registered view's dispatch path." "AvaloniaEdit.TextEditor" "Planned" {
                     properties {
                         "Requirements" "FR-RETRO-011, TR-RETRO-EDITOR-011"
@@ -88,6 +106,11 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
                     }
                 }
                 agentGateway = component "Agent Gateway" "Handles configured process launch and attach for authorized agent workflows." ".NET and MCP" "Planned"
+                mcpHost = component "Retro IDE MCP Host" "Exposes tools for every supported IDE feature. Generates context schemas from the declared public ViewModel members, validates scope and live context, and uses shared CQRS dispatch." "Official MCP C# SDK, Microsoft.Extensions.Hosting, ASP.NET Core" "Planned" {
+                    properties {
+                        "Requirements" "FR-RETRO-015, TR-RETRO-MCP-015"
+                    }
+                }
                 emulators = component "Emulators Management View" "Browses buckets, compatible releases, and installed versions. Presents refresh, install, update, rollback, and remove actions and their outcomes." "Avalonia" "Planned" {
                     properties {
                         "Requirements" "FR-RETRO-009, TR-RETRO-BUNDLE-009"
@@ -104,8 +127,10 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
                 viceSharpAdapter = component "ViceSharp Adapter" "Attaches to a configured ViceSharp host and maps supported session, monitor, media, video, input, snapshot, and diagnostics operations." "ViceSharp gRPC contracts" "Planned"
             }
 
-            workspaceFiles = container "Local Workspace Settings" "Stores IDE layout, preferences, configured bucket sources, and project settings with target preset, pinned bundle, and user artifact references." "Local files" "DataStore,Planned"
+            workspaceFiles = container "Local Workspace Settings" "Stores IDE layout, workspace roots and explorer state, preferences, language server registrations, bucket configuration, and project settings with target preset, pinned bundle, and artifact references." "Local files" "DataStore,Planned"
+            workspaceContent = container "Workspace Project and Folder Files" "Contains selected projects, source files, artifacts, and Git worktrees and metadata where present." "Local filesystem" "DataStore"
             bundleStore = container "Local Emulator Bundle Store" "Holds verified, versioned emulator archives and expanded binaries, bindings, install receipts, and the last valid bucket metadata for offline use." "Per-user filesystem" "DataStore,Planned"
+            mcpStdio = container "MCP Stdio Bridge" "Launched by CLI clients to attach MCP tools to the selected running Retro IDE instance." ".NET, ModelContextProtocol" "Planned"
         }
 
         uae = softwareSystem "UAE Developer" "Owns the UAE40 profile, control service, isolated worker and UAE-specific protocol and diagnostics. The desktop-facing interface is pending." "External" {
@@ -121,7 +146,9 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
         aiAgent = softwareSystem "Configured CLI or Desktop Agent" "Uses available scoped MCP resources and commands; its lifetime is independent of the emulator session." "External"
         buckets = softwareSystem "Emulator Bucket Repositories" "Configured Git sources publish per-emulator JSON manifests pointing to versioned release archives." "External"
         emulatorReleases = softwareSystem "Emulator Release Artifact Hosting" "Hosts the versioned platform archives referenced by the bucket manifests." "External"
-        qbrain = softwareSystem "QBrain Retro IDE Workspace" "Owns FR-RETRO-001 through FR-RETRO-011 and their linked technical requirements and verification records." "External"
+        gitRemotes = softwareSystem "Git Remotes" "Hosts workspace repositories for clone, fetch, pull, and push using the user's configured Git authentication." "External"
+        languageServers = softwareSystem "Configured Language Servers" "Installed processes such as clangd and rust-analyzer that supply language analysis through negotiated LSP features." "External"
+        qbrain = softwareSystem "QBrain Retro IDE Workspace" "Owns FR-RETRO-001 through FR-RETRO-015 and their linked technical requirements and verification records." "External"
 
         developer -> retro.desktop.shell "Works with projects, documents, and docked tools"
         developer -> retro.desktop.emulation "Views and operates the selected Emulation tab"
@@ -137,6 +164,10 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
         retro.desktop.shell -> retro.desktop.viewModels "Binds to the registered workspace, document, and tool ViewModels" "Avalonia bindings"
         retro.desktop.shell -> retro.desktop.documentViews "Binds the active editor tab and its scoped command instances" "Avalonia tabbed MDI"
         retro.desktop.shell -> retro.desktop.sourceEditor "Hosts the AvaloniaEdit control in each source tab"
+        retro.desktop.shell -> retro.desktop.workspaceExplorer "Opens the dockable workspace project and folder tree"
+        retro.desktop.workspaceExplorer -> retro.desktop.viewModels "Binds explorer state, file status decorations, and tree requests through its registered IView"
+        retro.desktop.shell -> retro.desktop.sourceControl "Opens the dockable Git Source Control pane"
+        retro.desktop.sourceControl -> retro.desktop.commands "Binds Git commands for the selected repository and worktree"
         retro.desktop.sourceEditor -> retro.desktop.documentViews "Binds the document buffer and source location, and raises scoped editor commands"
         retro.desktop.viewModels -> retro.desktop.controller "Register directly and raise CommandRequested with the request ID and captured context, or request an explicit query" "IView events"
         retro.desktop.controller -> retro.desktop.viewModels "Owns view registrations and attaches or detaches the command request handler"
@@ -155,10 +186,21 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
         retro.desktop.controller -> retro.desktop.unitOfWork "Dispatches a typed command or query in its captured workspace context"
         retro.desktop.unitOfWork -> retro.desktop.ideState "Reads state for queries; commands publish progress, interaction blocks, and outcomes"
         retro.desktop.unitOfWork -> retro.workspaceFiles "Reads and writes workspace settings and layouts through handlers" "Local files"
+        retro.desktop.unitOfWork -> retro.workspaceContent "Resolves workspace roots, enumerates directories, and opens the selected files" "Local filesystem"
         retro.desktop.unitOfWork -> retro.desktop.launch "Invokes build and debug-launch handlers"
         retro.desktop.unitOfWork -> retro.desktop.sessions "Invokes session, debugger, media, and diagnostics handlers"
         retro.desktop.unitOfWork -> retro.desktop.agentGateway "Invokes configured agent launch or attach"
         retro.desktop.unitOfWork -> retro.desktop.bundleManager "Invokes repository refresh and emulator bundle lifecycle handlers"
+        retro.desktop.unitOfWork -> retro.desktop.gitIntegration "Dispatches typed Git requests for the captured repository and worktree"
+        retro.desktop.unitOfWork -> retro.desktop.languageServices "Dispatches language queries and document synchronization for the captured editor context"
+        retro.desktop.languageServices -> retro.workspaceFiles "Resolves configured server registration and workspace language settings"
+        retro.desktop.languageServices -> languageServers "Starts and manages server processes, synchronizes documents, and sends negotiated LSP requests" "JSON-RPC over stdio"
+        languageServers -> retro.desktop.languageServices "Returns results and sends diagnostics and workspace requests" "JSON-RPC over stdio"
+        retro.desktop.languageServices -> retro.desktop.controller "Routes typed server-originated edits and diagnostics through the main MVC controller"
+        retro.desktop.unitOfWork -> retro.desktop.terminal "Opens an interactive terminal for the selected workspace context"
+        retro.desktop.gitIntegration -> retro.workspaceContent "Reads or updates the selected worktree, index, refs, and Git objects"
+        retro.desktop.gitIntegration -> gitRemotes "Uses native Git for repository transfer and remote updates" "HTTPS or SSH"
+        retro.desktop.terminal -> retro.workspaceContent "Runs the user's shell in the selected worktree"
         retro.desktop.sessions -> retro.desktop.ideState "Publishes normalized session state and capability changes"
         retro.desktop.sessions -> retro.desktop.emulation "Supplies negotiated media streams independently of control traffic"
         retro.desktop.shell -> retro.desktop.emulation "Opens the Emulation document"
@@ -176,6 +218,15 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
         retro.desktop.artifacts -> retro.desktop.viewModels "Binds registered views for media, snapshot, test, and diagnostic requests"
         retro.desktop.agentActivity -> retro.desktop.viewModels "Binds registered views for scoped agent requests"
         retro.desktop.agentGateway -> aiAgent "Starts or attaches a configured scoped agent" "Configured process and MCP stdio where supported"
+        aiAgent -> retro.desktop.mcpHost "Discovers and invokes IDE tools on the selected workbench" "MCP Streamable HTTP on loopback"
+        aiAgent -> retro.mcpStdio "Discovers and invokes IDE tools through the CLI attachment" "MCP stdio"
+        retro.mcpStdio -> retro.desktop.mcpHost "Attaches to the same registered IDE instance with the client's granted context"
+        retro.desktop.mcpHost -> retro.desktop.commands "Builds tool schemas for the registered IDE features"
+        retro.desktop.mcpHost -> retro.desktop.viewModels "Uses the declared ViewModel context contracts for scoped tool requests"
+        retro.desktop.mcpHost -> retro.desktop.documentViews "Reads and resolves the public editor ViewModel context snapshot"
+        retro.desktop.mcpHost -> retro.desktop.controller "Submits the authorized typed request with workspace and target context"
+        retro.desktop.controller -> retro.desktop.mcpHost "Returns the typed result for the originating tool invocation"
+        retro.desktop.mcpHost -> aiAgent "Returns structured tool results and supported progress" "MCP"
         aiAgent -> uae "Uses the scoped UAE MCP boundary when available" "Planned MCP"
 
         retro.desktop.sessions -> retro.desktop.catalog "Resolves the selected adapter and invokes normalized operations"
@@ -197,21 +248,27 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
         windows = deploymentEnvironment "Windows Development" {
             deploymentNode "Developer Workstation" "Planned Windows topology. Emulator hosts are selectable alternatives." "Windows" {
                 containerInstance retro.desktop
+                containerInstance retro.mcpStdio
                 containerInstance retro.workspaceFiles
+                containerInstance retro.workspaceContent
                 containerInstance retro.bundleStore
                 softwareSystemInstance uae
                 softwareSystemInstance vice
                 softwareSystemInstance viceSharp
+                softwareSystemInstance languageServers
             }
         }
         linux = deploymentEnvironment "Linux Development" {
             deploymentNode "Developer Workstation" "Planned Linux topology. Emulator hosts are selectable alternatives." "Linux" {
                 containerInstance retro.desktop
+                containerInstance retro.mcpStdio
                 containerInstance retro.workspaceFiles
+                containerInstance retro.workspaceContent
                 containerInstance retro.bundleStore
                 softwareSystemInstance uae
                 softwareSystemInstance vice
                 softwareSystemInstance viceSharp
+                softwareSystemInstance languageServers
             }
         }
     }
@@ -227,7 +284,7 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
             autoLayout lr
         }
         component retro.desktop "DesktopComponents" "IDE responsibilities in the desktop container" {
-            include developer retro.desktop.shell retro.desktop.commands retro.desktop.localizer retro.desktop.localeCatalog retro.desktop.controller retro.desktop.documentController retro.desktop.unitOfWork retro.desktop.viewModels retro.desktop.documentViews retro.desktop.sourceEditor retro.desktop.uiDispatcher retro.desktop.ideState retro.desktop.launch retro.desktop.sessions retro.desktop.emulation retro.desktop.debugger retro.desktop.artifacts retro.desktop.agentActivity retro.desktop.agentGateway retro.desktop.emulators retro.desktop.bundleManager retro.desktop.catalog retro.workspaceFiles retro.bundleStore buildTools aiAgent buckets emulatorReleases
+            include developer retro.desktop.shell retro.desktop.commands retro.desktop.localizer retro.desktop.localeCatalog retro.desktop.controller retro.desktop.documentController retro.desktop.unitOfWork retro.desktop.viewModels retro.desktop.documentViews retro.desktop.sourceEditor retro.desktop.workspaceExplorer retro.desktop.sourceControl retro.desktop.gitIntegration retro.desktop.terminal retro.desktop.languageServices retro.desktop.uiDispatcher retro.desktop.ideState retro.desktop.launch retro.desktop.sessions retro.desktop.emulation retro.desktop.debugger retro.desktop.artifacts retro.desktop.agentActivity retro.desktop.agentGateway retro.desktop.mcpHost retro.desktop.emulators retro.desktop.bundleManager retro.desktop.catalog retro.workspaceFiles retro.workspaceContent retro.bundleStore retro.mcpStdio buildTools aiAgent buckets emulatorReleases gitRemotes languageServers
             autoLayout lr
         }
         component retro.desktop "AdapterComponents" "Pinned bundle and session routing for the three adapter designs" {
@@ -248,6 +305,21 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
             retro.desktop.uiDispatcher -> retro.desktop.viewModels "Apply the result on the UI thread if the originating view is still registered"
             retro.desktop.viewModels -> retro.desktop.ideState "Observe the updated build output and diagnostics"
             retro.desktop.shell -> retro.desktop.viewModels "Render updated observable properties"
+            autoLayout lr
+        }
+        dynamic retro.desktop "McpToolDispatch" "An agent reads a ViewModel context, then invokes the same typed editor operation used by the workbench" {
+            aiAgent -> retro.desktop.mcpHost "Discover supported IDE tools in the selected client scope"
+            retro.desktop.mcpHost -> retro.desktop.commands "Read the registered editor operation and its tool schema"
+            retro.desktop.mcpHost -> retro.desktop.documentViews "Read the public editor ViewModel context for the authorized client"
+            retro.desktop.mcpHost -> aiAgent "Return the workspace, view key, document ID, and current revision"
+            aiAgent -> retro.desktop.mcpHost "Call editor_apply_edits with the returned ViewModel context"
+            retro.desktop.mcpHost -> retro.desktop.documentViews "Resolve the live registration and recheck the expected revision"
+            retro.desktop.mcpHost -> retro.desktop.controller "Validate client scope and submit the typed edit request"
+            retro.desktop.controller -> retro.desktop.unitOfWork "Dispatch to the shared document edit handler"
+            retro.desktop.unitOfWork -> retro.desktop.ideState "Apply the validated edits and publish the resulting document state"
+            retro.desktop.documentViews -> retro.desktop.ideState "Observe the updated document in the attached editor"
+            retro.desktop.controller -> retro.desktop.mcpHost "Return the outcome and new revision to the calling client"
+            retro.desktop.mcpHost -> aiAgent "Deliver the structured MCP tool result"
             autoLayout lr
         }
         dynamic retro.desktop "DocumentMdiSave" "The controller that the editor tab registers with owns its Save command and result delivery" {
@@ -275,6 +347,66 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
             retro.desktop.shell -> retro.desktop.sourceEditor "Open or select the editor tab"
             retro.desktop.sourceEditor -> retro.desktop.documentViews "Reveal the file and source range in AvaloniaEdit"
             developer -> retro.desktop.sourceEditor "Edit the source in its independent tab buffer"
+            autoLayout lr
+        }
+        dynamic retro.desktop "LanguageServerCompletion" "Request completion for the current unsaved buffer and apply a result to the originating editor" {
+            developer -> retro.desktop.sourceEditor "Request completion while editing an unsaved document"
+            retro.desktop.sourceEditor -> retro.desktop.documentViews "Capture the document version and caret"
+            retro.desktop.documentViews -> retro.desktop.documentController "Dispatch the completion request from the registered editor"
+            retro.desktop.documentController -> retro.desktop.controller "Submit the typed request through the shared CQRS entry point"
+            retro.desktop.controller -> retro.desktop.unitOfWork "Invoke the language completion query"
+            retro.desktop.unitOfWork -> retro.desktop.languageServices "Use the negotiated completion capability for this document"
+            retro.desktop.languageServices -> languageServers "Synchronize unsaved changes and request completion"
+            languageServers -> retro.desktop.languageServices "Return completion items for the correlated request"
+            retro.desktop.documentController -> retro.desktop.uiDispatcher "Schedule completion for the captured editor and document version"
+            retro.desktop.uiDispatcher -> retro.desktop.documentViews "Present completions in the originating editor if the version still matches"
+            autoLayout lr
+        }
+        dynamic retro.desktop "WorkspaceExplorerOpen" "Browse a workspace containing project and folder roots and open a source file" {
+            developer -> retro.desktop.shell "Open a project or folder and use Project Explorer"
+            retro.desktop.shell -> retro.desktop.workspaceExplorer "Show project and folder roots for the workspace"
+            retro.desktop.workspaceExplorer -> retro.desktop.viewModels "Request the children for the expanded root"
+            retro.desktop.viewModels -> retro.desktop.controller "Route the explorer query through its registered controller"
+            retro.desktop.controller -> retro.desktop.unitOfWork "Read children for the captured workspace root"
+            retro.desktop.unitOfWork -> retro.workspaceContent "Enumerate the selected directory"
+            retro.desktop.unitOfWork -> retro.desktop.ideState "Publish the updated explorer branch"
+            retro.desktop.workspaceExplorer -> retro.desktop.viewModels "Open the selected file under its workspace root"
+            retro.desktop.viewModels -> retro.desktop.controller "Raise the Open Document command"
+            retro.desktop.controller -> retro.desktop.unitOfWork "Resolve the selected document and its editor tab"
+            retro.desktop.unitOfWork -> retro.workspaceContent "Open the captured project or folder file"
+            retro.desktop.unitOfWork -> retro.desktop.ideState "Publish the new or active document tab"
+            retro.desktop.shell -> retro.desktop.sourceEditor "Show the source file in the AvaloniaEdit tab"
+            autoLayout lr
+        }
+        dynamic retro.desktop "GitStageCommitPush" "Review changes and run separate Stage, Commit, and Push actions in the selected worktree" {
+            developer -> retro.desktop.shell "Review changes and choose Stage for the selected hunk"
+            retro.desktop.shell -> retro.desktop.sourceControl "Show the selected worktree and its changes"
+            retro.desktop.sourceControl -> retro.desktop.commands "Execute the shared Stage command for the captured hunk"
+            retro.desktop.commands -> retro.desktop.viewModels "Raise the request on the registered Source Control view"
+            retro.desktop.viewModels -> retro.desktop.controller "Send the staging event with repository and worktree context"
+            retro.desktop.controller -> retro.desktop.unitOfWork "Dispatch the typed Stage Hunk request"
+            retro.desktop.unitOfWork -> retro.desktop.gitIntegration "Recheck the patch preimage and stage the hunk"
+            retro.desktop.gitIntegration -> retro.workspaceContent "Update the selected worktree index using Git"
+            retro.desktop.unitOfWork -> retro.desktop.ideState "Refresh the staged and unstaged changes"
+            developer -> retro.desktop.shell "Review staged changes and choose Commit"
+            retro.desktop.shell -> retro.desktop.sourceControl "Show the current staging and commit message"
+            retro.desktop.sourceControl -> retro.desktop.commands "Execute the registered Commit command"
+            retro.desktop.commands -> retro.desktop.viewModels "Raise the captured commit request"
+            retro.desktop.viewModels -> retro.desktop.controller "Submit the commit event through the registered controller"
+            retro.desktop.controller -> retro.desktop.unitOfWork "Dispatch the typed Commit request"
+            retro.desktop.unitOfWork -> retro.desktop.gitIntegration "Commit the selected index using native Git"
+            retro.desktop.gitIntegration -> retro.workspaceContent "Create the commit and update the checked-out ref"
+            developer -> retro.desktop.shell "Choose Push for the selected branch and remote"
+            retro.desktop.shell -> retro.desktop.sourceControl "Show the branch, upstream, and remote"
+            retro.desktop.sourceControl -> retro.desktop.commands "Execute the registered Push command"
+            retro.desktop.commands -> retro.desktop.viewModels "Raise the push request on the same registered view"
+            retro.desktop.viewModels -> retro.desktop.controller "Submit the push event with the captured branch and remote"
+            retro.desktop.controller -> retro.desktop.unitOfWork "Dispatch the typed Push request"
+            retro.desktop.unitOfWork -> retro.desktop.gitIntegration "Invoke native Git with the captured remote and ref"
+            retro.desktop.gitIntegration -> gitRemotes "Push the selected ref using configured authentication"
+            retro.desktop.unitOfWork -> retro.desktop.ideState "Refresh upstream status and publish the outcome"
+            retro.desktop.controller -> retro.desktop.uiDispatcher "Schedule the outcome for the originating Source Control view"
+            retro.desktop.uiDispatcher -> retro.desktop.viewModels "Deliver the push result on the UI thread"
             autoLayout lr
         }
         dynamic retro.desktop "SystemWaitCursor" "A background action blocks a UI scope while Avalonia continues to process paint and input" {

@@ -25,6 +25,7 @@ IDE chrome reference: [Visual Studio window layouts and tabs](https://learn.micr
 - `frames/STB01/05-layout-restored.svg` {#stb01-restored}
 
 <!-- Traceability: FR-UAE-001#ac-behavior-desktop-1, FR-UAE-001#ac-behavior-desktop-2, FR-UAE-001#ac-behavior-desktop-3, TEST-UAE-001. -->
+<!-- Project Explorer traceability: FR-RETRO-012, TR-RETRO-EXPLORER-012, TEST-RETRO-012. The empty pane invites opening a project or a folder. The WorkspaceExplorerOpen C4 view shows the selection opening a source tab. -->
 <!-- Decision needed: Approve the exact default pane set and initial Dock.Avalonia layout. The architecture lists supported tools but does not define their first-run positions. -->
 
 ### Storyboard: STB02 Validate and boot a UAE40 machine {#stb02-validate-and-boot}

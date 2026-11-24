@@ -10,6 +10,8 @@ The IDE calls adapters through a versioned host contract. Adapters translate pro
 
 The [emulator adapter contract](emulator-adapter-contract.md) defines the .NET factory and session interfaces, optional capability ports, request and event semantics, and backend mappings.
 
+Retro IDE exposes every supported feature as an MCP tool using the official .NET MCP hosting extensions. ViewModels define the public context contracts for those tools. CLI and desktop clients attach to the same IDE session and dispatch typed operations through the shared controller and CQRS handlers. [MCP tool contract](mcp-tools.md)
+
 ## MVVM Toolkit, SimpleMVC, and CQRS
 
 Avalonia menus, command bars, and keyboard bindings use the predefined command catalog. Each registration provides a stable ID and one shared `ICommand` instance per activation scope. A preset supplies target data to the command. [Avalonia commanding](https://docs.avaloniaui.net/docs/input-interaction/commanding)
@@ -37,6 +39,20 @@ The workbench can use a `DocumentController` for tabbed MDI. Each editor tab has
 
 The active editor tab supplies the document-scoped command bindings for its workbench window. Invoking Save captures that tab's document ID and originating registration. The document controller receives the event, dispatches the typed save request, and uses Avalonia to return its outcome to that editor. Selecting another tab during the save changes the bindings for the next command. The pending save keeps its captured document and recipient.
 
+### Project Explorer
+
+Project Explorer is a dockable workbench pane that displays the current workspace's projects and folders in one tree. Open Project loads a project with its metadata. Open Folder opens a directory for browsing and editing. A workspace can contain multiple roots of either kind. A project root can supply build and launch settings, and a folder root can be used for editing as soon as it opens.
+
+- Expand and collapse folders, open a file by double-clicking or pressing Enter, and select an existing editor tab when the file is already open. Reveal in Project Explorer locates an open document in the tree. Each item carries its workspace root and path so similarly named files open in the correct tab.
+- Load directory children on demand and apply the result to the workspace and root that requested it. Refresh changed branches when files are added, renamed, or removed outside the IDE. A root that is missing or inaccessible shows its status in the tree, and other roots remain browsable. Persist the workspace roots and the pane's expansion and selection state with the workspace.
+- The Explorer ViewModel registers with the main controller. Its commands and queries for opening roots, browsing files, and opening documents use the shared CQRS flow. Document opening resolves the selected file and opens or activates its AvaloniaEdit tab. Document commands continue through the tab's registered `DocumentController`.
+
+The existing workbench wireframes show the Project Explorer pane. STB01 shows its empty-workspace entry and STB14 shows it alongside the source editor. QBrain tracks the feature under `FR-RETRO-012`, `TR-RETRO-EXPLORER-012`, and `TEST-RETRO-012`.
+
+### Git and Source Control
+
+A Git menu and dockable Source Control pane expose repository actions as registered Toolkit commands. Project Explorer and source tabs use repository status for decorations and navigation. The Source Control ViewModel registers with the main controller. CQRS handlers invoke native Git in the captured repository and worktree, publish refreshed state, and return outcomes through Avalonia. The integrated terminal gives advanced Git workflows the same project context. [Git workflows and execution contract](git-integration.md)
+
 ### Source editor
 
 Use `AvaloniaEdit.TextEditor` from the `Avalonia.AvaloniaEdit` NuGet package for source documents in tabbed MDI. WebScene demonstrates Monaco inside an Avalonia window, with published Monaco-specific setup and verification for macOS. Cross-platform clipboard and text composition remain open in its published compatibility scope. Avalonia also supplies a general-purpose web host for Windows and Linux. The baseline editor uses the documented AvaloniaEdit control. [AvaloniaEdit](https://github.com/AvaloniaUI/AvaloniaEdit) · [WebScene Monaco compatibility](https://github.com/SceneTech/WebScene/blob/main/docs/monaco-compatibilty.md#remaining-compatibility-boundary) · [Avalonia NativeWebView](https://docs.avaloniaui.net/controls/web/nativewebview)
@@ -46,6 +62,10 @@ Use `AvaloniaEdit.TextEditor` from the `Avalonia.AvaloniaEdit` NuGet package for
 - Build diagnostics and debugger source locations identify a project file and line, with a column when available. Navigation opens or selects the editor tab and reveals the location. An editor gutter action requests a breakpoint through the registered controller and negotiated emulator adapter. The editor displays the reported breakpoint state, while raw debugger tools remain usable when source mapping is unavailable.
 
 QBrain tracks the editor under `FR-RETRO-011`, `TR-RETRO-EDITOR-011`, and `TEST-RETRO-011`.
+
+### Language servers
+
+Retro IDE hosts LSP servers for workspace source files and exposes negotiated features inline in AvaloniaEdit, through editor commands, and in Problems. The language service manages server lifecycle and versioned document synchronization. Editor requests use the registered controller and CQRS flow. Server-originated edits use typed requests through the main controller. [Language server contract](language-servers.md)
 
 ### System wait cursor
 

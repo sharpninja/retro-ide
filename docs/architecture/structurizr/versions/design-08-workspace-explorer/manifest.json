@@ -1,0 +1,87 @@
+{
+  "snapshotId": "design-08-workspace-explorer",
+  "previousSnapshot": "../design-07-source-editor/manifest.json",
+  "capturedAtLocal": "2026-11-24T12:08:21-06:00",
+  "state": "Design snapshot. Project Explorer and its desktop integration are planned.",
+  "workspace": {
+    "path": "workspace.dsl",
+    "sha256": "5ddc3ab83ef0898e66db4c3d947acbbdbe76a93f31ecf72197641b68ba5dc593"
+  },
+  "design": {
+    "architecture": "../../../../architecture.md",
+    "requirementOwnership": "../../../../requirement-ownership.md",
+    "requirements": [
+      "FR-RETRO-012",
+      "TR-RETRO-EXPLORER-012",
+      "TEST-RETRO-012"
+    ]
+  },
+  "validation": {
+    "cliImage": "structurizr/cli:2025.11.09",
+    "cliImageId": "sha256:0399ac8e24c16e41277cfcec22caa29e4775013e5395c0720016828426d62749",
+    "workspaceValidation": "passed",
+    "mermaidExport": "passed"
+  },
+  "exports": [
+    {
+      "path": "exports/mermaid/structurizr-AdapterComponents.mmd",
+      "sha256": "1c1ca0166184ff3847a35f25a2de54de377bb0e6b1cde90b385db5f08704717a"
+    },
+    {
+      "path": "exports/mermaid/structurizr-BuildLaunchDebug.mmd",
+      "sha256": "c152ff696d3fee81739edaf7bb198ea9f87b8675bc7254260cc8453daa1d17d4"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandDispatch.mmd",
+      "sha256": "c1013ef43be943b166c8890010fb57fc2824c927db5d1d5c9778d2ca377cf12f"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandLocalization.mmd",
+      "sha256": "3f4d113d7ddbb5dd0998e29112dde9fb7415261fed637d69252e0445e6f934f3"
+    },
+    {
+      "path": "exports/mermaid/structurizr-Containers.mmd",
+      "sha256": "473054a8c88d1f8ada0b1bed2345970e3e636574c0294f001104ab5d39d00270"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DesktopComponents.mmd",
+      "sha256": "1e758d1a10c76ef1012e92ebedd3a376d93ca90a2a9068f05371e383caccfad9"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DocumentMdiSave.mmd",
+      "sha256": "d60493a85b8a1ef0b12ed388103d59b765bd95f6f355f743a590ce9563b64dfe"
+    },
+    {
+      "path": "exports/mermaid/structurizr-EmulatorBundleInstall.mmd",
+      "sha256": "5a32ba35a3558ab16e877239f471ab590f6c83bad962a07219a634c02762f107"
+    },
+    {
+      "path": "exports/mermaid/structurizr-EmulatorSessionContract.mmd",
+      "sha256": "fb562437f9c90cd69cda437099b22eb82c44537bf81c65580587d1e4331100f4"
+    },
+    {
+      "path": "exports/mermaid/structurizr-LinuxDeployment.mmd",
+      "sha256": "3fd12ea3954e997a7457839079b4f0ca691eb265d78bcaaeceb0390b88cf43ac"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SourceEditorWorkflow.mmd",
+      "sha256": "9399604b981ca6175d2b5a5e2c906440671a0a3c1f72d90c9144130ec6d72620"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemContext.mmd",
+      "sha256": "524e3c4ee9a97f4dd09b23052c9450f80a0c880d7f2009ad94d94bcb7aab8f29"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemWaitCursor.mmd",
+      "sha256": "e83f94d7f54b5bc3160cd7a13fbac88b1728f920b8e30faae952209ce8ec33ee"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WindowsDeployment.mmd",
+      "sha256": "001b39adde08d372b721d764fc9b3f358e35bf40266bc7fd4d5dc0ffd42d8480"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WorkspaceExplorerOpen.mmd",
+      "sha256": "e3657e30a9366c90f6ec572fa9ab039366fc9b57db822ea255d39edb2f55002e"
+    }
+  ]
+}
