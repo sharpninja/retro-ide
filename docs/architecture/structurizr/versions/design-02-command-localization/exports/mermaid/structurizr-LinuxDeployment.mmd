@@ -1,0 +1,27 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Deployment View: Linux Development"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    subgraph 93 ["Developer Workstation"]
+      style 93 fill:#ffffff,stroke:#1b4043,color:#ffffff
+
+      101("<div style='font-weight: bold'>ViceSharp</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External .NET Commodore<br />emulator host with published<br />gRPC contracts.</div>")
+      style 101 fill:#57636b,stroke:#3c454a,color:#ffffff
+      94("<div style='font-weight: bold'>Retro IDE Desktop</div><div style='font-size: 70%; margin-top: 0px'>[Container: .NET, Avalonia, Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Owns the workbench, user<br />workflows, selected-session<br />state, and emulator adapter<br />components.</div>")
+      style 94 fill:#275c60,stroke:#d9a669,color:#ffffff
+      95[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout, user<br />preferences including display<br />language, and project<br />settings independently of<br />emulator state. Includes<br />references to target presets<br />and user-supplied project<br />artifacts.</div>")]
+      style 95 fill:#275c60,stroke:#d9a669,color:#ffffff
+      97("<div style='font-weight: bold'>UAE Developer</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Owns the UAE40 profile,<br />control service, isolated<br />worker and UAE-specific<br />protocol and diagnostics. The<br />desktop-facing interface is<br />pending.</div>")
+      style 97 fill:#57636b,stroke:#3c454a,color:#ffffff
+      99("<div style='font-weight: bold'>VICE</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External x64sc process and<br />Commodore 64 runtime. Its<br />binary monitor is the<br />documented debugger<br />interface.</div>")
+      style 99 fill:#57636b,stroke:#3c454a,color:#ffffff
+    end
+
+    94-. "<div>Starts x64sc and exchanges<br />supported debugger commands<br />and events</div><div style='font-size: 70%'>[Local process and loopback binary monitor]</div>" .->99
+    94-. "<div>Attaches to a configured host<br />and uses its published<br />session services</div><div style='font-size: 70%'>[gRPC]</div>" .->101
+    94-. "<div>Reads and writes workspace<br />settings and layouts through<br />handlers</div><div style='font-size: 70%'>[Local files]</div>" .->95
+    94-. "<div>Launches or attaches through<br />UAE control when a<br />desktop-facing bridge is<br />available</div><div style='font-size: 70%'>[Planned UAE control bridge]</div>" .->97
+
+  end

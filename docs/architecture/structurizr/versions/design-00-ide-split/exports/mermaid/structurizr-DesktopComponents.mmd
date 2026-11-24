@@ -1,0 +1,62 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    19("<div style='font-weight: bold'>Project Build Toolchain</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Operator-configured compiler,<br />assembler, or build task that<br />produces artifacts and<br />diagnostics for the current<br />project.</div>")
+    style 19 fill:#57636b,stroke:#3c454a,color:#ffffff
+    20("<div style='font-weight: bold'>Configured CLI or Desktop Agent</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Uses available scoped MCP<br />resources and commands; its<br />lifetime is independent of<br />the emulator session.</div>")
+    style 20 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#d9a669,color:#d9a669
+
+        10("<div style='font-weight: bold'>Agent Session and Activity</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET and Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Launches or attaches<br />configured agents and<br />displays scoped operations,<br />denials, transport failures,<br />and reattachment state.</div>")
+        style 10 fill:#275c60,stroke:#d9a669,color:#ffffff
+        11("<div style='font-weight: bold'>Adapter Catalog and Host Contract</div><div style='font-size: 70%; margin-top: 0px'>[Component: Versioned .NET contracts]</div><div style='font-size: 80%; margin-top:10px'>Resolves target presets to<br />adapters and normalizes<br />capabilities, machine<br />metadata, instance<br />operations, events, and<br />optional streams.</div>")
+        style 11 fill:#275c60,stroke:#d9a669,color:#ffffff
+        4("<div style='font-weight: bold'>Workbench and Docking</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia and Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Hosts document and tool<br />windows, project navigation,<br />command UI, and saved<br />layouts. Emulation is a<br />document tab.</div>")
+        style 4 fill:#275c60,stroke:#d9a669,color:#ffffff
+        5("<div style='font-weight: bold'>Project and Launch Workflow</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Selects the target preset,<br />runs the configured build,<br />opens source diagnostics, and<br />launches or attaches after a<br />successful build.</div>")
+        style 5 fill:#275c60,stroke:#d9a669,color:#ffffff
+        6("<div style='font-weight: bold'>Session Coordinator</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Tracks adapter and instance<br />identity, lifecycle,<br />operations, capabilities, and<br />connection state for the<br />selected session. Routes<br />commands through its adapter.</div>")
+        style 6 fill:#275c60,stroke:#d9a669,color:#ffffff
+        7("<div style='font-weight: bold'>Emulation and Replay View</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Presents video, input<br />capture, host volume, and<br />available frame capture. A<br />seekable recording drives the<br />replay playhead; live<br />emulation shows elapsed time.</div>")
+        style 7 fill:#275c60,stroke:#d9a669,color:#ffffff
+        8("<div style='font-weight: bold'>Debugger and Guest Inspectors</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Displays target-aware<br />registers, address spaces,<br />disassembly, source,<br />breakpoints, console, logs,<br />and optional guest tools.<br />Keeps raw views available<br />when symbols or guest<br />features are unavailable.</div>")
+        style 8 fill:#275c60,stroke:#d9a669,color:#ffffff
+        9("<div style='font-weight: bold'>Media, Tests, and Diagnostics</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Presents media and snapshot<br />workflows, test results,<br />operation progress, and<br />failure evidence with<br />adapter-provided identity and<br />compatibility.</div>")
+        style 9 fill:#275c60,stroke:#d9a669,color:#ffffff
+      end
+
+      15[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout and project<br />settings independently of<br />emulator state; includes<br />references to target presets<br />and user-supplied project<br />artifacts.</div>")]
+      style 15 fill:#275c60,stroke:#d9a669,color:#ffffff
+    end
+
+    1-. "<div>Works with projects,<br />documents, and docked tools</div><div style='font-size: 70%'></div>" .->4
+    1-. "<div>Starts a build or debug<br />launch</div><div style='font-size: 70%'></div>" .->5
+    1-. "<div>Views and operates the<br />selected Emulation tab</div><div style='font-size: 70%'></div>" .->7
+    4-. "<div>Saves and restores IDE<br />layouts</div><div style='font-size: 70%'>[Local files]</div>" .->15
+    4-. "<div>Routes project and debug<br />commands</div><div style='font-size: 70%'></div>" .->5
+    4-. "<div>Opens the Emulation document</div><div style='font-size: 70%'></div>" .->7
+    4-. "<div>Opens debugging and console<br />tools</div><div style='font-size: 70%'></div>" .->8
+    4-. "<div>Opens media, snapshot, test,<br />and diagnostic panels</div><div style='font-size: 70%'></div>" .->9
+    4-. "<div>Opens the scoped agent<br />activity view</div><div style='font-size: 70%'></div>" .->10
+    5-. "<div>Loads project configuration<br />and target presets</div><div style='font-size: 70%'>[Local files]</div>" .->15
+    5-. "<div>Runs the configured build and<br />collects diagnostics and<br />outputs</div><div style='font-size: 70%'>[Configured process]</div>" .->19
+    5-. "<div>Requests launch or attach<br />using resolved artifacts</div><div style='font-size: 70%'></div>" .->6
+    7-. "<div>Reads selected-session media<br />and sends supported guest<br />input</div><div style='font-size: 70%'></div>" .->6
+    8-. "<div>Inspects normalized debugger<br />state and issues supported<br />controls</div><div style='font-size: 70%'></div>" .->6
+    9-. "<div>Uses supported media,<br />snapshots, tests, and<br />diagnostic operations</div><div style='font-size: 70%'></div>" .->6
+    10-. "<div>Associates agent activity and<br />permissions with the selected<br />session</div><div style='font-size: 70%'></div>" .->6
+    10-. "<div>Starts or attaches a<br />configured scoped agent</div><div style='font-size: 70%'>[Configured process and MCP stdio where supported]</div>" .->20
+    6-. "<div>Resolves the selected adapter<br />and invokes normalized<br />operations</div><div style='font-size: 70%'></div>" .->11
+
+  end

@@ -1,0 +1,83 @@
+{
+  "snapshotId": "design-07-source-editor",
+  "previousSnapshot": "../design-06-emulator-integration/manifest.json",
+  "capturedAtLocal": "2026-11-24T11:45:54-06:00",
+  "state": "Design snapshot. The AvaloniaEdit source editor and desktop integration are planned.",
+  "workspace": {
+    "path": "workspace.dsl",
+    "sha256": "804599a3c6b72d74a83fc6d2c47189dc6455633ede3f713583536237a8d36a1e"
+  },
+  "design": {
+    "architecture": "../../../../architecture.md",
+    "requirementOwnership": "../../../../requirement-ownership.md",
+    "requirements": [
+      "FR-RETRO-011",
+      "TR-RETRO-EDITOR-011",
+      "TEST-RETRO-011"
+    ]
+  },
+  "validation": {
+    "cliImage": "structurizr/cli:2025.11.09",
+    "cliImageId": "sha256:0399ac8e24c16e41277cfcec22caa29e4775013e5395c0720016828426d62749",
+    "workspaceValidation": "passed",
+    "mermaidExport": "passed"
+  },
+  "exports": [
+    {
+      "path": "exports/mermaid/structurizr-AdapterComponents.mmd",
+      "sha256": "5dc08d95effcb41e791b0503933cf75c80b0ec510ec05bf4b2b545b4ef99f409"
+    },
+    {
+      "path": "exports/mermaid/structurizr-BuildLaunchDebug.mmd",
+      "sha256": "adc6b2d03c44f5f65f6a10e3a528203573865ddb4254ae13830e40da86f00de4"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandDispatch.mmd",
+      "sha256": "63370538f5be009546cb878f7433cf07574e7213e3885c9cf558e2dae310d75b"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandLocalization.mmd",
+      "sha256": "c6f34e8c5d5f57074f8b84ebeddced05c504157781aeaf39b17828328c970b31"
+    },
+    {
+      "path": "exports/mermaid/structurizr-Containers.mmd",
+      "sha256": "5212f8f24e6b46861758d330ee05b7b1845a52a3485cf528d22955ffb1920453"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DesktopComponents.mmd",
+      "sha256": "893de65c72925c8dde593a669477141880577ac4a86e5b7c0de8f6f677cf0022"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DocumentMdiSave.mmd",
+      "sha256": "f48ee8ffb643bec95af8427e6bfed209c7b374beed85cb53a5f9f8d9953083dd"
+    },
+    {
+      "path": "exports/mermaid/structurizr-EmulatorBundleInstall.mmd",
+      "sha256": "18f810d4e9a1a2f7e04ae5c6df3008702d47480a9536e5a725f0b39ce972a651"
+    },
+    {
+      "path": "exports/mermaid/structurizr-EmulatorSessionContract.mmd",
+      "sha256": "6921b6f0c1c2c5cd8672cfbc2a4d743dfcd7476c0efd28a891c2db6d3328f1a7"
+    },
+    {
+      "path": "exports/mermaid/structurizr-LinuxDeployment.mmd",
+      "sha256": "18ecb8d82ce7d2feafd670d8ef654746001d9c89a2b5f002ae6b9e7df0f0d41d"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SourceEditorWorkflow.mmd",
+      "sha256": "3e87cc74958432d1f680b29ba3bba19a5bca4c6350c7411973fa3d616c2cd7ac"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemContext.mmd",
+      "sha256": "23d31991a6071a23503ddf24ec56db859e5db6e507b40d3468eca1aed614ef68"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemWaitCursor.mmd",
+      "sha256": "5575a687f9a804ea93da2b6c3295a188493c1779ee5582a021f321ad46f71734"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WindowsDeployment.mmd",
+      "sha256": "853e1421fd0e9c7c752f50327e745d1d2e180d9cb90a42c95fe4fefe62ab5f1a"
+    }
+  ]
+}

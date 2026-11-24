@@ -1,0 +1,59 @@
+{
+  "snapshotId": "design-02-command-localization",
+  "previousSnapshot": "../design-01-mvc-commanding/manifest.json",
+  "capturedAtLocal": "2026-11-24T11:13:12-06:00",
+  "state": "Design snapshot. Command descriptors, localization, and desktop runtime are planned.",
+  "workspace": {
+    "path": "workspace.dsl",
+    "sha256": "58a5bdd1baa4ee38e5efbb18eddbdfde13b5d2d63de7b6d661e2593b4fd2a4a8"
+  },
+  "design": {
+    "architecture": "../../../../architecture.md",
+    "requirementOwnership": "../../../../requirement-ownership.md",
+    "requirements": ["FR-RETRO-008", "TR-RETRO-LOCALIZATION-008", "TEST-RETRO-008"]
+  },
+  "validation": {
+    "cliImage": "structurizr/cli:2025.11.09",
+    "cliImageId": "sha256:0399ac8e24c16e41277cfcec22caa29e4775013e5395c0720016828426d62749",
+    "workspaceValidation": "passed",
+    "mermaidExport": "passed"
+  },
+  "exports": [
+    {
+      "path": "exports/mermaid/structurizr-AdapterComponents.mmd",
+      "sha256": "feeb109d3cd3bad56605deb01791628fdb190c2895ca08da4cf4e7f055378628"
+    },
+    {
+      "path": "exports/mermaid/structurizr-BuildLaunchDebug.mmd",
+      "sha256": "d274fc1be3a015b7149253158f9f30ede84f618e85b64a95ab622a31cc6b4e28"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandDispatch.mmd",
+      "sha256": "6271df1711f5ef7b8be5278d09da248631b7b93756f4403ea159b10857f153fc"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandLocalization.mmd",
+      "sha256": "7e333a74a7a32c7a0ca57672939920b816ba350164c05b4676c17546ebed89dd"
+    },
+    {
+      "path": "exports/mermaid/structurizr-Containers.mmd",
+      "sha256": "905300afff56ba4532eedbdfecb7baef062f6b6263c10e19044db9b83dc9580f"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DesktopComponents.mmd",
+      "sha256": "36d1b18031f9cf25d27be96cad77ffff574b850594cc098a3eed37a73f1247bc"
+    },
+    {
+      "path": "exports/mermaid/structurizr-LinuxDeployment.mmd",
+      "sha256": "eb3a8dee98c844aa60dba8fbd1060f41ff555d8f068beb80dfc7f680865e011c"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemContext.mmd",
+      "sha256": "c48f330e1cadf4a93537e09aa51c58c9b53375f947a6d4d42152c49444362712"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WindowsDeployment.mmd",
+      "sha256": "f1cdfb86e9fc82775b57883e350715d2e049e152d34a3b86d0dd740ad4d9e601"
+    }
+  ]
+}

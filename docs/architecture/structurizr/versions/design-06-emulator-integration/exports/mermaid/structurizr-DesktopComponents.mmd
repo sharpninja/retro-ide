@@ -1,0 +1,130 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    33("<div style='font-weight: bold'>Project Build Toolchain</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Operator-configured compiler,<br />assembler, or build task that<br />produces artifacts and<br />diagnostics for the current<br />project.</div>")
+    style 33 fill:#57636b,stroke:#3c454a,color:#ffffff
+    34("<div style='font-weight: bold'>Configured CLI or Desktop Agent</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Uses available scoped MCP<br />resources and commands; its<br />lifetime is independent of<br />the emulator session.</div>")
+    style 34 fill:#57636b,stroke:#3c454a,color:#ffffff
+    35("<div style='font-weight: bold'>Emulator Bucket Repositories</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Configured Git sources<br />publish per-emulator JSON<br />manifests pointing to<br />versioned release archives.</div>")
+    style 35 fill:#57636b,stroke:#3c454a,color:#ffffff
+    36("<div style='font-weight: bold'>Emulator Release Artifact Hosting</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosts the versioned platform<br />archives referenced by the<br />bucket manifests.</div>")
+    style 36 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#d9a669,color:#d9a669
+
+        10("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 10 fill:#275c60,stroke:#d9a669,color:#ffffff
+        11("<div style='font-weight: bold'>IDE ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.ComponentModel and SimpleMVC]</div><div style='font-size: 80%; margin-top:10px'>Implement IView with a stable<br />ViewKey. Raise<br />CommandRequested, receive<br />correlated results on the UI<br />thread, and expose observable<br />properties through<br />ObservableObject.</div>")
+        style 11 fill:#275c60,stroke:#d9a669,color:#ffffff
+        12("<div style='font-weight: bold'>Editor Tab ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.ComponentModel and SimpleMVC]</div><div style='font-size: 80%; margin-top:10px'>One observable IView per<br />editor tab. Each registers<br />directly with the document<br />controller and raises events<br />for the document captured at<br />invocation.</div>")
+        style 12 fill:#275c60,stroke:#d9a669,color:#ffffff
+        13("<div style='font-weight: bold'>Avalonia UI Dispatcher</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia Dispatcher.UIThread]</div><div style='font-size: 80%; margin-top:10px'>Schedules callbacks on the UI<br />thread. The dispatch owner<br />checks its originating<br />registration inside the<br />callback before applying the<br />result.</div>")
+        style 13 fill:#275c60,stroke:#d9a669,color:#ffffff
+        14("<div style='font-weight: bold'>IDE State (Model)</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Provides observable<br />workspace, presentation<br />culture, active document and<br />target, selected session,<br />availability, operation<br />state, interaction blocks by<br />scope, and diagnostics.</div>")
+        style 14 fill:#275c60,stroke:#d9a669,color:#ffffff
+        15("<div style='font-weight: bold'>Project and Launch Workflow</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Selects the target preset,<br />runs the configured build,<br />opens source diagnostics, and<br />launches or attaches after a<br />successful build.</div>")
+        style 15 fill:#275c60,stroke:#d9a669,color:#ffffff
+        16("<div style='font-weight: bold'>Session Coordinator</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Opens a versioned adapter<br />session, owns its lifetime<br />and bundle lease, routes<br />typed capability requests,<br />and projects state, control<br />events, and bounded media<br />streams.</div>")
+        style 16 fill:#275c60,stroke:#d9a669,color:#ffffff
+        17("<div style='font-weight: bold'>Emulation and Replay View</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Presents video, input<br />capture, host volume, and<br />available frame capture. A<br />seekable recording drives the<br />replay playhead; live<br />emulation shows elapsed time.</div>")
+        style 17 fill:#275c60,stroke:#d9a669,color:#ffffff
+        18("<div style='font-weight: bold'>Debugger and Guest Inspectors</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Displays target-aware<br />registers, address spaces,<br />disassembly, source,<br />breakpoints, console, logs,<br />and optional guest tools.<br />Keeps raw views available<br />when symbols or guest<br />features are unavailable.</div>")
+        style 18 fill:#275c60,stroke:#d9a669,color:#ffffff
+        19("<div style='font-weight: bold'>Media, Tests, and Diagnostics</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Presents media and snapshot<br />workflows, test results,<br />operation progress, and<br />failure evidence with<br />adapter-provided identity and<br />compatibility.</div>")
+        style 19 fill:#275c60,stroke:#d9a669,color:#ffffff
+        20("<div style='font-weight: bold'>Agent Session and Activity</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Presents agent launch and<br />attach commands, scoped<br />operations, denials,<br />transport failures, and<br />reattachment state.</div>")
+        style 20 fill:#275c60,stroke:#d9a669,color:#ffffff
+        21("<div style='font-weight: bold'>Agent Gateway</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET and MCP]</div><div style='font-size: 80%; margin-top:10px'>Handles configured process<br />launch and attach for<br />authorized agent workflows.</div>")
+        style 21 fill:#275c60,stroke:#d9a669,color:#ffffff
+        22("<div style='font-weight: bold'>Emulators Management View</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Browses buckets, compatible<br />releases, and installed<br />versions. Presents refresh,<br />install, update, rollback,<br />and remove actions and their<br />outcomes.</div>")
+        style 22 fill:#275c60,stroke:#d9a669,color:#ffffff
+        23("<div style='font-weight: bold'>Emulator Bundle Manager</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET, Git, JSON, SHA-256]</div><div style='font-size: 80%; margin-top:10px'>Reads Git bucket manifests at<br />a recorded commit, selects a<br />compatible host target,<br />verifies release archives,<br />and installs immutable<br />bundles with receipts.</div>")
+        style 23 fill:#275c60,stroke:#d9a669,color:#ffffff
+        24("<div style='font-weight: bold'>Adapter Catalog and Host Contract</div><div style='font-size: 70%; margin-top: 0px'>[Component: Versioned .NET contracts]</div><div style='font-size: 80%; margin-top:10px'>Loads the selected installed<br />binding and its factory.<br />Defines .NET session<br />identity, version<br />negotiation, capability<br />ports, typed results,<br />resumable events, and<br />separate media streams.</div>")
+        style 24 fill:#275c60,stroke:#d9a669,color:#ffffff
+        4("<div style='font-weight: bold'>Workbench and Docking (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia and Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Hosts menus, command bars,<br />keyboard bindings, documents,<br />and docked tools. Presents<br />command metadata and<br />localization, and applies the<br />system wait cursor to<br />logically blocked UI.</div>")
+        style 4 fill:#275c60,stroke:#d9a669,color:#ffffff
+        5("<div style='font-weight: bold'>Predefined Command Catalog</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.Input (ICommand)]</div><div style='font-size: 80%; margin-top:10px'>Pairs a shared RelayCommand<br />or AsyncRelayCommand with a<br />stable ID, label slug, icon<br />slug, and default keyboard<br />gesture. Exposes availability<br />and execution state and<br />raises requests on registered<br />views.</div>")
+        style 5 fill:#275c60,stroke:#d9a669,color:#ffffff
+        6("<div style='font-weight: bold'>Localization Service</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET localization]</div><div style='font-size: 80%; margin-top:10px'>Resolves typed text and image<br />slugs through exact locale,<br />parent locales, and bundled<br />English. Formats messages and<br />refreshes workbench<br />presentation when the UI<br />culture changes.</div>")
+        style 6 fill:#275c60,stroke:#d9a669,color:#ffffff
+        7[("<div style='font-weight: bold'>Locale Catalogs</div><div style='font-size: 70%; margin-top: 0px'>[Component: BCP 47 locale tags]</div><div style='font-size: 80%; margin-top:10px'>Supplies versioned catalogs<br />of strings, message patterns,<br />and local SVG or PNG<br />resources. Includes the<br />bundled default catalog and<br />validated language packs.</div>")]
+        style 7 fill:#275c60,stroke:#d9a669,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch and result<br />delivery for views registered<br />directly with it. Provides<br />the shared execution entry<br />point for typed requests from<br />all controllers into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#d9a669,color:#ffffff
+        9("<div style='font-weight: bold'>Document Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch for editor<br />views that register directly<br />with it. Receives their<br />events, dispatches typed<br />document requests through the<br />shared CQRS entry point, and<br />delivers results to the<br />originating tab.</div>")
+        style 9 fill:#275c60,stroke:#d9a669,color:#ffffff
+      end
+
+      28[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout,<br />preferences, configured<br />bucket sources, and project<br />settings with target preset,<br />pinned bundle, and user<br />artifact references.</div>")]
+      style 28 fill:#275c60,stroke:#d9a669,color:#ffffff
+      29[("<div style='font-weight: bold'>Local Emulator Bundle Store</div><div style='font-size: 70%; margin-top: 0px'>[Container: Per-user filesystem]</div><div style='font-size: 80%; margin-top:10px'>Holds verified, versioned<br />emulator archives and<br />expanded binaries, bindings,<br />install receipts, and the<br />last valid bucket metadata<br />for offline use.</div>")]
+      style 29 fill:#275c60,stroke:#d9a669,color:#ffffff
+    end
+
+    23-. "<div>Installs verified files and<br />receipts atomically and<br />caches valid catalog metadata</div><div style='font-size: 70%'></div>" .->29
+    24-. "<div>Reads the project's pinned<br />bundle version and manifest<br />revision</div><div style='font-size: 70%'></div>" .->28
+    24-. "<div>Resolves verified local entry<br />points and holds the selected<br />version for the session</div><div style='font-size: 70%'></div>" .->29
+    1-. "<div>Works with projects,<br />documents, and docked tools</div><div style='font-size: 70%'></div>" .->4
+    1-. "<div>Views and operates the<br />selected Emulation tab</div><div style='font-size: 70%'></div>" .->17
+    4-. "<div>Reads descriptors and binds<br />menus, command bars, and<br />shortcuts to the same<br />predefined command</div><div style='font-size: 70%'>[ICommand]</div>" .->5
+    4-. "<div>Observes logical interaction<br />blocks and presents the<br />native wait cursor over<br />affected UI</div><div style='font-size: 70%'></div>" .->14
+    4-. "<div>Resolves labels, accessible<br />names, and icon slugs for<br />rendering</div><div style='font-size: 70%'></div>" .->6
+    6-. "<div>Observes the current<br />presentation culture</div><div style='font-size: 70%'></div>" .->14
+    6-. "<div>Finds typed resources using<br />the locale fallback chain</div><div style='font-size: 70%'></div>" .->7
+    6-. "<div>Notifies open windows to<br />refresh localized<br />presentation</div><div style='font-size: 70%'></div>" .->4
+    4-. "<div>Binds to the registered<br />workspace, document, and tool<br />ViewModels</div><div style='font-size: 70%'>[Avalonia bindings]</div>" .->11
+    4-. "<div>Binds the active editor tab<br />and its scoped command<br />instances</div><div style='font-size: 70%'>[Avalonia tabbed MDI]</div>" .->12
+    11-. "<div>Register directly and raise<br />CommandRequested with the<br />request ID and captured<br />context, or request an<br />explicit query</div><div style='font-size: 70%'>[IView events]</div>" .->8
+    8-. "<div>Owns view registrations and<br />attaches or detaches the<br />command request handler</div><div style='font-size: 70%'></div>" .->11
+    12-. "<div>Register directly and raise<br />document command requests<br />with the captured document ID</div><div style='font-size: 70%'>[IView events]</div>" .->9
+    9-. "<div>Owns editor view<br />registrations and attaches or<br />detaches the command request<br />handler</div><div style='font-size: 70%'></div>" .->12
+    9-. "<div>Executes the selected typed<br />document request through the<br />shared CQRS entry point</div><div style='font-size: 70%'></div>" .->8
+    8-. "<div>Schedules delivery for the<br />request and originating<br />registration</div><div style='font-size: 70%'></div>" .->13
+    9-. "<div>Schedules document results<br />for the originating editor<br />registration</div><div style='font-size: 70%'></div>" .->13
+    13-. "<div>Invokes the result callback<br />on the original registered<br />view on the UI thread</div><div style='font-size: 70%'></div>" .->11
+    13-. "<div>Invokes the document owner's<br />result callback on the<br />original editor view</div><div style='font-size: 70%'></div>" .->12
+    11-. "<div>Observe model state and<br />expose it to the view</div><div style='font-size: 70%'></div>" .->14
+    12-. "<div>Project document state into<br />editor tabs</div><div style='font-size: 70%'></div>" .->14
+    5-. "<div>Reads handler-published<br />eligibility and invalidates<br />CanExecute when it changes</div><div style='font-size: 70%'></div>" .->14
+    5-. "<div>Raises CommandRequested on<br />the originating view and<br />awaits asynchronous<br />completion</div><div style='font-size: 70%'>[RelayCommand or AsyncRelayCommand]</div>" .->11
+    5-. "<div>Raises the scoped document<br />command on the originating<br />editor tab</div><div style='font-size: 70%'>[RelayCommand or AsyncRelayCommand]</div>" .->12
+    8-. "<div>Dispatches a typed command or<br />query in its captured<br />workspace context</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>Reads state for queries;<br />commands publish progress,<br />interaction blocks, and<br />outcomes</div><div style='font-size: 70%'></div>" .->14
+    10-. "<div>Reads and writes workspace<br />settings and layouts through<br />handlers</div><div style='font-size: 70%'>[Local files]</div>" .->28
+    10-. "<div>Invokes build and<br />debug-launch handlers</div><div style='font-size: 70%'></div>" .->15
+    10-. "<div>Invokes session, debugger,<br />media, and diagnostics<br />handlers</div><div style='font-size: 70%'></div>" .->16
+    10-. "<div>Invokes configured agent<br />launch or attach</div><div style='font-size: 70%'></div>" .->21
+    10-. "<div>Invokes repository refresh<br />and emulator bundle lifecycle<br />handlers</div><div style='font-size: 70%'></div>" .->23
+    16-. "<div>Publishes normalized session<br />state and capability changes</div><div style='font-size: 70%'></div>" .->14
+    16-. "<div>Supplies negotiated media<br />streams independently of<br />control traffic</div><div style='font-size: 70%'></div>" .->17
+    4-. "<div>Opens the Emulation document</div><div style='font-size: 70%'></div>" .->17
+    4-. "<div>Opens debugging and console<br />tools</div><div style='font-size: 70%'></div>" .->18
+    4-. "<div>Opens media, snapshot, test,<br />and diagnostic panels</div><div style='font-size: 70%'></div>" .->19
+    4-. "<div>Opens the scoped agent<br />activity view</div><div style='font-size: 70%'></div>" .->20
+    4-. "<div>Opens the Emulators manager</div><div style='font-size: 70%'></div>" .->22
+    22-. "<div>Binds bundle management<br />actions to registered<br />commands</div><div style='font-size: 70%'></div>" .->5
+    15-. "<div>Loads project configuration<br />and target presets</div><div style='font-size: 70%'>[Local files]</div>" .->28
+    15-. "<div>Runs the configured build and<br />collects diagnostics and<br />outputs</div><div style='font-size: 70%'>[Configured process]</div>" .->33
+    15-. "<div>Requests launch or attach<br />using resolved artifacts</div><div style='font-size: 70%'></div>" .->16
+    17-. "<div>Binds registered views for<br />selected-session media and<br />input requests</div><div style='font-size: 70%'></div>" .->11
+    18-. "<div>Binds registered views for<br />debugger queries and commands</div><div style='font-size: 70%'></div>" .->11
+    19-. "<div>Binds registered views for<br />media, snapshot, test, and<br />diagnostic requests</div><div style='font-size: 70%'></div>" .->11
+    20-. "<div>Binds registered views for<br />scoped agent requests</div><div style='font-size: 70%'></div>" .->11
+    21-. "<div>Starts or attaches a<br />configured scoped agent</div><div style='font-size: 70%'>[Configured process and MCP stdio where supported]</div>" .->34
+    16-. "<div>Resolves the selected adapter<br />and invokes normalized<br />operations</div><div style='font-size: 70%'></div>" .->24
+    24-. "<div>Exposes the negotiated<br />session and optional<br />capability ports</div><div style='font-size: 70%'></div>" .->16
+    23-. "<div>Fetches configured Git<br />sources and reads versioned<br />manifests</div><div style='font-size: 70%'>[Git and JSON]</div>" .->35
+    23-. "<div>Downloads the archive named<br />for the compatible host<br />target</div><div style='font-size: 70%'>[HTTPS]</div>" .->36
+
+  end

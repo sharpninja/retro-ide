@@ -1,0 +1,58 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    31("<div style='font-weight: bold'>UAE Developer</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Owns the UAE40 profile,<br />control service, isolated<br />worker and UAE-specific<br />protocol and diagnostics. The<br />desktop-facing interface is<br />pending.</div>")
+    click 31 https://github.com/sharpninja/uae-developer "https://github.com/sharpninja/uae-developer"
+    style 31 fill:#57636b,stroke:#3c454a,color:#ffffff
+    32("<div style='font-weight: bold'>VICE</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External x64sc process and<br />Commodore 64 runtime. Its<br />binary monitor is the<br />documented debugger<br />interface.</div>")
+    click 32 https://vice-emu.sourceforge.io/vice_2.html "https://vice-emu.sourceforge.io/vice_2.html"
+    style 32 fill:#57636b,stroke:#3c454a,color:#ffffff
+    33("<div style='font-weight: bold'>ViceSharp</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External .NET Commodore<br />emulator host with published<br />gRPC contracts.</div>")
+    click 33 https://github.com/sharpninja/vice-sharp "https://github.com/sharpninja/vice-sharp"
+    style 33 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#d9a669,color:#d9a669
+
+        16("<div style='font-weight: bold'>Project and Launch Workflow</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Selects the target preset,<br />runs the configured build,<br />opens source diagnostics, and<br />launches or attaches after a<br />successful build.</div>")
+        style 16 fill:#275c60,stroke:#d9a669,color:#ffffff
+        17("<div style='font-weight: bold'>Session Coordinator</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Opens a versioned adapter<br />session, owns its lifetime<br />and bundle lease, routes<br />typed capability requests,<br />and projects state, control<br />events, and bounded media<br />streams.</div>")
+        style 17 fill:#275c60,stroke:#d9a669,color:#ffffff
+        25("<div style='font-weight: bold'>Adapter Catalog and Host Contract</div><div style='font-size: 70%; margin-top: 0px'>[Component: Versioned .NET contracts]</div><div style='font-size: 80%; margin-top:10px'>Loads the selected installed<br />binding and its factory.<br />Defines .NET session<br />identity, version<br />negotiation, capability<br />ports, typed results,<br />resumable events, and<br />separate media streams.</div>")
+        style 25 fill:#275c60,stroke:#d9a669,color:#ffffff
+        26("<div style='font-weight: bold'>UAE Adapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET; desktop-facing transport pending]</div><div style='font-size: 80%; margin-top:10px'>Translates UAE40 profile and<br />session operations. Exposes<br />UAE-specific debugger data<br />through optional extensions.</div>")
+        style 26 fill:#275c60,stroke:#d9a669,color:#ffffff
+        27("<div style='font-weight: bold'>VICE Adapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: Process and VICE binary monitor]</div><div style='font-size: 80%; margin-top:10px'>Launches the configured x64sc<br />executable and maps supported<br />C64 debugger operations from<br />the loopback binary monitor.<br />Video, audio, and input paths<br />need separate integration.</div>")
+        style 27 fill:#275c60,stroke:#d9a669,color:#ffffff
+        28("<div style='font-weight: bold'>ViceSharp Adapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: ViceSharp gRPC contracts]</div><div style='font-size: 80%; margin-top:10px'>Attaches to a configured<br />ViceSharp host and maps<br />supported session, monitor,<br />media, video, input,<br />snapshot, and diagnostics<br />operations.</div>")
+        style 28 fill:#275c60,stroke:#d9a669,color:#ffffff
+      end
+
+      29[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout,<br />preferences, configured<br />bucket sources, and project<br />settings with target preset,<br />pinned bundle, and user<br />artifact references.</div>")]
+      style 29 fill:#275c60,stroke:#d9a669,color:#ffffff
+      30[("<div style='font-weight: bold'>Local Emulator Bundle Store</div><div style='font-size: 70%; margin-top: 0px'>[Container: Per-user filesystem]</div><div style='font-size: 80%; margin-top:10px'>Holds verified, versioned<br />emulator archives and<br />expanded binaries, bindings,<br />install receipts, and the<br />last valid bucket metadata<br />for offline use.</div>")]
+      style 30 fill:#275c60,stroke:#d9a669,color:#ffffff
+    end
+
+    25-. "<div>Reads the project's pinned<br />bundle version and manifest<br />revision</div><div style='font-size: 70%'></div>" .->29
+    25-. "<div>Resolves verified local entry<br />points and holds the selected<br />version for the session</div><div style='font-size: 70%'></div>" .->30
+    25-. "<div>Resolves UAE presets</div><div style='font-size: 70%'></div>" .->26
+    25-. "<div>Resolves VICE presets</div><div style='font-size: 70%'></div>" .->27
+    25-. "<div>Resolves ViceSharp presets</div><div style='font-size: 70%'></div>" .->28
+    28-. "<div>Normalizes session state,<br />command outcomes, events, and<br />media streams</div><div style='font-size: 70%'></div>" .->25
+    26-. "<div>Launches or attaches through<br />UAE control when a<br />desktop-facing bridge is<br />available</div><div style='font-size: 70%'>[Planned UAE control bridge]</div>" .->31
+    27-. "<div>Starts x64sc and exchanges<br />supported debugger commands<br />and events</div><div style='font-size: 70%'>[Local process and loopback binary monitor]</div>" .->32
+    28-. "<div>Attaches to a configured host<br />and uses its published<br />session services</div><div style='font-size: 70%'>[gRPC]</div>" .->33
+    33-. "<div>Returns session data and<br />streams available events and<br />frames</div><div style='font-size: 70%'>[gRPC]</div>" .->28
+    16-. "<div>Loads project configuration<br />and target presets</div><div style='font-size: 70%'>[Local files]</div>" .->29
+    16-. "<div>Requests launch or attach<br />using resolved artifacts</div><div style='font-size: 70%'></div>" .->17
+    17-. "<div>Resolves the selected adapter<br />and invokes normalized<br />operations</div><div style='font-size: 70%'></div>" .->25
+    25-. "<div>Exposes the negotiated<br />session and optional<br />capability ports</div><div style='font-size: 70%'></div>" .->17
+
+  end

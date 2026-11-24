@@ -1,0 +1,31 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Deployment View: Windows Development"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    subgraph 122 ["Developer Workstation"]
+      style 122 fill:#ffffff,stroke:#1b4043,color:#ffffff
+
+      123("<div style='font-weight: bold'>Retro IDE Desktop</div><div style='font-size: 70%; margin-top: 0px'>[Container: .NET, Avalonia, Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Owns the workbench, user<br />workflows, selected-session<br />state, and emulator adapter<br />components.</div>")
+      style 123 fill:#275c60,stroke:#d9a669,color:#ffffff
+      124[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout,<br />preferences, configured<br />bucket sources, and project<br />settings with target preset,<br />pinned bundle, and user<br />artifact references.</div>")]
+      style 124 fill:#275c60,stroke:#d9a669,color:#ffffff
+      126[("<div style='font-weight: bold'>Local Emulator Bundle Store</div><div style='font-size: 70%; margin-top: 0px'>[Container: Per-user filesystem]</div><div style='font-size: 80%; margin-top:10px'>Holds verified, versioned<br />emulator archives and<br />expanded binaries, bindings,<br />install receipts, and the<br />last valid bucket metadata<br />for offline use.</div>")]
+      style 126 fill:#275c60,stroke:#d9a669,color:#ffffff
+      128("<div style='font-weight: bold'>UAE Developer</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Owns the UAE40 profile,<br />control service, isolated<br />worker and UAE-specific<br />protocol and diagnostics. The<br />desktop-facing interface is<br />pending.</div>")
+      style 128 fill:#57636b,stroke:#3c454a,color:#ffffff
+      130("<div style='font-weight: bold'>VICE</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External x64sc process and<br />Commodore 64 runtime. Its<br />binary monitor is the<br />documented debugger<br />interface.</div>")
+      style 130 fill:#57636b,stroke:#3c454a,color:#ffffff
+      132("<div style='font-weight: bold'>ViceSharp</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External .NET Commodore<br />emulator host with published<br />gRPC contracts.</div>")
+      style 132 fill:#57636b,stroke:#3c454a,color:#ffffff
+    end
+
+    123-. "<div>Reads and writes workspace<br />settings and layouts through<br />handlers</div><div style='font-size: 70%'>[Local files]</div>" .->124
+    123-. "<div>Installs verified files and<br />receipts atomically and<br />caches valid catalog metadata</div><div style='font-size: 70%'></div>" .->126
+    123-. "<div>Launches or attaches through<br />UAE control when a<br />desktop-facing bridge is<br />available</div><div style='font-size: 70%'>[Planned UAE control bridge]</div>" .->128
+    123-. "<div>Starts x64sc and exchanges<br />supported debugger commands<br />and events</div><div style='font-size: 70%'>[Local process and loopback binary monitor]</div>" .->130
+    132-. "<div>Returns session data and<br />streams available events and<br />frames</div><div style='font-size: 70%'>[gRPC]</div>" .->123
+    123-. "<div>Attaches to a configured host<br />and uses its published<br />session services</div><div style='font-size: 70%'>[gRPC]</div>" .->132
+
+  end

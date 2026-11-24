@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "id": "uae",
+  "label": "UAE",
+  "machine": {
+    "id": "UAE40-v1",
+    "cpu": "68040",
+    "video": "AGA",
+    "profileFile": "uae40.dev"
+  },
+  "connection": {
+    "adapter": "uae-developer",
+    "bundle": {
+      "bucket": "official",
+      "id": "uae"
+    },
+    "mode": "adapter-owned",
+    "machineProfile": "UAE40-v1"
+  }
+}

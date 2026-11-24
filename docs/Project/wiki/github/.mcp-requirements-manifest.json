@@ -1,0 +1,20 @@
+{
+  "schema": "mcp-requirements-wiki/v1",
+  "platform": "github",
+  "generatedAtUtc": "2026-11-24T17:55:17.3006854+00:00",
+  "documents": [
+    "Home.md",
+    "Functional-Requirements.md",
+    "Technical-Requirements.md",
+    "Testing-Requirements.md",
+    "TR-per-FR-Mapping.md",
+    "Requirements-Matrix.md",
+    "Project-Overview.md",
+    "Architecture.md",
+    "Emulator-Adapter-Contract.md",
+    "C4-Model.md",
+    "Wireframes-and-Storyboards.md",
+    "Shared-SVG-Components.md",
+    "Requirement-Ownership.md"
+  ]
+}

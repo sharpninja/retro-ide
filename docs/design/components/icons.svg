@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="ide-icon-pin"><path d="M6 3h5l-1 5 2 2H4l2-2zM8 10v4"/></g>
+    <g id="ide-icon-close"><path d="M4 4l8 8M12 4l-8 8"/></g>
+    <g id="ide-icon-down"><path d="m4 6 4 4 4-4"/></g>
+    <g id="ide-icon-save"><path d="M3 2h8l2 2v10H3zM5 2v4h5V2M5 14V9h6v5"/></g>
+    <g id="ide-icon-search"><path d="M10 10l4 4M11 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0"/></g>
+    <g id="ide-icon-play"><path d="M5 3l8 5-8 5z"/></g>
+    <g id="ide-icon-pause"><path d="M6 3v10m4-10v10"/></g>
+    <g id="ide-icon-stop"><path d="M4 4h8v8H4z"/></g>
+    <g id="ide-icon-step"><path d="M3 4h8m-4 5 3 3 3-3m-3-6v9"/></g>
+    <g id="ide-icon-window"><path d="M3 3h10v10H3z"/></g>
+    <g id="ide-icon-float"><path d="M5 3h8v8M3 5h8v8H3z"/></g>
+    <g id="ide-icon-minus"><path d="M3 8h10"/></g>
+    <g id="ide-icon-screen"><path d="M2 3h12v8H2zM5 14h6m-3-3v3"/></g>
+    <g id="ide-icon-file"><path d="M4 2h5l3 3v9H4zM9 2v4h3"/></g>
+    <g id="ide-icon-speaker"><path d="M2 6h3l4-3v10l-4-3H2zm9-1a4 4 0 0 1 0 6m2-8a7 7 0 0 1 0 10"/></g>
+    <g id="ide-icon-tree"><path d="M3 3v10m0-8h5m-5 6h5m0-8h5v4H8zm0 6h5v4H8z"/></g>
+  </defs>
+</svg>

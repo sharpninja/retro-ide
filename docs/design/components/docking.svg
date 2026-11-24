@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <symbol id="ide-tool-header-fill" viewBox="0 0 1 32" preserveAspectRatio="none">
+      <rect width="1" height="32" fill="#28343a"/>
+    </symbol>
+    <g id="ide-tool-header-accent"><rect width="3" height="32" fill="#edb77b"/></g>
+    <g id="ide-tool-header-actions" fill="none" stroke="#a8b5bb" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+      <use href="#ide-icon-down"/><use href="#ide-icon-close" x="50"/>
+    </g>
+    <symbol id="ide-tab-strip" viewBox="0 0 1 36" preserveAspectRatio="none">
+      <rect width="1" height="36" fill="#202b30"/>
+    </symbol>
+    <symbol id="ide-tab-active" viewBox="0 0 1 36" preserveAspectRatio="none">
+      <rect width="1" height="36" fill="#303b40"/>
+      <rect y="34" width="1" height="2" fill="#edb77b"/>
+    </symbol>
+    <g id="ide-docking-guide">
+      <rect x="1023" y="127" width="407" height="248" fill="#ecc188" fill-opacity=".27" stroke="#edb77b" stroke-dasharray="6 4"/>
+      <rect x="1227" y="209" width="38" height="38" rx="3" fill="#ebbd89" stroke="#fff0df"/>
+      <text x="1238" y="234" class="strong" fill="#212b2e">→</text>
+      <text x="1275" y="232" class="label" fill="#e6eaed">Dock right</text>
+    </g>
+  </defs>
+</svg>

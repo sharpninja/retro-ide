@@ -1,0 +1,41 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Container View: Retro IDE"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+    27("<div style='font-weight: bold'>UAE Developer</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Owns the UAE40 profile,<br />control service, isolated<br />worker and UAE-specific<br />protocol and diagnostics. The<br />desktop-facing interface is<br />pending.</div>")
+    click 27 https://github.com/sharpninja/uae-developer "https://github.com/sharpninja/uae-developer"
+    style 27 fill:#57636b,stroke:#3c454a,color:#ffffff
+    28("<div style='font-weight: bold'>VICE</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External x64sc process and<br />Commodore 64 runtime. Its<br />binary monitor is the<br />documented debugger<br />interface.</div>")
+    click 28 https://vice-emu.sourceforge.io/vice_2.html "https://vice-emu.sourceforge.io/vice_2.html"
+    style 28 fill:#57636b,stroke:#3c454a,color:#ffffff
+    29("<div style='font-weight: bold'>ViceSharp</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External .NET Commodore<br />emulator host with published<br />gRPC contracts.</div>")
+    click 29 https://github.com/sharpninja/vice-sharp "https://github.com/sharpninja/vice-sharp"
+    style 29 fill:#57636b,stroke:#3c454a,color:#ffffff
+    30("<div style='font-weight: bold'>Project Build Toolchain</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Operator-configured compiler,<br />assembler, or build task that<br />produces artifacts and<br />diagnostics for the current<br />project.</div>")
+    style 30 fill:#57636b,stroke:#3c454a,color:#ffffff
+    31("<div style='font-weight: bold'>Configured CLI or Desktop Agent</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Uses available scoped MCP<br />resources and commands; its<br />lifetime is independent of<br />the emulator session.</div>")
+    style 31 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      26[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout, user<br />preferences including display<br />language, and project<br />settings independently of<br />emulator state. Includes<br />references to target presets<br />and user-supplied project<br />artifacts.</div>")]
+      style 26 fill:#275c60,stroke:#d9a669,color:#ffffff
+      3("<div style='font-weight: bold'>Retro IDE Desktop</div><div style='font-size: 70%; margin-top: 0px'>[Container: .NET, Avalonia, Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Owns the workbench, user<br />workflows, selected-session<br />state, and emulator adapter<br />components.</div>")
+      style 3 fill:#275c60,stroke:#d9a669,color:#ffffff
+    end
+
+    1-. "<div>Works with projects,<br />documents, and docked tools</div><div style='font-size: 70%'></div>" .->3
+    3-. "<div>Reads and writes workspace<br />settings and layouts through<br />handlers</div><div style='font-size: 70%'>[Local files]</div>" .->26
+    3-. "<div>Runs the configured build and<br />collects diagnostics and<br />outputs</div><div style='font-size: 70%'>[Configured process]</div>" .->30
+    3-. "<div>Starts or attaches a<br />configured scoped agent</div><div style='font-size: 70%'>[Configured process and MCP stdio where supported]</div>" .->31
+    31-. "<div>Uses the scoped UAE MCP<br />boundary when available</div><div style='font-size: 70%'>[Planned MCP]</div>" .->27
+    3-. "<div>Launches or attaches through<br />UAE control when a<br />desktop-facing bridge is<br />available</div><div style='font-size: 70%'>[Planned UAE control bridge]</div>" .->27
+    3-. "<div>Starts x64sc and exchanges<br />supported debugger commands<br />and events</div><div style='font-size: 70%'>[Local process and loopback binary monitor]</div>" .->28
+    3-. "<div>Attaches to a configured host<br />and uses its published<br />session services</div><div style='font-size: 70%'>[gRPC]</div>" .->29
+
+  end

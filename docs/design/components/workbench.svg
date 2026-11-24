@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style id="ide-typography">
+      .ui { font: 14px "DejaVu Sans", sans-serif; }
+      .label { font: 13px "DejaVu Sans", sans-serif; }
+      .strong { font: bold 16px "DejaVu Sans", sans-serif; }
+      .mono { font: 15px "DejaVu Sans Mono", monospace; white-space: pre; }
+      .log { font: 13px "DejaVu Sans Mono", monospace; white-space: pre; }
+    </style>
+    <g id="ide-workbench">
+      <rect width="1440" height="900" fill="#202a2f"/>
+      <rect width="1440" height="44" fill="#192327"/>
+      <rect x="16" y="11" width="23" height="23" rx="4" fill="#edb77b"/>
+      <text x="22" y="28" class="strong" fill="#25201c">R</text>
+      <text x="51" y="28" class="strong" fill="#e6eaed">Retro IDE</text>
+      <rect x="580" y="9" width="280" height="27" rx="4" fill="#263338" stroke="#3a484d"/>
+      <text x="617" y="27" class="label" fill="#a8b5bb">Search commands and files</text>
+      <text x="795" y="27" class="label" fill="#b3bfc3">Ctrl+Q</text>
+      <rect y="44" width="1440" height="36" fill="#242f34"/>
+      <g class="ui" fill="#e6eaed">
+        <text x="19" y="67">File</text><text x="73" y="67">Edit</text>
+        <text x="127" y="67">View</text><text x="181" y="67">Project</text>
+        <text x="259" y="67">Build</text><text x="321" y="67">Debug</text>
+        <text x="383" y="67">Test</text><text x="437" y="67">Window</text>
+        <text x="507" y="67">Help</text>
+      </g>
+      <rect y="80" width="1440" height="42" fill="#28353a"/>
+      <rect x="52" y="87" width="106" height="27" rx="3" fill="#182429" stroke="#43545a"/>
+      <rect x="171" y="87" width="153" height="27" rx="3" fill="#182429" stroke="#43545a"/>
+      <rect x="335" y="87" width="78" height="27" rx="3" fill="#263f3d" stroke="#47746a"/>
+      <g class="label" fill="#e6eaed">
+        <text x="63" y="105">Debug</text>
+        <text x="640" y="105">Build Project</text><text x="751" y="105">Run Tests</text>
+      </g>
+      <rect y="122" width="38" height="748" fill="#1a2429"/>
+      <text class="label" fill="#a6b5bc" transform="translate(24 393) rotate(-90)">Guest Explorer</text>
+      <g fill="none" stroke="#a8b5bb" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <use href="#ide-icon-search" x="592" y="14"/>
+        <use href="#ide-icon-minus" x="1337" y="14"/>
+        <use href="#ide-icon-window" x="1371" y="14"/>
+        <use href="#ide-icon-close" x="1405" y="14"/>
+        <use href="#ide-icon-save" x="21" y="92"/>
+        <use href="#ide-icon-down" x="136" y="92"/>
+        <use href="#ide-icon-down" x="302" y="92"/>
+        <use href="#ide-icon-play" x="341" y="92" stroke="#a7dad0"/>
+        <use href="#ide-icon-tree" x="10" y="137"/>
+        <use href="#ide-icon-screen" x="10" y="174"/>
+        <use href="#ide-icon-search" x="10" y="211"/>
+      </g>
+      <rect x="43" y="127" width="971" height="531" fill="#141e23" stroke="#46555b"/>
+      <rect x="1023" y="127" width="407" height="531" fill="#182327" stroke="#46555b"/>
+      <rect x="43" y="667" width="1387" height="196" fill="#172226" stroke="#46555b"/>
+      <rect y="873" width="1440" height="27" fill="#293f42"/>
+      <text x="1329" y="891" class="label" fill="#e6eaed">Local</text>
+    </g>
+  </defs>
+</svg>

@@ -1,0 +1,55 @@
+{
+  "snapshotId": "design-01-mvc-commanding",
+  "previousSnapshot": "../design-00-ide-split/manifest.json",
+  "capturedAtLocal": "2026-11-24T11:07:58-06:00",
+  "state": "Design snapshot. Desktop runtime and emulator adapters are planned.",
+  "workspace": {
+    "path": "workspace.dsl",
+    "sha256": "e9252550ad74520d13ead4865129c8dfb5eb08822293ec4b20993efad6b0453a"
+  },
+  "design": {
+    "architecture": "../../../../architecture.md",
+    "requirementOwnership": "../../../../requirement-ownership.md",
+    "requirements": ["FR-RETRO-007", "TR-RETRO-COMMAND-007", "TEST-RETRO-007"]
+  },
+  "validation": {
+    "cliImage": "structurizr/cli:2025.11.09",
+    "cliImageId": "sha256:0399ac8e24c16e41277cfcec22caa29e4775013e5395c0720016828426d62749",
+    "workspaceValidation": "passed",
+    "mermaidExport": "passed"
+  },
+  "exports": [
+    {
+      "path": "exports/mermaid/structurizr-AdapterComponents.mmd",
+      "sha256": "754e81750ae90eceb60cd3ff293e95415d208fb6fbac766a1d351a80d58e6021"
+    },
+    {
+      "path": "exports/mermaid/structurizr-BuildLaunchDebug.mmd",
+      "sha256": "81ba22a689fbe4a230913784dc03cb9a247945c520cb0da3c7613227d6c4d5cd"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandDispatch.mmd",
+      "sha256": "5c4ce344a0cbad81be4942104d78d1a55958242aa7f9758315754d28abe9c41e"
+    },
+    {
+      "path": "exports/mermaid/structurizr-Containers.mmd",
+      "sha256": "58bc6ed6c2681234258476586aca66644e4a1a39770c4f35a508bdb1511d77d1"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DesktopComponents.mmd",
+      "sha256": "d5d1d5b0ea2acb1ac00a06a54f09113b1b682fe66c104dd3aec4766fdfff6d06"
+    },
+    {
+      "path": "exports/mermaid/structurizr-LinuxDeployment.mmd",
+      "sha256": "809248a791472940e6c8660968920975cbc02999b3506cbf3a901796ab721059"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemContext.mmd",
+      "sha256": "31231c01edd53f780bdcf882eb1d3634ef388fd8fe9e1907afb89b844eef88a9"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WindowsDeployment.mmd",
+      "sha256": "6a7e14c7c6f431ce7c620cfbfabd7dc2cdc862cfa769a6d74661a8990af55cbe"
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "snapshotId": "design-06-emulator-integration",
+  "previousSnapshot": "../design-05-system-wait-cursor/manifest.json",
+  "capturedAtLocal": "2026-11-24T11:40:18-06:00",
+  "state": "Design snapshot. Bundles, Emulators management, and the shared runtime contract are planned.",
+  "workspace": {
+    "path": "workspace.dsl",
+    "sha256": "7a5f77de0f7bf9de6abfe444eb953e066252f0c3e1b6b1b381c8fa94dca3120c"
+  },
+  "design": {
+    "architecture": "../../../../architecture.md",
+    "adapterContract": "../../../../emulator-adapter-contract.md",
+    "requirementOwnership": "../../../../requirement-ownership.md",
+    "requirements": [
+      "FR-RETRO-009",
+      "TR-RETRO-BUNDLE-009",
+      "TEST-RETRO-009",
+      "FR-RETRO-010",
+      "TR-RETRO-ADAPTER-010",
+      "TEST-RETRO-010"
+    ]
+  },
+  "validation": {
+    "cliImage": "structurizr/cli:2025.11.09",
+    "cliImageId": "sha256:0399ac8e24c16e41277cfcec22caa29e4775013e5395c0720016828426d62749",
+    "workspaceValidation": "passed",
+    "mermaidExport": "passed"
+  },
+  "exports": [
+    {
+      "path": "exports/mermaid/structurizr-AdapterComponents.mmd",
+      "sha256": "af4f61a03d8dd0625b8857bb21d00be827436b883f49ca6e77bb3328d630e860"
+    },
+    {
+      "path": "exports/mermaid/structurizr-BuildLaunchDebug.mmd",
+      "sha256": "d8cdd8f27f6e8b4b12d02e81d31ceba6731eddd423bef8a39d89300cd8519ecd"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandDispatch.mmd",
+      "sha256": "a6354da48947602b8eb3072212d560ac2d1a1d8e1cddfca11778e0d0fb6648a7"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandLocalization.mmd",
+      "sha256": "8eb5ecbef64ade2edb1c880854f44480e1bcf7bd2a4bb7fbe70b30b7bedad5a7"
+    },
+    {
+      "path": "exports/mermaid/structurizr-Containers.mmd",
+      "sha256": "8339a30fa74749b71255bc35ccac0f0b5d0a3ef1409581a951c0abb947a4b3a5"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DesktopComponents.mmd",
+      "sha256": "3176930e3ca94120674707a131a8357e7e876f8ef8a4851bcb43285ba3e2d0fb"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DocumentMdiSave.mmd",
+      "sha256": "45193a6f757d620c233d8d0fce9809c72c7c8c0e2fe3dec0ab4051815410d988"
+    },
+    {
+      "path": "exports/mermaid/structurizr-EmulatorBundleInstall.mmd",
+      "sha256": "873b37968e46fd08b8a93aab59dc851c5dd42d7efe1f7373f93cc85196e17d61"
+    },
+    {
+      "path": "exports/mermaid/structurizr-EmulatorSessionContract.mmd",
+      "sha256": "ff0fef7076a41d44d726e127167801831eed1293b27efb700449e0ebd7ab3f7f"
+    },
+    {
+      "path": "exports/mermaid/structurizr-LinuxDeployment.mmd",
+      "sha256": "c577c933748e227d5d52c13fda8d46b6730f488fc282e746c2e9455561fa6095"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemContext.mmd",
+      "sha256": "128d9f9d78e02dd57822245e75839380f823d12c157858a47f8a18212349a341"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemWaitCursor.mmd",
+      "sha256": "bf0dafa1ce14010b2bd734c52fe67594397298c1d18510d1b6c10c17ae6860e1"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WindowsDeployment.mmd",
+      "sha256": "3c722bef1b88c96109f3be8fd6f2305184d1b72724ff5ebefabd412d97121697"
+    }
+  ]
+}

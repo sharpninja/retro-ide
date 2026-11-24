@@ -1,0 +1,71 @@
+{
+  "snapshotId": "design-05-system-wait-cursor",
+  "previousSnapshot": "../design-04-controller-ownership/manifest.json",
+  "capturedAtLocal": "2026-11-24T11:30:48-06:00",
+  "state": "Design snapshot. The desktop and its scoped system wait cursor are planned.",
+  "workspace": {
+    "path": "workspace.dsl",
+    "sha256": "b767c0503a99c1acc630cad17aca0e1a5138afd8f55aef2424941c6ddf38bc94"
+  },
+  "design": {
+    "architecture": "../../../../architecture.md",
+    "requirementOwnership": "../../../../requirement-ownership.md",
+    "requirements": [
+      "FR-RETRO-007",
+      "TR-RETRO-COMMAND-007",
+      "TEST-RETRO-007"
+    ]
+  },
+  "validation": {
+    "cliImage": "structurizr/cli:2025.11.09",
+    "cliImageId": "sha256:0399ac8e24c16e41277cfcec22caa29e4775013e5395c0720016828426d62749",
+    "workspaceValidation": "passed",
+    "mermaidExport": "passed"
+  },
+  "exports": [
+    {
+      "path": "exports/mermaid/structurizr-AdapterComponents.mmd",
+      "sha256": "f3241655a4f13a29cab2f6555db1a36b91e74d98d1d642df6c63b5c29245cbd2"
+    },
+    {
+      "path": "exports/mermaid/structurizr-BuildLaunchDebug.mmd",
+      "sha256": "95b30ae911501ad56d99f1b375fa5c9123577a1fb24d1a07f65aac78971ccbf1"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandDispatch.mmd",
+      "sha256": "22886805aae5c17806535ebb6f7c188724c101b53dc307406b4eab62cfc79ae3"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandLocalization.mmd",
+      "sha256": "b2ef9c3438406f9ff25b52fbfdd98b1d023748f207c4c1cc2d793d5248c63c41"
+    },
+    {
+      "path": "exports/mermaid/structurizr-Containers.mmd",
+      "sha256": "51110c5e4f2c8b9c348566c38ec28e38d96d91541b99b170a92f1ba18f735279"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DesktopComponents.mmd",
+      "sha256": "ea7645201cb334555b4af90ce4fe1b68dedc6d06ada158ba490a3050d86b46c9"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DocumentMdiSave.mmd",
+      "sha256": "45193a6f757d620c233d8d0fce9809c72c7c8c0e2fe3dec0ab4051815410d988"
+    },
+    {
+      "path": "exports/mermaid/structurizr-LinuxDeployment.mmd",
+      "sha256": "4f8e5bacf69782b9a8aeb1ca0f6a68b3750816a9d014ab41eb29a25712d4367e"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemContext.mmd",
+      "sha256": "f0a4466eb80490c05a404ea4da11ff6501061ad587f40d5f2d587d4c382d9dfa"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemWaitCursor.mmd",
+      "sha256": "bf0dafa1ce14010b2bd734c52fe67594397298c1d18510d1b6c10c17ae6860e1"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WindowsDeployment.mmd",
+      "sha256": "78ba6d9d386497aac6fb5dd1c9400797e4fd739728d60d2b1a1b47deebf216a5"
+    }
+  ]
+}

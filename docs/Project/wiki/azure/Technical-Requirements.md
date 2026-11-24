@@ -1,0 +1,128 @@
+# Technical Requirements (QBrain.AI)
+
+## TR-RETRO-ADAPTER-010
+
+**Versioned .NET session contract and capability ports** — Define the shared .NET adapter factory, session identity and lifetime, optional capability ports, request and event semantics, and media stream boundaries.
+**Covered by:** FR: FR-RETRO-010; TEST: TEST-RETRO-010
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Check the bundle adapter identity and supported contract versions. Negotiate a compatible session with stable identity, lifecycle, state revision, capabilities, an event cursor, and an explicit close policy for launch versus attach.
+- [ ] Discover typed capability ports with negotiated versions and limits for execution, debugger and inspection, video, audio, input, media, snapshots and replay, console and diagnostics, and guest tools. Unknown optional extensions preserve common session behavior.
+- [ ] Route scoped operations with correlated IDs and expected revisions where applicable. Normalize typed outcomes and errors while preserving backend authorization. Reconcile uncertain mutation outcomes before unsafe retries.
+- [ ] Expose ordered control events with cursor resumption or explicit gap recovery. Keep bounded and separately timestamped media streams independent of control traffic and release subscriptions and bundle leases on session disposal.
+- [ ] Document the UAE control, VICE binary monitor, and ViceSharp gRPC mappings. Distinguish frame capture from continuous video, and only advertise verified capabilities.
+
+## TR-RETRO-AGENT-006
+
+**Integrated agent activity and scoped control contract** — Use local MCP stdio for a launched agent and shared instance identity and authorization across IDE and headless clients.
+**Covered by:** FR: FR-RETRO-006; TEST: TEST-RETRO-006
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Agent activity respects host capabilities and permissions and does not introduce a path around the adapter.
+
+## TR-RETRO-AVINPUT-003
+
+**Emulation video, audio, input, and replay controls contract** — Adapt media streams and input through capability-driven contracts. Keep presentation and host playback controls independent of the underlying transport.
+**Covered by:** FR: FR-RETRO-003; TEST: TEST-RETRO-003
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Use adapter-described dimensions, format, timing, and input routing. Prevent media, input, and playback state from bleeding between instances.
+
+## TR-RETRO-BUNDLE-009
+
+**Emulator bundle publishing and installation contract** — Read versioned JSON manifests from configured Git buckets, verify host-specific release archives, and resolve installed bindings through pinned receipts.
+**Covered by:** FR: FR-RETRO-009; TEST: TEST-RETRO-009
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Each emulator repository entry is bucket/<id>.json at a recorded Git commit. It declares schema version, stable bundle ID, immutable release version, display and license metadata, adapter identity and compatible contract, and runtime-identifier targets with archive URLs, SHA-256 and relative entry points.
+- [ ] Select a compatible platform artifact, verify SHA-256, validate archive paths and entry points, and publish the staged files and receipt atomically. A failed or canceled operation leaves verified versions usable.
+- [ ] Resolve emulator binaries and bindings from a compatible receipt matching the project pin, with a clear diagnostic for missing or incompatible versions. A live session holds its installed bundle version and prevents its removal.
+
+## TR-RETRO-COMMAND-007
+
+**SimpleMVC command dispatch and CQRS Unit of Work** — Use CommunityToolkit.Mvvm for observable IView ViewModels and RelayCommand or AsyncRelayCommand bindings. Each view registers directly with its dispatching SimpleMVC controller, which handles its events, dispatches typed requests through the main controller shared CQRS Unit of Work entry point, and delivers the results through Avalonia.
+**Covered by:** FR: FR-RETRO-007; TEST: TEST-RETRO-007
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] The view binds equivalent entries to a shared ICommand with a stable ID. CanExecute reads eligibility published by the Model, and CanExecuteChanged refreshes the bound controls.
+- [ ] The main controller derives from GPS.SimpleMVC.Controllers.SimpleControllerBase and provides the shared execution entry point to the custom CQRS Unit of Work. Dispatch owners use that entry point with the typed request and captured context.
+- [ ] A stale command context or an unsupported capability produces no emulator mutation. The adapter host remains authoritative for authorization.
+- [ ] Use the GPS.SimpleMVC NuGet package. Every IDE ViewModel implements Retro IDE IView, which extends GPS.SimpleMVC.Views.ISimpleView. Each live ViewModel has a unique ViewKey and participates in the SimpleMVC view registry.
+- [ ] All IDE application logic uses the custom CQRS Unit of Work dispatched by the main MVC controller. The Unit of Work scopes each typed request and invokes a registered handler. Queries return read-only results. Commands validate context and publish operation progress and outcomes to the Model.
+- [ ] Every IDE ViewModel derives from CommunityToolkit.Mvvm ObservableObject, uses generated observable properties for UI state, and implements IView for SimpleMVC registration.
+- [ ] Shared UI commands use RelayCommand or AsyncRelayCommand. Task-based commands await completion, expose IsRunning, suppress repeat activation by default, and forward supported cancellation tokens. Eligibility changes invalidate CanExecute through the Toolkit API.
+- [ ] The controller a view registers with subscribes once and detaches on removal. Toolkit commands raise CommandRequested on the originating registered view with a request ID, ViewKey, command ID, captured context, and any applicable cancellation token. Its dispatch owner verifies the sender and selects the typed CQRS request.
+- [ ] The dispatch owner schedules correlated success, failure, and cancellation on the Avalonia UI dispatcher. The owner checks that its originating registration is still live in the callback, then updates that view. Shared model state remains observable independently.
+- [ ] Each live IView registers directly with one SimpleMVC controller. That registration determines the dispatch owner and the sole CommandRequested subscription. The owner dispatches the request and delivers the result. Multiple controllers can own distinct views at the same time.
+- [ ] In the tabbed MDI reference design, each editor tab implements IView and registers directly with DocumentController. The active tab supplies the document command binding. The chosen command captures the document ID and editor registration at invocation.
+- [ ] Publish interaction blocks by operation and UI scope. Apply Avalonia StandardCursorType.Wait to the affected surfaces on the UI thread, keep paint and available input responsive, and clear the temporary override once all covering operations release their blocks on completion, failure, or cancellation.
+
+## TR-RETRO-DEBUG-004
+
+**Debugger, console, and guest inspection tools contract** — Use machine metadata and optional extensions to present address spaces, registers, device inspectors, symbol resolution, and guest features.
+**Covered by:** FR: FR-RETRO-004; TEST: TEST-RETRO-004
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] The common shell does not assume 68040, AGA, 32-bit addresses, ELF/DWARF, or an A1200 OS guest.
+- [ ] Tag observed state by target and instance. Display raw state safely when an optional interpreter or guest extension is unavailable.
+
+## TR-RETRO-DESKTOP-001
+
+**Dockable cross-platform IDE shell contract** — Use Avalonia and Dock.Avalonia on .NET. Serialize layout separately from emulator state and route instance operations through the adapter boundary.
+**Covered by:** FR: FR-RETRO-001; TEST: TEST-RETRO-001
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Run the desktop on Windows and Linux without requiring the adapter host to load desktop dependencies.
+- [ ] Restore the docking layout without altering emulator instance state.
+- [ ] Reattach to a running instance through the adapter.
+
+## TR-RETRO-EDITOR-011
+
+**AvaloniaEdit editor surface and integration** — Implement the Windows and Linux source surface using AvaloniaEdit.TextEditor from Avalonia.AvaloniaEdit. Integrate it with tabbed MDI and the existing controller and CQRS path.
+**Covered by:** FR: FR-RETRO-011; TEST: TEST-RETRO-011
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Host a separate AvaloniaEdit.TextEditor and document buffer per source tab. Provide line numbers, search and replace, supported language highlighting, and a plain-text fallback.
+- [ ] Use the tab's registered IView and DocumentController for document commands. Capture document ID, buffer, and revision for save and apply results through the Avalonia UI dispatcher.
+- [ ] Project diagnostics and debugger locations into the source view. Route gutter requests through the view owner, CQRS, and the selected adapter capability.
+
+## TR-RETRO-LOCALIZATION-008
+
+**Command descriptors and typed locale catalogs** — Attach label and icon slugs and a default keyboard gesture to every ICommand registration. Use one localizer for typed text and image lookup, locale-aware formatting, fallback, and live presentation updates.
+**Covered by:** FR: FR-RETRO-008; TEST: TEST-RETRO-008
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Each shared ICommand has a stable ID, label slug, icon slug, and a default gesture. Any platform override supplies both the displayed shortcut and the binding. Gesture validation detects collisions in overlapping activation scopes.
+- [ ] Versioned BCP 47 locale packs resolve typed text or image slugs. Text entries are UTF-8 strings or message patterns. Image entries resolve to packaged SVG or PNG resources inside the pack. Bundled English covers every required slug.
+- [ ] Lookup tries exact and parent locales, then bundled English, independently for each resource. An unresolved slug produces a placeholder string or fallback icon and a diagnostic identifying the slug and type.
+- [ ] The resolver supports named typed arguments, plural and select forms, and culture-aware number and date formatting. It applies plural rules from the resolved translation's locale.
+- [ ] Validation checks resource kinds, paths, message arguments, command IDs, and required descriptor fields. The MVC controller dispatches a typed language change through the CQRS Unit of Work to persist and publish culture changes, and open views update bindings and layout direction.
+
+## TR-RETRO-PROFILE-002
+
+**Target selection and project launch contract** — Use an emulator-neutral, versioned preset and capability-driven adapter contract.
+**Covered by:** FR: FR-RETRO-002; TEST: TEST-RETRO-002
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Validate the shared preset shape independently of adapter-specific payload validation. Keep binaries, ROMs, and endpoint settings external.
+- [ ] Distinguish deliberate capability unavailability from adapter connection or launch failures.
+
+## TR-RETRO-WORKFLOW-005
+
+**Media, snapshots, tests, and diagnostics contract** — Use adapter-reported operation progress, status, and artifact identity. Keep artifact storage and emulator-specific compatibility decisions in their owning hosts.
+**Covered by:** FR: FR-RETRO-005; TEST: TEST-RETRO-005
+**Status:** pending
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] Route mutations through authorized instance operations and carry provenance and operation state into the corresponding panels.
+

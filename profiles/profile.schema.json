@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Retro IDE target preset",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "id",
+    "label",
+    "machine",
+    "connection"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "machine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "cpu",
+        "video",
+        "profileFile"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "cpu": {
+          "type": "string"
+        },
+        "video": {
+          "type": "string"
+        },
+        "profileFile": {
+          "type": "string"
+        }
+      }
+    },
+    "connection": {
+      "description": "The selected adapter validates its own connection options.",
+      "type": "object",
+      "required": [
+        "adapter",
+        "mode"
+      ],
+      "properties": {
+        "adapter": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "bundle": {
+          "description": "Emulator bundle identity. The project pins its selected installed version and manifest revision separately.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["bucket", "id"],
+          "properties": {
+            "bucket": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          }
+        },
+        "mode": {
+          "enum": [
+            "adapter-owned",
+            "launch",
+            "attach"
+          ]
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

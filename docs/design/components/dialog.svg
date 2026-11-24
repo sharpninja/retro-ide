@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="ide-confirmation-dialog">
+      <rect width="1440" height="900" fill="#0a1012" opacity=".69"/>
+      <rect x="434" y="319" width="572" height="253" rx="5" fill="#263237" stroke="#687a80"/>
+      <rect x="711" y="512" width="102" height="34" rx="3" fill="#34464c" stroke="#60747a"/>
+      <rect x="823" y="512" width="160" height="34" rx="3" fill="#edb77b"/>
+      <text x="734" y="534" class="label" fill="#e6eaed">Cancel</text>
+    </g>
+  </defs>
+</svg>

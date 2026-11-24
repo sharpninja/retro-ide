@@ -1,0 +1,109 @@
+# Retro IDE architecture
+
+The [Structurizr C4 model](architecture/structurizr/README.md) locates these responsibilities in the IDE and shows the UAE, VICE, and ViceSharp integration boundaries.
+
+Retro IDE owns the .NET desktop shell, saved layouts, project and launch configuration, source and debugger tabs, Emulation, input capture and host volume, media and snapshot dialogs, diagnostics and test views, and scoped agent activity. QBrain workspace `/home/sharpninja/github/retro-ide` owns these UI requirements.
+
+Each session is identified by an adapter and an instance ID. The IDE consumes negotiated capabilities, machine metadata, and normalized events. The selected target drives register labels, address width, device names, media formats, and tool availability. Session-specific state follows the selected instance. Layout files remain independent of emulator state.
+
+The IDE calls adapters through a versioned host contract. Adapters translate profile data, launch or attach to the host, and translate lifecycle, media, video, audio, input, diagnostics, and debug operations. Unsupported operations are surfaced as unavailable. Recorded timeline seeking requires a seekable recording source and is independent of live CPU stepping or rewind.
+
+The [emulator adapter contract](emulator-adapter-contract.md) defines the .NET factory and session interfaces, optional capability ports, request and event semantics, and backend mappings.
+
+## MVVM Toolkit, SimpleMVC, and CQRS
+
+Avalonia menus, command bars, and keyboard bindings use the predefined command catalog. Each registration provides a stable ID and one shared `ICommand` instance per activation scope. A preset supplies target data to the command. [Avalonia commanding](https://docs.avaloniaui.net/docs/input-interaction/commanding)
+
+Use the .NET Community Toolkit's `CommunityToolkit.Mvvm` package for ViewModels and presentation commands. ViewModels derive from `ObservableObject` and use `[ObservableProperty]` for UI-bound properties. Every ViewModel implements Retro IDE's `IView`, which extends `GPS.SimpleMVC.Views.ISimpleView`, and owns a unique `Guid ViewKey` for its registration lifetime. GPS.SimpleMVC 2.0.0 provides the main MVC controller and view registry. [MVVM Toolkit package](https://www.nuget.org/packages/CommunityToolkit.Mvvm) · [GPS.SimpleMVC package](https://www.nuget.org/packages/GPS.SimpleMVC/2.0.0)
+
+Use Toolkit `RelayCommand` for synchronous dispatch and `AsyncRelayCommand` for task-based dispatch such as Build Project and Start Debugging. Use `[RelayCommand]` on ViewModel dispatch methods, or construct those same Toolkit command types when registering a command directly in the catalog. Cache the instance in the registration so every bound control observes the same eligibility and execution state. Commands capture the originating view and invocation context and raise that view's command event. Async commands await the request's completion, expose `IsRunning`, disable repeat activation by default while pending, and forward a cancellation token for operations that support cancellation. [Toolkit command generator](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/generators/relaycommand)
+
+- **View** binds Avalonia controls to Toolkit commands and registered ViewModels. The ViewModels project model updates for selection, progress, diagnostics, and outcomes onto the UI thread.
+- **Model** exposes workspace, active document and target, selected instance, negotiated capabilities, and operation state. `CanExecute` reads published eligibility. Use `[NotifyCanExecuteChangedFor]` on dependent ViewModel properties or `IRelayCommand.NotifyCanExecuteChanged()` when eligibility changes arrive from the model or active scope.
+- **Controllers** derive from `SimpleControllerBase`. A view registers directly with its dispatching controller. That controller handles the view's events, dispatches its typed requests, and schedules its results through Avalonia. The main controller owns workbench-wide views and provides the shared execution entry point to the CQRS Unit of Work.
+- **CQRS Unit of Work** owns IDE application logic. A request gets a scope for its context, handlers, and dependencies. Command handlers validate the captured context, coordinate workflow and adapter effects, and publish outcomes to the model. Query handlers return read-only results. The adapter host enforces emulator authorization.
+
+Build Project runs the configured build and publishes diagnostics. Start Debugging builds first and launches only after success. Disabled commands produce no operation. The Unit of Work revalidates eligibility after dispatch and rejects stale requests before applying changes. An emulator operation reports its own outcome through the adapter.
+
+### View events and result delivery
+
+1. Each `IView` registers with one controller by `ViewKey`. Registration establishes the dispatch owner. That controller subscribes once to `CommandRequested` and unsubscribes when the view closes or its registration is replaced. Menu, command-bar, and keyboard bindings use the command registered for the originating view's activation scope.
+2. The Toolkit command raises `CommandRequested` on that view. The event carries the command ID, a unique request ID, the originating `ViewKey`, captured context, and a cancellation token when applicable. The owner checks the sender against its live registration, resolves the command ID, and dispatches the typed request through the main controller's shared CQRS execution entry point. The owner supplies the completion task to an async command. An invocation without a registered subscriber completes as unavailable.
+3. The owner awaits the handler and uses `Dispatcher.UIThread.InvokeAsync` to deliver success, failure, or cancellation to the originating view. The callback checks that the originating registration is still live under that owner and correlates the result by request ID. Closing or replacing the registration suppresses delivery. Focus and docking changes preserve the recipient while the registration is live. Shared application state and diagnostics flow through the model. [Avalonia threading model](https://docs.avaloniaui.net/docs/app-development/threading)
+
+### Tabbed document editing
+
+The workbench can use a `DocumentController` for tabbed MDI. Each editor tab has its own `IView` ViewModel and registers directly with that controller. The document controller owns editor subscriptions and dispatches document commands such as Edit, Save, and Close. CQRS handlers own document operations and publish document state to the model.
+
+The active editor tab supplies the document-scoped command bindings for its workbench window. Invoking Save captures that tab's document ID and originating registration. The document controller receives the event, dispatches the typed save request, and uses Avalonia to return its outcome to that editor. Selecting another tab during the save changes the bindings for the next command. The pending save keeps its captured document and recipient.
+
+### Source editor
+
+Use `AvaloniaEdit.TextEditor` from the `Avalonia.AvaloniaEdit` NuGet package for source documents in tabbed MDI. WebScene demonstrates Monaco inside an Avalonia window, with published Monaco-specific setup and verification for macOS. Cross-platform clipboard and text composition remain open in its published compatibility scope. Avalonia also supplies a general-purpose web host for Windows and Linux. The baseline editor uses the documented AvaloniaEdit control. [AvaloniaEdit](https://github.com/AvaloniaUI/AvaloniaEdit) · [WebScene Monaco compatibility](https://github.com/SceneTech/WebScene/blob/main/docs/monaco-compatibilty.md#remaining-compatibility-boundary) · [Avalonia NativeWebView](https://docs.avaloniaui.net/controls/web/nativewebview)
+
+- Each editor tab keeps its own text buffer, caret, selection, undo history, and dirty state when the tab is switched or moved to a floating workbench window. Provide line numbers, find and replace, and syntax highlighting for registered source grammars. Use the TextMate integration where a matching grammar is available and display other files as plain text. [AvaloniaEdit controls and TextMate integration](https://github.com/AvaloniaUI/AvaloniaEdit#avaloniaedit)
+- The control handles immediate text input and editing gestures. The tab's `IView` and `DocumentController` retain ownership of document commands through CQRS. Save captures the document ID, buffer contents, and revision. A completed save clears the dirty state for the saved revision, and later edits remain dirty. A failed save keeps the buffer and reports the error to the originating tab.
+- Build diagnostics and debugger source locations identify a project file and line, with a column when available. Navigation opens or selects the editor tab and reveals the location. An editor gutter action requests a breakpoint through the registered controller and negotiated emulator adapter. The editor displays the reported breakpoint state, while raw debugger tools remain usable when source mapping is unavailable.
+
+QBrain tracks the editor under `FR-RETRO-011`, `TR-RETRO-EDITOR-011`, and `TEST-RETRO-011`.
+
+### System wait cursor
+
+When a background operation temporarily blocks interaction, publish the affected UI scope in the model. Each affected Avalonia surface applies the platform's standard wait cursor (`StandardCursorType.Wait`) over the blocked region on the UI thread. A whole-window block covers the window's blocked client area. The view keeps processing paint and input, and available actions such as Cancel keep their normal pointer. Background operations that leave interaction available keep the normal pointer. [Avalonia cursor management](https://docs.avaloniaui.net/docs/input-interaction/pointer#cursor-management)
+
+Track each operation's block independently and release it on completion, failure, or cancellation. Keep the wait cursor while any operation still blocks that region. When the last block clears, remove the temporary override so the surface resumes its normal cursor, including text and resize cursors. Apply the same scope rules to docked and floating views.
+
+QBrain tracks this design under `FR-RETRO-007`, `TR-RETRO-COMMAND-007`, and `TEST-RETRO-007`. STB14 illustrates the Build and Start Debugging workflow.
+
+## Command metadata and localization
+
+Every command registration pairs its shared `ICommand` with an immutable descriptor containing a stable command ID, label slug, icon slug, and default keyboard gesture. A descriptor can specify a Windows or Linux gesture override where needed. The workbench derives both the displayed shortcut and the keyboard binding from the effective gesture. Menus, command bars, and keyboard bindings invoke the same command within its activation scope and honor its `CanExecute` state. Guest input capture follows its own focus and input routing policy.
+
+| Illustrative command ID | Label slug | Icon slug | Default gesture |
+| --- | --- | --- | --- |
+| `project.build` | `command.project.build.label` | `command.project.build.icon` | Ctrl+Shift+B |
+| `debug.start` | `command.debug.start.label` | `command.debug.start.icon` | F5 |
+
+A shared localization service resolves a namespaced slug as a text or image resource from a versioned locale catalog. The default English (`en`) catalog ships with the IDE. Additional language packs declare a BCP 47 locale and supply translated strings, message patterns, and optional image variants. Each pack has a manifest with typed entries. A text entry holds a UTF-8 string or message pattern. An image entry names a packaged SVG or PNG relative to that pack. Translators can reuse the default icon by leaving the translated image entry absent. The service uses the same lookup for command labels, tooltips, accessible names, diagnostics, and other IDE-owned UI resources. [BCP 47 language tags](https://www.rfc-editor.org/info/rfc5646/)
+
+- **Lookup.** Resolve each slug independently from the selected locale to its parent tags and then to `en`. For `fr-CA`, the service checks `fr-CA`, `fr`, and `en` in order. A missing or unusable entry advances the lookup and produces a diagnostic for malformed entries. If the default also fails, return a visible placeholder string or fallback icon and record the missing slug and resource kind. [BCP 47 lookup](https://www.rfc-editor.org/rfc/rfc4647.html#section-3.4)
+- **Formatting.** Support named arguments, plural and select forms, and locale-aware number and date formatting. Use the resolved message's locale for plural rules and the user's formatting culture for number and date values. Preserve parameters as typed data so translations can reorder them. [ICU message formatting](https://unicode-org.github.io/icu/userguide/format_parse/messages/)
+- **Language changes.** Start with the OS language or a saved IDE choice. A language change goes through the main MVC controller and CQRS Unit of Work, which persists the choice and publishes the updated presentation culture. Open windows refresh text, images, accessible names, and layout direction through Avalonia bindings. The command ID, default gesture, and handler stay the same when the UI language changes.
+- **Validation.** Check command IDs, required descriptor fields, default resource coverage, resource kinds, gesture syntax, and overlapping shortcut scopes at build time. Validate language pack manifests, message arguments, and that local image paths resolve within the pack before accepting a pack. Tests cover a partial locale, a right-to-left locale, and a pseudo-localized catalog with expanded strings.
+
+QBrain tracks command presentation and localization under `FR-RETRO-008`, `TR-RETRO-LOCALIZATION-008`, and `TEST-RETRO-008`.
+
+## Emulator bundles and buckets
+
+The **Emulators** manager discovers, installs, updates, rolls back, and removes emulator bundles. A bundle version ships the emulator executables, Retro IDE bindings, and their managed or native runtime files together for each supported host platform and architecture. The IDE's built-in bucket is identified as `official`. Users can add other Git-backed buckets through the manager. The catalog distinguishes available and installed versions, shows host compatibility, and lets the user select the version a project will use.
+
+### Publishing a bundle
+
+Use a Git repository with one JSON manifest per emulator at `bucket/<id>.json`. Publishers upload versioned archives to release hosting, then commit manifests that point to those artifacts. The manager refreshes catalog metadata from the configured Git source and records the exact commit used to read each manifest. This follows Scoop's Git bucket and JSON manifest convention with a Retro IDE bundle format. [Scoop buckets](https://github.com/ScoopInstaller/Scoop/wiki/Buckets) · [Scoop app manifests](https://github.com/ScoopInstaller/Scoop/wiki/App-Manifests)
+
+| Manifest field | Contract |
+| --- | --- |
+| `schemaVersion`, `id`, `version` | Manifest format, stable bundle ID, and immutable bundle release version. Publish a new version when an archive or its entry points change. |
+| `name`, `description`, `homepage`, `license` | Catalog display and publisher-provided release metadata. |
+| `adapterId`, `adapterApi` | Adapter identity and compatible Retro IDE adapter contract versions. |
+| `targets` | Map from host runtime identifier, such as `win-x64` or `linux-x64`, to the release archive URL, SHA-256 digest, and relative entry points for the binding library and any emulator or worker the adapter launches. [Portable .NET runtime identifiers](https://learn.microsoft.com/en-us/dotnet/core/rid-catalog) |
+
+### Installing and running a bundle
+
+1. Select a bundle release for a supported host and adapter contract. The manager downloads and verifies the advertised SHA-256, then extracts to a staging directory. It validates archive paths and declared entry points before publishing a version to the per-user bundle store. Catalog refresh and package install treat manifests as data. The manager performs installation through its own archive and file operations.
+2. The store commits verified versions atomically with receipts recording the bucket, Git commit, bundle ID, version, host target, and archive digest. A failed or cancelled install leaves existing versions usable. The manager can browse its last valid catalog offline and launch installed bundles without contacting a bucket.
+3. Projects select a bundle by bucket and ID and pin the chosen version and manifest revision. The adapter catalog resolves the pinned, compatible local receipt and uses its entry points. The manager can fetch the recorded manifest revision to install that version on another workstation where its artifact is available for the host. Missing or incompatible bundles surface in **Emulators** so the user can install or select a version. A feed refresh or update adds versions without changing a project's pin. Rollback selects a prior verified version. Running sessions retain their exact version and prevent its removal until they release it.
+
+Bucket operations use the existing controller and CQRS command flow. Their status is visible in **Emulators**. Presets describe the guest machine and launch or attach settings, while bundle manifests describe host executables and bindings. ROMs and project media remain user-supplied. QBrain tracks the packaging and publishing contract under `FR-RETRO-009`, `TR-RETRO-BUNDLE-009`, and `TEST-RETRO-009`.
+
+## Emulator adapters
+
+| Preset | Integration boundary | Current evidence |
+| --- | --- | --- |
+| UAE | The UAE bundle packages the worker and binding for the UAE control interface. `uae-developer` owns the UAE40 model, worker, protocol, and hardware-specific extensions. | The UAE control and worker projects exist. The desktop-facing bridge still needs implementation. |
+| VICE | The VICE bundle packages `x64sc` and its monitor binding. The launched process binds the binary monitor to loopback. | The monitor is the documented debugging interface. Video, audio, and input integration need independent capability checks. |
+| ViceSharp | The ViceSharp bundle supplies the host binaries and gRPC binding. The attach preset connects to a configured host using that binding. | The protocol defines session, media, video, input, monitor, snapshot, and diagnostics services. Transport availability and audio are negotiated. |
+
+Adapter capabilities are discovered from the selected host after bundle resolution. Project paths, local endpoints, and capability authorization remain subject to the host policy.
+
+Sources: [UAE Developer](https://github.com/sharpninja/uae-developer), [VICE invocation manual](https://vice-emu.sourceforge.io/vice_2.html), [VICE binary monitor manual](https://vice-emu.sourceforge.io/manual/vice.pdf), and [ViceSharp host protocol](https://github.com/sharpninja/vice-sharp/blob/main/src/ViceSharp.Protocol/Protos/emulator_host.proto).

@@ -1,0 +1,112 @@
+schema: mcp-wiki-export/v1
+home:
+  document: home
+documents:
+  - id: home
+    title: Home
+    source: generated:home
+    target: Home.md
+    platforms:
+      - github
+      - azure
+  - id: functional
+    title: Functional Requirements
+    source: generated:functional
+    target: Functional-Requirements.md
+    platforms:
+      - github
+      - azure
+  - id: technical
+    title: Technical Requirements
+    source: generated:technical
+    target: Technical-Requirements.md
+    platforms:
+      - github
+      - azure
+  - id: testing
+    title: Testing Requirements
+    source: generated:testing
+    target: Testing-Requirements.md
+    platforms:
+      - github
+      - azure
+  - id: mapping
+    title: TR per FR Mapping
+    source: generated:mapping
+    target: TR-per-FR-Mapping.md
+    platforms:
+      - github
+      - azure
+  - id: matrix
+    title: Requirements Matrix
+    source: generated:matrix
+    target: Requirements-Matrix.md
+    platforms:
+      - github
+      - azure
+  - id: project-overview
+    title: Project Overview
+    source: README.md
+    target: Project-Overview.md
+    platforms:
+      - github
+      - azure
+  - id: architecture
+    title: Architecture
+    source: docs/architecture.md
+    target: Architecture.md
+    platforms:
+      - github
+      - azure
+  - id: emulator-adapter-contract
+    title: Emulator Adapter Contract
+    source: docs/emulator-adapter-contract.md
+    target: Emulator-Adapter-Contract.md
+    platforms:
+      - github
+      - azure
+  - id: c4-model
+    title: C4 Model
+    source: docs/architecture/structurizr/README.md
+    target: C4-Model.md
+    platforms:
+      - github
+      - azure
+  - id: storyboards
+    title: Wireframes and Storyboards
+    source: docs/design/_manifest.md
+    target: Wireframes-and-Storyboards.md
+    platforms:
+      - github
+      - azure
+  - id: svg-components
+    title: Shared SVG Components
+    source: docs/design/components/README.md
+    target: Shared-SVG-Components.md
+    platforms:
+      - github
+      - azure
+  - id: requirement-ownership
+    title: Requirement Ownership
+    source: docs/requirement-ownership.md
+    target: Requirement-Ownership.md
+    platforms:
+      - github
+      - azure
+navigation:
+  - document: home
+  - document: project-overview
+  - title: Architecture and Design
+    path: design
+    children:
+      - document: architecture
+      - document: emulator-adapter-contract
+      - document: c4-model
+      - document: storyboards
+      - document: svg-components
+  - document: functional
+  - document: technical
+  - document: testing
+  - document: mapping
+  - document: matrix
+  - document: requirement-ownership

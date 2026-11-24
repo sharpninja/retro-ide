@@ -1,0 +1,53 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    27("<div style='font-weight: bold'>Project Build Toolchain</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Operator-configured compiler,<br />assembler, or build task that<br />produces artifacts and<br />diagnostics for the current<br />project.</div>")
+    style 27 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#d9a669,color:#d9a669
+
+        10("<div style='font-weight: bold'>IDE ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: IView : GPS.SimpleMVC.Views.ISimpleView]</div><div style='font-size: 80%; margin-top:10px'>Every ViewModel implements<br />the Retro IDE IView<br />interface, which extends<br />SimpleMVC ISimpleView. Each<br />live view instance supplies a<br />stable ViewKey and exposes<br />model state to Avalonia<br />bindings.</div>")
+        style 10 fill:#275c60,stroke:#d9a669,color:#ffffff
+        11("<div style='font-weight: bold'>IDE State (Model)</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Provides observable<br />workspace, presentation<br />culture, active document and<br />target, selected session,<br />availability, operation<br />state, and diagnostics for<br />the view.</div>")
+        style 11 fill:#275c60,stroke:#d9a669,color:#ffffff
+        12("<div style='font-weight: bold'>Project and Launch Workflow</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Selects the target preset,<br />runs the configured build,<br />opens source diagnostics, and<br />launches or attaches after a<br />successful build.</div>")
+        style 12 fill:#275c60,stroke:#d9a669,color:#ffffff
+        4("<div style='font-weight: bold'>Workbench and Docking (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia and Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Hosts menus, command bars,<br />keyboard bindings, documents,<br />and docked tools. Presents<br />command metadata from the<br />catalog and resolves UI<br />strings and images for the<br />active locale.</div>")
+        style 4 fill:#275c60,stroke:#d9a669,color:#ffffff
+        5("<div style='font-weight: bold'>Predefined Command Catalog</div><div style='font-size: 70%; margin-top: 0px'>[Component: System.Windows.Input.ICommand]</div><div style='font-size: 80%; margin-top:10px'>Pairs each shared ICommand<br />with a stable ID, label slug,<br />icon slug, and default<br />keyboard gesture. Reads model<br />state for availability and<br />delegates Execute to the<br />controller.</div>")
+        style 5 fill:#275c60,stroke:#d9a669,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Derives from<br />SimpleControllerBase, manages<br />view registration by ViewKey,<br />and dispatches predefined IDE<br />actions and queries into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#d9a669,color:#ffffff
+        9("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 9 fill:#275c60,stroke:#d9a669,color:#ffffff
+      end
+
+    end
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+    27("<div style='font-weight: bold'>Project Build Toolchain</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Operator-configured compiler,<br />assembler, or build task that<br />produces artifacts and<br />diagnostics for the current<br />project.</div>")
+    style 27 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    1-. "<div>1. Choose Build Project from<br />the menu, from the command<br />bar, or with its shortcut</div><div style='font-size: 70%'></div>" .->4
+    4-. "<div>2. Execute the same<br />predefined Build Project<br />ICommand</div><div style='font-size: 70%'>[ICommand]</div>" .->5
+    5-. "<div>3. Dispatch Build Project for<br />the active context</div><div style='font-size: 70%'>[ICommand]</div>" .->8
+    8-. "<div>4. Dispatch the typed Build<br />Project request</div><div style='font-size: 70%'></div>" .->9
+    9-. "<div>5. Recheck context and<br />publish the pending operation</div><div style='font-size: 70%'></div>" .->11
+    9-. "<div>6. Run the registered<br />build-only handler</div><div style='font-size: 70%'></div>" .->12
+    12-. "<div>7. Run the configured build<br />and collect diagnostics</div><div style='font-size: 70%'>[Configured process]</div>" .->27
+    9-. "<div>8. Publish completion or<br />source diagnostics</div><div style='font-size: 70%'></div>" .->11
+    10-. "<div>9. Observe the updated build<br />output and diagnostics</div><div style='font-size: 70%'></div>" .->11
+    4-. "<div>10. Render the updated<br />ViewModel</div><div style='font-size: 70%'>[Avalonia bindings]</div>" .->10
+
+  end

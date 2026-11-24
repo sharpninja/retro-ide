@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "id": "vice",
+  "label": "VICE",
+  "machine": {
+    "id": "C64",
+    "cpu": "6510",
+    "video": "VIC-II",
+    "profileFile": "vice.dev"
+  },
+  "connection": {
+    "adapter": "vice-binary-monitor",
+    "bundle": {
+      "bucket": "official",
+      "id": "vice"
+    },
+    "mode": "launch",
+    "arguments": [
+      "-binarymonitor",
+      "-binarymonitoraddress",
+      "ip4://127.0.0.1:{monitorPort}"
+    ],
+    "settings": {
+      "monitorPort": 6502
+    }
+  }
+}

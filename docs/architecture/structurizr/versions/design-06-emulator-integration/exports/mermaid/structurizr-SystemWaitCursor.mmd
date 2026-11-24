@@ -1,0 +1,46 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#d9a669,color:#d9a669
+
+        10("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 10 fill:#275c60,stroke:#d9a669,color:#ffffff
+        11("<div style='font-weight: bold'>IDE ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.ComponentModel and SimpleMVC]</div><div style='font-size: 80%; margin-top:10px'>Implement IView with a stable<br />ViewKey. Raise<br />CommandRequested, receive<br />correlated results on the UI<br />thread, and expose observable<br />properties through<br />ObservableObject.</div>")
+        style 11 fill:#275c60,stroke:#d9a669,color:#ffffff
+        14("<div style='font-weight: bold'>IDE State (Model)</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Provides observable<br />workspace, presentation<br />culture, active document and<br />target, selected session,<br />availability, operation<br />state, interaction blocks by<br />scope, and diagnostics.</div>")
+        style 14 fill:#275c60,stroke:#d9a669,color:#ffffff
+        4("<div style='font-weight: bold'>Workbench and Docking (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia and Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Hosts menus, command bars,<br />keyboard bindings, documents,<br />and docked tools. Presents<br />command metadata and<br />localization, and applies the<br />system wait cursor to<br />logically blocked UI.</div>")
+        style 4 fill:#275c60,stroke:#d9a669,color:#ffffff
+        5("<div style='font-weight: bold'>Predefined Command Catalog</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.Input (ICommand)]</div><div style='font-size: 80%; margin-top:10px'>Pairs a shared RelayCommand<br />or AsyncRelayCommand with a<br />stable ID, label slug, icon<br />slug, and default keyboard<br />gesture. Exposes availability<br />and execution state and<br />raises requests on registered<br />views.</div>")
+        style 5 fill:#275c60,stroke:#d9a669,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch and result<br />delivery for views registered<br />directly with it. Provides<br />the shared execution entry<br />point for typed requests from<br />all controllers into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#d9a669,color:#ffffff
+      end
+
+    end
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    1-. "<div>1. Invoke a command that<br />temporarily blocks<br />interaction in one UI region</div><div style='font-size: 70%'></div>" .->4
+    4-. "<div>2. Execute the registered<br />asynchronous command</div><div style='font-size: 70%'>[ICommand]</div>" .->5
+    5-. "<div>3. Raise the command request<br />on the originating view</div><div style='font-size: 70%'>[RelayCommand or AsyncRelayCommand]</div>" .->11
+    11-. "<div>4. Submit the request to its<br />registered workbench<br />controller</div><div style='font-size: 70%'>[IView events]</div>" .->8
+    8-. "<div>5. Start the typed background<br />operation</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>6. Publish the interaction<br />block for the affected scope</div><div style='font-size: 70%'></div>" .->14
+    4-. "<div>7. Apply the native wait<br />cursor to the blocked region<br />on the UI thread</div><div style='font-size: 70%'></div>" .->14
+    1-. "<div>8. Continue using available<br />controls while the operation<br />runs</div><div style='font-size: 70%'></div>" .->4
+    10-. "<div>9. Release this operation's<br />block on completion, failure,<br />or cancellation</div><div style='font-size: 70%'></div>" .->14
+    4-. "<div>10. Restore the normal cursor<br />when the last block on the<br />region clears</div><div style='font-size: 70%'></div>" .->14
+
+  end

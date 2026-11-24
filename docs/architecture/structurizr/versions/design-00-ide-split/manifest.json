@@ -1,0 +1,52 @@
+{
+  "snapshotId": "design-00-ide-split",
+  "capturedAtLocal": "2026-11-24T10:51:43-06:00",
+  "state": "Design baseline. Desktop runtime and emulator adapters are planned.",
+  "workspace": {
+    "path": "workspace.dsl",
+    "sha256": "584c25426d222a535e235972d05718b4b90e924ae6c01557f1456b5240bfdbca"
+  },
+  "migration": {
+    "sourceRepository": "uae-developer",
+    "sourceSnapshot": "phase-02-control-plane-candidate",
+    "sourceWorkspaceSha256": "3a148f9d10f4f40f5bd74e58c84a59884dcd88238c7d83ce3392224175a8d360",
+    "qbrainWorkspace": "/home/sharpninja/github/retro-ide",
+    "requirementOwnership": "../../../../requirement-ownership.md"
+  },
+  "validation": {
+    "cliImage": "structurizr/cli:2025.11.09",
+    "cliImageId": "sha256:0399ac8e24c16e41277cfcec22caa29e4775013e5395c0720016828426d62749",
+    "workspaceValidation": "passed",
+    "mermaidExport": "passed"
+  },
+  "exports": [
+    {
+      "path": "exports/mermaid/structurizr-AdapterComponents.mmd",
+      "sha256": "7ea4c32976218b43c7bc409163ab32d64d22b32e3505b887cffb8b83de9bec57"
+    },
+    {
+      "path": "exports/mermaid/structurizr-BuildLaunchDebug.mmd",
+      "sha256": "9fb26bba773c72599038a1db1c188efba2542529d68407f882ad0c137e08e150"
+    },
+    {
+      "path": "exports/mermaid/structurizr-Containers.mmd",
+      "sha256": "391ec2b966a2ce06594bc75319d4d536b6e2c6a3384bb3f0c971458875f413ef"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DesktopComponents.mmd",
+      "sha256": "dfb37efb4792e6f261a5aebdd05b2fc7f1bae38ebc4294a4a1971ea8b42eed49"
+    },
+    {
+      "path": "exports/mermaid/structurizr-LinuxDeployment.mmd",
+      "sha256": "06401e91b4e2be898431b4adad6ac320e428ee4532cf430ebcf10742c6846d94"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemContext.mmd",
+      "sha256": "afc778ea2bcd33b0693921b1fab4145f2b3c429235152c5c5e058fed5f2a3a6b"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WindowsDeployment.mmd",
+      "sha256": "641d4d6b25290f462446b7221450000472caa48eb957b3526a77b89efcdb2b0f"
+    }
+  ]
+}

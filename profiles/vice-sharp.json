@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "id": "vice-sharp",
+  "label": "ViceSharp",
+  "machine": {
+    "id": "C64",
+    "cpu": "6510",
+    "video": "VIC-II",
+    "profileFile": "vice-sharp.dev"
+  },
+  "connection": {
+    "adapter": "vice-sharp-grpc",
+    "bundle": {
+      "bucket": "official",
+      "id": "vice-sharp"
+    },
+    "mode": "attach",
+    "service": "EmulatorHost",
+    "endpointSetting": "viceSharpHostEndpoint"
+  }
+}

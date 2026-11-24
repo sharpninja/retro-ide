@@ -1,0 +1,11 @@
+AGENTS-README-FIRST.yaml
+.mcpServer/
+cache/
+mcp.db
+mcp.db-*
+.asset-review/
+.migration/
+bin/
+obj/
+.env
+.env.*
