@@ -27,9 +27,18 @@ Start the desktop with `-- --mcp` to issue an observer attachment or `-- --mcp-m
 
 Run `dotnet test RetroIde.sln -c Release --no-build` for the managed tests. The UI suite drives the workbench through SharpNinja.Avalonia.RemoteControl on Avalonia Headless and needs no physical keyboard or mouse. RemoteControl is loaded only by the test projects. Run `pwsh -File eng/Verify-Phase01Trace.ps1 -QBrainExport docs/requirements/phase-01-test-criteria.yaml` to verify the compiled requirement trace.
 
-The Windows build also runs `dotnet run --project tests/RetroIde.NativeTests -c Release --no-build -- --remote-control` to focus a real Win32 workbench and verify distinct main and floating windows through Dock’s float and redock operations.
+On Windows, run `dotnet run --project tests/RetroIde.NativeTests -c Release --no-build -- --remote-control` to focus a real Win32 workbench and verify distinct main and floating windows through Dock’s float and redock operations.
 
-The separate native smoke test checks platform cursor rendering and the interactive tear-away and redock gestures. Run `dotnet run --project tests/RetroIde.NativeTests -c Release --no-build` from an available Windows desktop. The Windows CI job runs this smoke test when `RETRO_IDE_RUN_NATIVE_POINTER_TESTS` is set to `1`. Linux CI runs it on an isolated Xvfb display with the static X11 core cursor.
+The separate native smoke test checks platform cursor rendering and the interactive tear-away and redock gestures. Run it from an available Windows desktop or from Linux under Xvfb. For Linux, choose an explicit unused display number and verify that its socket and lock are absent before launching the test. The example uses display `:177`.
+
+```sh
+test ! -e /tmp/.X11-unix/X177 && test ! -e /tmp/.X177-lock &&
+  XCURSOR_THEME=core XCURSOR_PATH=/nonexistent xvfb-run -n 177 \
+    -s '-screen 0 1600x1000x24 -extension GLX' \
+    dotnet run --project tests/RetroIde.NativeTests -c Release --no-build
+```
+
+Run validation on the designated local development hosts. Do not add GitHub Actions workflows for Retro IDE.
 
 ## Review the design
 

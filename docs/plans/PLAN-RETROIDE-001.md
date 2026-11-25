@@ -21,7 +21,7 @@
 | `RetroIde.Adapters.Abstractions` and provider projects | Versioned .NET bundle/adapter contracts and backend mappings as each provider lands. Keep desktop dependencies outside adapter hosts. |
 | `RetroIde.UnitTests` and `RetroIde.IntegrationTests` | Criterion-linked tests and negative controls, then real dispatcher, SDK client, native window, and provider tests through production entry points. |
 
-Use .NET 10 as the proposed baseline. Pin SDK and package versions against the Windows and Linux build in Phase 01. Apply `Meziantou.Analyzer` centrally to every .NET project, including tests and providers. Keep any Nuke project outside the product solution. Compile public XML documentation and link public contracts and tests to QBrain criteria in CI. Use the existing desktop designs as the interaction reference. [Wireframes and storyboards](../design/_manifest.md)
+Use .NET 10 as the proposed baseline. Pin SDK and package versions against the Windows and Linux build in Phase 01. Apply `Meziantou.Analyzer` centrally to every .NET project, including tests and providers. Keep any Nuke project outside the product solution. Compile public XML documentation and verify public contract and test links against the QBrain criteria on the local validation hosts. Do not create GitHub Actions workflows for this project. Use the existing desktop designs as the interaction reference. [Wireframes and storyboards](../design/_manifest.md)
 
 ## First executable increment
 
