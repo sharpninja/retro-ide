@@ -2,6 +2,10 @@
 
 Every supported Retro IDE feature has a Model Context Protocol (MCP) tool. CLI and desktop agents can inspect state and invoke the same operations available through the workbench. Use the official MCP C# SDK and Microsoft hosting extensions. `ModelContextProtocol` provides server registration and stdio, and `ModelContextProtocol.AspNetCore` provides Streamable HTTP. Use `ModelContextProtocol.Extensions.Tasks` for long-running operations when the client negotiates it. [Microsoft .NET SDK guidance](https://devblogs.microsoft.com/dotnet/announcing-v20-of-the-official-mcp-csharp-sdk/)
 
+## Phase 01 tool inventory
+
+The candidate exposes `workbench_get_context` and `workbench_focus_tool`. They share one local IDE instance through Streamable HTTP or its stdio bridge. The four public context members are `viewKey`, `workspaceId`, `activeToolId`, and `workbenchRevision`. A missing selection is an explicit null. Mutations require a live registration, the current context and a write-enabled attachment. The rest of this page describes the broader implementation contract. [Cross-platform verification](receipts/phase-01-remotecontrol-verification.md)
+
 ## One feature registry
 
 Register each IDE command and query with a stable ID, typed input and output, context, and required capabilities. The workbench binds its commands to these registrations. The MCP host describes the same operations with stable tool names and JSON Schemas for `tools/list`, then maps `tools/call` requests to the registered command or query. UI gestures such as docking have semantic tool operations such as dock, float, and focus. A coverage check compares the complete feature registry to the MCP tool registry and fails when a supported operation has no tool. [MCP tool protocol](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)

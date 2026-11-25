@@ -1,0 +1,123 @@
+# PLAN-RETROIDE-001 hostile-validation receipt
+
+OverallVerdict: DISAGREE
+
+OverallAccuracy: 77
+
+OverallCompleteness: 91
+
+ValidatorIdentity: ChatGPT-6.2-SOL-HIGH-LEGION2
+
+Task 01A EXEC-TODO-001: DISAGREE (accuracy 83, completeness 86)
+
+Task 01B EXEC-TODO-002: DISAGREE (accuracy 71, completeness 100)
+
+Task 01C EXEC-TODO-003: DISAGREE (accuracy 78, completeness 90)
+
+Task 01D EXEC-TODO-004: DISAGREE (accuracy 75, completeness 89)
+
+The supplied runs establish real Avalonia/Dock operation on Windows and Linux X11, including native tear-away and redock, the scoped platform Wait cursor, and UI, HTTP, and stdio focus against the same selected desktop process. Three source findings block acceptance. The controller accepts a foreign-workspace ViewModel into a shared layout, layout restore loses the original owner of pins from dynamically identified groups, and CI can pass its trace gate without a QBrain export. The running-session fixture also leaves preservation during the actual restore unverified.
+
+All four tasks are open and in flux. There are no completed tasks and no regression-only tasks. For this receipt, accuracy is the percentage of determined matrix rows that pass. Completeness is the percentage of matrix rows with a determined outcome. Shared requirements count for each affected task. Totals are 23 PASS, 7 FAIL, and 3 UNKNOWN. Infrastructure rule 6 applies to the supplied evidence. This session exposed no QBrain memory or session-log interface, so `MEMORY-HV-100` readback and a server-side receipt are unverified. That limitation did not change the scored source or execution findings.
+
+## Execution receipts
+
+| Source | Command or observation | Captured result |
+|---|---|---|
+| Separate LEGION2 host harness, fresh scratch directory | `sha256sum -c` before and after the managed rerun | Passed both times. SDK `10.0.404`. |
+| Same independent host harness | `dotnet build RetroIde.sln -c Release --disable-build-servers` | `Build succeeded.` 50 warnings, 0 errors. |
+| Same independent host harness | `dotnet test RetroIde.sln -c Release --no-build` | Unit 2 passed in 103 ms. Integration 12 passed in 2 s. Both reported 0 failed and 0 skipped. |
+| Earlier Windows runner | Managed run and native run on signed-in Windows NT `10.0.26300.0` desktop | Build 50 warnings, 0 errors. Managed 2 unit and 12 integration passed. Native HWND/Win32 input, docking, cursor, and two-desktop checks passed as reported. |
+| Earlier Linux runner | Managed run and native X11/XTEST runs on `:182` at 1600×1000 and `:183` at 800×600 | Build 23 warnings, 0 errors. Managed 2 unit and 12 integration passed. Both native runs reported docking, cursor, and two-desktop checks. |
+| Earlier trace runner | `pwsh -File eng/Verify-Phase01Trace.ps1 -QBrainExport /tmp/retro-ide-bdp-effective.yaml` | Reported 21 test links, 9 documented public contracts, and 12 distinct TEST criteria. Export SHA-256 `ECB8B51F475D8C0AA2E1851C88978445A43599AC03666FDBADAE224F062E6C19`. |
+
+I reviewed the pasted snapshot and captures. The separate host harness ran the independent build and managed tests. The native Windows test ran outside that Session 0 harness. The excerpts report success and test outcomes, with no numeric exit codes printed for the independent commands. `RetroIde.NativeTests` is an executable, so the 14 managed passes do not represent a native rerun.
+
+## Requirements matrix
+
+Paths and symbol names refer to the supplied snapshot.
+
+### 01A · FR-RETRO-001 / TR-RETRO-DESKTOP-001 / TEST-RETRO-001
+
+| Claim and criterion | Outcome | Source and evidence |
+|---|---|---|
+| A1. SDK, restore, and Release build | PASS | `global.json`, `NuGet.Config`, `RetroIde.sln`, `Directory.Build.props`, and the seven product and test project files define the .NET 10 build. The independent Release build includes restore. The earlier Linux build also succeeded. |
+| A2. Central analyzer application | PASS | `Directory.Packages.props` globally references `Meziantou.Analyzer` 3.0.320 across the solution. `Directory.Build.props` enables generated XML documentation. The supplied warning totals do not identify individual diagnostic IDs. |
+| A3. Real desktop workbench with tool and document tabs | PASS | `src/RetroIde.Workbench/Program.cs` uses the classic desktop lifetime. `WorkbenchApp.cs`, `WorkbenchWindow.cs`, and `DockLayout.cs` build the themed `DockControl` with tool and document groups, including Emulation. The earlier production-process runs exercise the desktop entry point. `TestApplication.cs` supplies the headless counterpart. |
+| A4. `verify-ac-behavior-desktop-1` native docking | PASS | `tests/RetroIde.NativeTests/NativeDockingTests.cs`, `SelectCallStackAsync` and `DragToolAsync`, drive a native tab selection, tear away Registers, require a distinct top-level handle, and redock into the original group. `NativeInput.cs` uses Win32 or XTEST. Supplied runs cover Windows and X11. |
+| A5. Managed and compiled trace entry points | PASS | The independent solution test reached both managed projects. `eng/Verify-Phase01Trace.ps1` reads compiled member XML and maps the native executable method to the desktop criterion. The earlier explicit export run reports the counts above. |
+| A6. QBrain-backed CI trace, shared with 01B–01D | **FAIL** | `.github/workflows/phase01.yml`, `Verify compiled Phase 01 requirement trace`, supplies no `-QBrainExport`. The verifier explicitly succeeds without it. The earlier export-backed invocation does not exercise that CI path. |
+| A7. Hosted CI matrix execution | **UNKNOWN** | The workflow contains Windows and Linux native steps. No hosted job receipt for this snapshot was supplied. The signed-in Windows run and the X11 runs establish cross-host behavior independently of the hosted matrix. |
+
+### 01B · FR-RETRO-007 / TR-RETRO-COMMAND-007 / TEST-RETRO-007
+
+| Claim and criterion | Outcome | Source and evidence |
+|---|---|---|
+| B1. `ac-test-simplemvc-views` direct owner and one subscription | PASS | `src/RetroIde.Workbench/WorkbenchSession.cs` composes one `WorkbenchController`. `WorkbenchViewModel.cs` implements `IView : ISimpleView`. `WorkbenchController.cs`, `Register`, `Resolve`, and `Unregister`, uses the base SimpleMVC registration directly, subscribes once, detaches on unregister, and disallows reuse of a closed ViewModel. `WorkbenchDispatchTests` checks base lookup and subscriber count. |
+| B2. `ac-test-toolkit-bindings` shared eligible command | PASS | `WorkbenchWindow.cs` binds the menu, toolbar, and shortcut to the generated `AsyncRelayCommand`. `WorkbenchDispatchTests.Menu_toolbar_and_shortcut_share_one_eligible_focus_command` checks object identity, eligibility, and one dispatch from a toolbar click. `NativeDockingTests.InvokeWorkbenchBindingsAsync` separately drives all three native entry points and checks cumulative dispatch counts of 1, 2, and 3. |
+| B3. `ac-test-view-result-routing` correlated UI completion | PASS | `WorkbenchController.DispatchToViewAsync` returns on the Avalonia dispatcher and checks the original registration identity. `WorkbenchDispatchTests.Completion_is_correlated_to_its_live_origin_even_if_focus_changes` verifies the request ID and UI affinity after focus changes, silence on the second view, and dropped delivery both before a queued operation and after a write when the origin closes. |
+| B4. `ac-test-cqrs-unit-of-work` guard ordering and correlation | PASS | `src/RetroIde.Application/WorkbenchDispatch.cs`, `WorkbenchUnitOfWork.Execute`, runs the typed handler after authorization and context checks. `WorkbenchDispatchTests.Cancellation_and_stale_context_produce_correlated_outcomes_without_mutation` proves queued Toolkit cancellation and one successful write from two requests with the same revision. |
+| B5. Owner enforces workspace at registration, shared with 01C | **FAIL** | `WorkbenchController.cs`, `Register`, `Registration.TryFocus`, and `RefreshViews`. `Register` grants authority using the incoming ViewModel’s `WorkspaceId` without checking it against the workspace that owns the controller’s layout. Every admitted registration dispatches against that same layout and receives its state. An admitted foreign-workspace view therefore gets a grant consistent with its own address and can change the owner’s layout. The existing secondary-view test registers a view with the same workspace ID. This is a controller registration defect. The tested remote cross-workspace guards still hold. |
+| B6. Four command criterion links | PASS | `eng/Verify-Phase01Trace.ps1` maps all four named TEST-RETRO-007 criteria to compiled `WorkbenchDispatchTests` members. |
+| B7. QBrain-backed CI trace | **FAIL** | Same gate as A6. |
+
+### 01C · FR-RETRO-015 / TR-RETRO-MCP-015 / TEST-RETRO-015
+
+| Claim and criterion | Outcome | Source and evidence |
+|---|---|---|
+| C1. `ac-test-mcp-same-instance` common typed path and real Dock focus | PASS | `WorkbenchDispatch.cs` defines one typed query and one typed focus handler. `WorkbenchController.cs` and `src/RetroIde.Mcp/LoopbackMcpHost.cs` use the same dispatcher and registry. `McpWorkbenchTransportTests.Http_stdio_and_ui_focus_the_same_live_dockable` resets the active tool between routes, checks actual Dock focus and one revision per focus, and asserts seven selected-controller dispatches and zero on the other. |
+| C2. Two real desktops and official SDK transports | PASS | `tests/RetroIde.NativeTests/ProductionAttachmentTests.cs`, `RunAsync` and `Desktop`, launches distinct production PIDs and endpoints, independently resolves the selected context through direct Streamable HTTP and a separate stdio bridge, and observes selected-process Registers revisions 2, 4, and 6. The other process stays unchanged and remains usable after selected shutdown. `src/RetroIde.Mcp.Stdio/BridgeEntryPoint.cs` attaches to the selected descriptor and forwards SDK calls. Its production path has no desktop launch. The two-process test observes live context and the saved layout. The integration test supplies the direct Dock-model assertions for remote calls. |
+| C3. `ac-test-mcp-viewmodel-context` explicit schema and live snapshot parity | PASS | `ViewContextContract.cs`, `WorkbenchViewModel.cs`, and `ViewModelContextContractTests.cs` establish the exact marked allowlist. `McpWorkbenchTransportTests` compares input and output discovery schemas across both clients and the raw live snapshots. The captured schema has exactly `activeToolId`, `viewKey`, `workbenchRevision`, and `workspaceId`, all required, with extra properties disallowed. `Capture` preserves a null `activeToolId`. Direct serialization of the typed `WorkbenchAddress` with `WireJson.Options` omits that null field. The live response uses `Capture` and preserves parity. |
+| C4. `ac-test-mcp-inventory` Phase 01 inventory and trace | PASS | `FeatureRegistry` and `ViewModelContextContractTests.Every_feature_has_a_unique_tool_and_context_contract` check the exact two tool names, unique feature IDs, and the shared context schema. The verifier links all four Phase 01 TEST-RETRO-015 criteria across unit, integration, and native tests. |
+| C5. `ac-test-mcp-scope` stale revision, registration, and workspace rejection | PASS | `McpWorkbenchTransportTests.Transport_and_live_scope_rejections_have_no_focus_effect` holds the active tool current while making the revision stale. It also targets another live view in the same workspace, a foreign workspace, and a closed registration. The baseline checks structured codes and unchanged revision or Dock focus. The real-process test checks cross-workspace rejection through both selected clients. |
+| C6. `ac-test-mcp-scope` authentication, actor grant, Host, and Origin | PASS | `LoopbackMcpHost.AuthenticateAsync` checks loopback, exact Host, applicable Origin, and the attachment grant. `Transport_and_live_scope_rejections_have_no_focus_effect` checks anonymous and wrong-Host requests, accepted same-origin observer reads, denied observer mutation, and HTTP 403 on an authenticated bad-Origin mutation POST with unchanged revision. `AttachmentDescriptor.cs` implements restricted file creation and disables redirects and proxies. The test asserts Unix file mode. Windows ACL behavior is supported by source inspection. |
+| C7. `ac-test-mcp-scope` queued revoke and shutdown | PASS | `Revoking_an_authenticated_HTTP_mutation_while_queued_prevents_focus` pauses an authenticated SDK request in a dispatcher wrapper before releasing it to the real controller. It checks a correlated `unauthorized` result, unchanged revision, and unchanged focus. The earlier native runs show existing selected HTTP and stdio clients losing access after graceful close, descriptor removal, and normal process exits. |
+| C8. Owner enforces workspace at registration | **FAIL** | Same controller defect as B5. Unit-of-work checks validate the registered view’s address and actor grant. They cannot establish that the underlying layout belongs to that workspace. |
+| C9. Client-initiated disconnect and cancellation with correlation evidence | **UNKNOWN** | The plan asks for client disconnect, cancellation, and registration disposal with correlated logs and dispatcher traces. The supplied evidence covers Toolkit cancellation, explicit grant revoke, and server shutdown. It does not show a client-initiated disconnect during a pending mutation with a correlated server outcome and unchanged Dock state. |
+| C10. QBrain-backed CI trace | **FAIL** | Same gate as A6. |
+
+### 01D · Phase 01 slices of 001 / 007 / 008
+
+This slice covers `FR-RETRO-001 / TR-RETRO-DESKTOP-001 / TEST-RETRO-001`, `FR-RETRO-007 / TR-RETRO-COMMAND-007 / TEST-RETRO-007`, and `FR-RETRO-008 / TR-RETRO-LOCALIZATION-008 / TEST-RETRO-008`.
+
+| Claim and criterion | Outcome | Source and evidence |
+|---|---|---|
+| D1. `verify-ac-behavior-desktop-2` ordinary save and restore | PASS | `LayoutStore.cs` writes a temporary file and replaces the destination after the final cancellation check. `WorkbenchWindow.SaveLayoutAndCloseAsync` captures layout and saves asynchronously. `ShellLifecycleTests` checks selected document, moved and focused tool, pinned pane, one close, and cleanup after an I/O save failure. `NativeDockingTests.VerifyRestoredFloatAsync` reopens a visible float with Registers selected and verifies the production close path preserves it in the saved layout. |
+| D2. Prior accepted-topology startup crash | PASS | `DockLayout.RestorePinned` permits a missing original group. `ShellLifecycleTests.Startup_restores_main_pins_when_remaining_tools_are_floating` loads a document-only main host with pins and the remaining tools in a float. It checks startup, pin restoration, focus, unpinning into an aligned group, and fallback on invalid alignment. The independent managed suite passed. This establishes the specific topology in the test. |
+| D3. `verify-ac-behavior-desktop-2` pinned-pane original owner | **FAIL** | `DockLayout.cs`, `CaptureGroup`, `PinList`, `GroupId`, `Build`, and `RestorePinned`. Capture discards group IDs outside the six fixed names for both the dock and the pin’s original owner. Build gives the unnamed dock an empty-string ID. Restore then looks for an owner whose ID equals the saved null group, leaving `OriginalOwner` unset even when the corresponding dock survived. The startup test proves fallback when the original dock is absent. It does not cover the surviving dynamically identified dock. |
+| D4. Running adapter session across layout restore | **UNKNOWN** | `ShellLifecycleTests.RunningAdapterFixture.OpenWorkbench` reuses one workspace and state object, advances it while closed, and checks the before/after root association and effect list. It assigns `Root.Context` **after** `new WorkbenchSession(WorkspaceId, layout)` has already constructed and restored the Dock layout. No production code in the snapshot consumes that fixture association. The test proves the fixture can survive shell replacement and advance on either side. It does not exercise preservation through a bound adapter seam during restoration. A Phase 01 fixture is sufficient in principle. |
+| D5. `ac-test-system-wait-cursor` native scoped behavior | PASS | `InteractionBlocks.cs`, `Wrap` and `SurfaceSubscription`, apply the override to the pane content overlay. `NativeDockingTests.VerifyWaitAsync` checks an effective platform Wait cursor and restoration over docked and floating Registers. It also checks disabled pane content and an interactive tool picker during the docked block. The capture covers pane content on both hosts. It supplies no separate assertion for floating tab or title chrome, or rendered frame cadence under load. |
+| D6. `ac-test-system-wait-cursor` dispatcher and lifecycle | PASS | `InteractionBlocks.RunAsync` runs the delegate with `Task.Run` and ends the scope in `finally`. Both `Synchronous_operation_yields_the_dispatcher` cases keep a synchronous worker occupied while the dispatcher runs another callback. `Interaction_blocks_overlap_and_clear_after_each_outcome` checks overlap, an unrelated cursor, and restoration on success, cancellation, and failure. Native tests verify success restoration at the OS pointer. |
+| D7. `ac-test-gesture-parity` bundled command metadata | PASS | `CommandPresentation.cs`, `Resources/en.json`, and `WorkbenchWindow.cs` supply the bundled English label and icon and one gesture for display and binding. Managed tests check control metadata, gesture equality, distinct icon controls, and duplicate detection. Native tests exercise Ctrl+Shift+F on both hosts. |
+| D8. Phase 01 persistence, wait, and gesture links | PASS | `eng/Verify-Phase01Trace.ps1` checks compiled links for the three named criteria. The native gesture link is present. The headless metadata test also carries the gesture criterion in XML, although the verifier omits that specific pairing. |
+| D9. QBrain-backed CI trace | **FAIL** | Same gate as A6. |
+
+The shared in-flux product requirements are **001** across 01A and 01D, **007** across 01B and 01D, and the typed dispatch, live registration, workspace authority, and revision boundary across 01B and 01C. Compiled criterion trace applies to all four slices. The supplied export command checks TEST criterion ID presence in an export and compiled member comments. It does not check the live FR-to-TR-to-TEST relations, full criterion text, or behavior coverage for every public contract. The export contents, live QBrain readback, and historical test-first and mock-green sequence were not supplied.
+
+## Negative controls
+
+| Earlier control | Exact behavior established |
+|---|---|
+| `stale-current-tool` | Removing the revision comparison changed `stale_revision` to `ok` with the captured tool still current. The restored baseline passed. This isolates revision from the active-tool comparison. |
+| `wrong-live-view` | Removing only the current-view-key check changed `view_mismatch` to `ok` for another live view in the same workspace. The restored baseline passed. It does not exercise controller admission of a foreign-workspace ViewModel. |
+| `queued-http-revoke` | Removing the revoke check inside `ActorGrant.Authorize` changed `unauthorized` to `ok` after successful transport authentication. The restored baseline passed. The wrapper holds the request before forwarding it to the real dispatcher. |
+| `cancel-before-write` | Removing the Unit of Work cancellation check changed queued Toolkit cancellation from `cancelled` to `ok`. The restored baseline passed. This establishes the queued cancellation case. |
+| `duplicate-subscription` | Adding a subscriber on repeated `Register` caused `Assert.Single` to see two handlers. The restored baseline passed. The failing assertion counts subscriptions. It does not observe two handlers writing, and `request.Completion` supplies a deduplication check. |
+| `origin-on-post` | Weakening the single-Origin check changed the authenticated mutation POST status from `Forbidden` to `OK`. The restored baseline passed. The mutant fails at the status assertion. The baseline supplies the unchanged-revision assertion. |
+| Startup and inline-dispatch red excerpt | The startup test failed with `Sequence contains no elements`. Both synchronous-operation cases failed after five seconds. The frozen source and green tests address those specific cases. The red excerpt supplies no mutation diff, exact command, or snapshot digest for these three failures. |
+
+The earlier two-process SDK evidence gap is resolved for the observed Windows and Linux X11 runs. The earlier trace and mutation gap is partly resolved by the export-backed receipt and five isolated red/green controls. CI export enforcement and the representative running-adapter restore case remain open.
+
+## Later phases outside this verdict
+
+Each entry below identifies the plan’s linked `FR-RETRO-nnn`, `TR-RETRO-<name>-nnn`, and `TEST-RETRO-nnn` set. The 015 entries are the plan’s continuing parity work.
+
+| Phase | Requirement sets and deferred scope |
+|---|---|
+| 02 | `007 COMMAND`, `008 LOCALIZATION`, `011 EDITOR`, `012 EXPLORER`, `015 MCP`. MDI, editor and save lifecycle, mixed roots, full localization. |
+| 03 | `013 GIT`, `014 LSP`, `015 MCP`. Git, terminal, language servers, and shared routing for those features. |
+| 04 | `009 BUNDLE`, `010 ADAPTER`, `015 MCP`. Transactional bundles, adapter contract and conformance, shared tools for those features. |
+| 05 | `001 DESKTOP`, `002 PROFILE`, `007 COMMAND`, `009 BUNDLE`, `010 ADAPTER`, `015 MCP`. Production reattach, guarded build and launch, real backends, and provider receipts. |
+| 06 | `004 DEBUG`, `010 ADAPTER`, `011 EDITOR`, `015 MCP`. Debugger, consoles, symbols, live ports, and editor breakpoint integration. |
+| 07 | `003 AVINPUT`, `005 WORKFLOW`, `010 ADAPTER`, `015 MCP`. Emulation player, media, snapshots, testing, and negotiated operation workflows. |
+| 08 | `001 DESKTOP`, `006 AGENT`, `015 MCP`. Fully scoped panes, agents and reconnect, full registry parity, packaging, and release evidence. |

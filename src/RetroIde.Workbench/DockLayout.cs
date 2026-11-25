@@ -1,0 +1,491 @@
+using Avalonia.Threading;
+using Dock.Avalonia.Controls;
+using Dock.Model.Controls;
+using Dock.Model.Core;
+using Dock.Model.Mvvm;
+using Dock.Model.Mvvm.Controls;
+
+namespace RetroIde.Workbench;
+
+/// <summary>Hosts real Dock groups and keeps the workbench model synchronized with Dock selection.</summary>
+/// <remarks>TEST-RETRO-001#verify-ac-behavior-desktop-1; TEST-RETRO-001#verify-ac-behavior-desktop-2</remarks>
+public sealed class DockLayout : IDisposable
+{
+    private readonly IWorkbenchWorkspaceContext _workspace;
+    private readonly Dictionary<string, ShellTool> _tools;
+    private readonly Dictionary<string, ShellDocument> _documents;
+    private readonly DockBranch[] _floating;
+    private bool _suppress;
+    private bool _shown;
+    private bool _disposed;
+
+    internal DockLayout(IWorkbenchWorkspaceContext workspace, WorkbenchLayoutState? state, InteractionBlocks interaction)
+    {
+        _workspace = workspace;
+        Factory = new Factory
+        {
+            DefaultHostWindowLocator = () => new HostWindow(),
+        };
+        _tools = new[]
+        {
+            new ShellTool("explorer", "Project Explorer", "Open a project or folder to browse files.", "left", interaction),
+            new ShellTool("registers", "Registers", "No debugger session connected.", "right", interaction),
+            new ShellTool("call-stack", "Call Stack", "No debugger session connected.", "right", interaction),
+            new ShellTool("output", "Output", "Workbench ready.", "bottom", interaction),
+            new ShellTool("problems", "Problems", "No diagnostics.", "bottom", interaction),
+            new ShellTool("serial", "Serial Console", "No session connected.", "bottom", interaction),
+            new ShellTool("breakpoints", "Breakpoints", "No breakpoints.", "bottom", interaction),
+            new ShellTool("mcp-activity", "MCP Activity", "No agent activity.", "bottom", interaction),
+        }.ToDictionary(tool => tool.Id, StringComparer.Ordinal);
+        _documents = new[]
+        {
+            new ShellDocument("start", "Start Page", "Open an emulator session to begin.", interaction),
+            new ShellDocument("emulation", "Emulation", "No emulator session connected.", interaction),
+            new ShellDocument("disassembly", "Disassembly", "No debugger session connected.", interaction),
+            new ShellDocument("test-results", "Test Results", "No test run selected.", interaction),
+        }.ToDictionary(document => document.Id, StringComparer.Ordinal);
+
+        state = Compatible(state) ? state : null;
+        _floating = state?.Floating ?? [];
+        Root = CreateRoot(Build(state?.Main.Content ?? DefaultTopology()), state?.Main.Pinned ?? []);
+        Factory.InitLayout(Root);
+
+        _suppress = true;
+        ActiveToolId = state?.ActiveTool;
+        if (ActiveToolId is { } toolId)
+            Focus(toolId);
+        _suppress = false;
+        Revision = 0;
+        Factory.FocusedDockableChanged += (_, args) =>
+        {
+            if (!_suppress && args.Dockable is ShellTool tool && !string.Equals(ActiveToolId, tool.Id, StringComparison.Ordinal))
+                Publish(tool.Id);
+        };
+        Factory.DockableMoved += (_, _) =>
+        {
+            if (!_suppress)
+                Publish(ActiveToolId);
+        };
+        Factory.WindowClosed += (_, _) => Dispatcher.UIThread.Post(RestoreLostPanes, DispatcherPriority.Background);
+    }
+
+    /// <summary>Gets the Dock package factory used by both primary and floating controls.</summary>
+    public Factory Factory { get; }
+
+    /// <summary>Gets the primary Dock root.</summary>
+    public IRootDock Root { get; }
+
+    /// <summary>Gets the workbench's last active tool.</summary>
+    public string? ActiveToolId { get; private set; }
+
+    /// <summary>Gets the current workbench selection revision.</summary>
+    public long Revision { get; private set; }
+
+    /// <summary>Gets the selected document in the main host.</summary>
+    public string? SelectedDocumentId => Descendants(Root).OfType<IDocumentDock>().FirstOrDefault()?.ActiveDockable?.Id;
+
+    internal IEnumerable<ShellTool> Tools => _tools.Values;
+
+    internal event EventHandler? Changed;
+
+    /// <summary>Resolves an allowlisted tool.</summary>
+    public Tool Tool(string id) => _tools[id];
+
+    /// <summary>Indicates whether a live tool can receive focus.</summary>
+    public bool CanFocus(string id) => _tools.TryGetValue(id, out var tool) && Factory.FindRoot(tool) is not null;
+
+    /// <summary>Activates a tool's actual tab and marks it as the Dock root's focused item.</summary>
+    public bool Focus(string id)
+    {
+        Dispatcher.UIThread.VerifyAccess();
+        if (!CanFocus(id))
+            return false;
+
+        var tool = _tools[id];
+        var wasSuppressed = _suppress;
+        _suppress = true;
+        try
+        {
+            if (Factory.IsDockablePinned(tool))
+                Factory.PreviewPinnedDockable(tool);
+            if (tool.Owner is not IDock owner)
+                return false;
+
+            Factory.SetActiveDockable(tool);
+            Factory.SetFocusedDockable(owner, tool);
+            Factory.ActivateWindow(tool);
+            if (!IsFocused(id))
+                return false;
+        }
+        finally { _suppress = wasSuppressed; }
+
+        Publish(id);
+        return string.Equals(ActiveToolId, id, StringComparison.Ordinal) && IsFocused(id);
+    }
+
+    /// <summary>Checks the selected tab and focus state in the Dock model.</summary>
+    public bool IsFocused(string id) =>
+        _tools.TryGetValue(id, out var tool) && Factory.FindRoot(tool)?.FocusedDockable == tool &&
+        tool.Owner is IDock { IsActive: true } owner && owner.ActiveDockable == tool;
+
+    /// <summary>Selects a shell document within its current Dock group.</summary>
+    public void SelectDocument(string id) => Factory.SetActiveDockable(_documents[id]);
+
+    internal void MoveToolToGroup(string id, string group)
+    {
+        var destination = Descendants(Root).OfType<IToolDock>().First(d => string.Equals(d.Id, group, StringComparison.Ordinal));
+        var tool = _tools[id];
+        if (tool.Owner is IDock source && !ReferenceEquals(source, destination))
+            Factory.MoveDockable(source, destination, tool, destination.VisibleDockables?.LastOrDefault());
+    }
+
+    internal void ShowFloatingLayouts()
+    {
+        if (_shown)
+            return;
+        _shown = true;
+
+        var previous = ActiveToolId;
+        _suppress = true;
+        try
+        {
+            foreach (var branch in _floating)
+            {
+                var root = CreateRoot(Build(branch.Content), branch.Pinned);
+                var window = Factory.CreateDockWindow();
+                window.Layout = root;
+                window.Title = "Retro IDE";
+                window.Width = Math.Clamp(branch.Width ?? 420, 240, 1200);
+                window.Height = Math.Clamp(branch.Height ?? 300, 180, 900);
+                root.Window = window;
+                Factory.AddWindow(Root, window);
+                window.Present(isDialog: false);
+            }
+            if (previous is not null)
+                Focus(previous);
+        }
+        finally { _suppress = false; }
+    }
+
+    /// <summary>Captures only topology, tab selection, auto-hidden panes, and relative presentation sizes.</summary>
+    public WorkbenchLayoutState Capture()
+    {
+        Dispatcher.UIThread.VerifyAccess();
+        if (_shown)
+            RestoreLostPanes();
+        var floating = Root.Windows?.Where(window => window.Layout is not null)
+            .Select(window =>
+            {
+                window.Save();
+                return CaptureBranch(window.Layout!) with { Width = Size(window.Width), Height = Size(window.Height) };
+            }).ToArray();
+        return new WorkbenchLayoutState(1, CaptureBranch(Root), _shown ? floating ?? [] : _floating, ActiveToolId);
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+        if (Root.ExitWindows.CanExecute(null))
+            Root.ExitWindows.Execute(null);
+    }
+
+    private bool Compatible(WorkbenchLayoutState? layout)
+    {
+        if (layout is not { Version: 1, Main: not null, Floating.Length: <= 12 } || layout.Main.Content is null)
+            return false;
+
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        return VisitBranch(layout.Main) && layout.Floating.All(VisitBranch) && ids.SetEquals(_tools.Keys.Concat(_documents.Keys)) &&
+            (layout.ActiveTool is null || _tools.ContainsKey(layout.ActiveTool));
+
+        bool VisitBranch(DockBranch branch) =>
+            branch is { Pinned: not null, Content.Kind: "vertical" or "horizontal" or "tool-tabs" or "document-tabs" } &&
+            Visit(branch.Content, 0) && branch.Pinned.All(item =>
+                item is { Tool: not null, Alignment: "Left" or "Right" or "Top" or "Bottom" } &&
+                _tools.ContainsKey(item.Tool) && ids.Add(item.Tool));
+
+        bool Visit(DockNode? node, int depth)
+        {
+            if (node is null || depth > 24)
+                return false;
+            return node.Kind switch
+            {
+                "tool" => node.Id is not null && _tools.ContainsKey(node.Id) && ids.Add(node.Id),
+                "document" => node.Id is not null && _documents.ContainsKey(node.Id) && ids.Add(node.Id),
+                "horizontal" or "vertical" =>
+                    node.Children is { Length: <= 24 } && node.Children.All(child =>
+                        child is { Kind: not ("tool" or "document") } && Visit(child, depth + 1)),
+                "tool-tabs" or "document-tabs" =>
+                    node.Children is { Length: <= 24 } && node.Children.All(child =>
+                        child is { Kind: "tool" or "document" } && Visit(child, depth + 1)),
+                "splitter" => true,
+                _ => false,
+            };
+        }
+    }
+
+    private IRootDock CreateRoot(IDockable content, PinnedTool[] pins)
+    {
+        var root = Factory.CreateRootDock();
+        root.Id = "root";
+        root.Context = _workspace;
+        root.IsCollapsable = false;
+        root.FloatingWindowHostMode = DockFloatingWindowHostMode.Native;
+        root.VisibleDockables = Factory.CreateList(content);
+        root.ActiveDockable = content;
+        root.DefaultDockable = content;
+        RestorePinned(root, pins);
+        return root;
+    }
+
+    private IDockable Build(DockNode node)
+    {
+        switch (node.Kind)
+        {
+            case "tool": return _tools[node.Id!];
+            case "document": return _documents[node.Id!];
+            case "splitter": return new ProportionalDockSplitter { CanResize = true, ResizePreview = true };
+        }
+
+        IDock dock = node.Kind switch
+        {
+            "tool-tabs" => new ToolDock { Alignment = ParseAlignment(node.Alignment), GripMode = GripMode.Visible },
+            "document-tabs" => new DocumentDock { EnableWindowDrag = true },
+            _ => new ProportionalDock
+            {
+                Orientation = string.Equals(node.Kind, "horizontal", StringComparison.Ordinal) ? Orientation.Horizontal : Orientation.Vertical,
+            },
+        };
+        dock.Id = GroupId(node.Id) ?? string.Empty;
+        dock.IsCollapsable = false;
+        if (node.Proportion is > 0 and <= 1)
+            dock.Proportion = node.Proportion.Value;
+        dock.VisibleDockables = Factory.CreateList(node.Children!.Select(Build).ToArray());
+        dock.ActiveDockable = dock.VisibleDockables.FirstOrDefault(child => string.Equals(child.Id, node.Active, StringComparison.Ordinal))
+            ?? dock.VisibleDockables.FirstOrDefault(child => child is not ISplitter);
+        return dock;
+    }
+
+    private static DockBranch CaptureBranch(IRootDock root)
+    {
+        var groupIds = CaptureToolGroupIds(root);
+        var pinned = PinList(root.LeftPinnedDockables, Alignment.Left)
+            .Concat(PinList(root.RightPinnedDockables, Alignment.Right))
+            .Concat(PinList(root.TopPinnedDockables, Alignment.Top))
+            .Concat(PinList(root.BottomPinnedDockables, Alignment.Bottom)).ToArray();
+        var body = root.VisibleDockables!.First(child => child is IDock);
+        return new DockBranch(CaptureNode(body), pinned);
+
+        IEnumerable<PinnedTool> PinList(IList<IDockable>? dockables, Alignment alignment) =>
+            (dockables ?? []).OfType<ShellTool>().Select(tool => new PinnedTool(tool.Id, alignment.ToString(),
+                (tool.OriginalOwner as IToolDock ?? tool.Owner as IToolDock) is { } owner ? groupIds.GetValueOrDefault(owner) : null));
+
+        string? CapturedId(IDockable? item) =>
+            item is IToolDock tools ? groupIds.GetValueOrDefault(tools) : GroupId(item?.Id);
+
+        DockNode CaptureNode(IDockable item) => item switch
+        {
+            ShellTool tool => new("tool", tool.Id),
+            ShellDocument document => new("document", document.Id),
+            ISplitter => new("splitter"),
+            IProportionalDock split => CaptureGroup(split, split.Orientation == Orientation.Horizontal ? "horizontal" : "vertical"),
+            IToolDock tools => CaptureGroup(tools, "tool-tabs", tools.Alignment.ToString()),
+            IDocumentDock documents => CaptureGroup(documents, "document-tabs"),
+            IDock fallback => CaptureGroup(fallback, "tool-tabs"),
+            _ => throw new InvalidOperationException("Unsupported workbench dockable."),
+        };
+
+        DockNode CaptureGroup(IDock dock, string kind, string? alignment = null) =>
+            new(kind, CapturedId(dock), dock.Proportion is > 0 and <= 1 ? dock.Proportion : null,
+                CapturedId(dock.ActiveDockable), dock.VisibleDockables?.Select(CaptureNode).ToArray() ?? [], alignment);
+    }
+
+    private static Dictionary<IToolDock, string> CaptureToolGroupIds(IRootDock root)
+    {
+        var docks = Descendants(root).OfType<IDock>().ToArray();
+        var existingIds = docks.Select(dock => dock.Id).ToHashSet(StringComparer.Ordinal);
+        var assignedIds = docks.Where(dock => dock is not IToolDock).Select(dock => dock.Id).ToHashSet(StringComparer.Ordinal);
+        var groupIds = new Dictionary<IToolDock, string>(ReferenceEqualityComparer.Instance);
+        var suffix = 0;
+
+        // Dock can leave newly split groups unnamed or copy an existing ID. Give
+        // each group a unique saved ID so pins can reference it by identity.
+        foreach (var group in docks.OfType<IToolDock>())
+        {
+            var id = GroupId(group.Id);
+            if (id is null || !assignedIds.Add(id))
+            {
+                do { id = FormattableString.Invariant($"tool-group-{++suffix}"); }
+                while (!existingIds.Add(id));
+            }
+            groupIds.Add(group, id);
+        }
+
+        return groupIds;
+    }
+
+    private void RestorePinned(IRootDock root, PinnedTool[] pins)
+    {
+        var owners = Descendants(root).OfType<IToolDock>().ToArray();
+        // Dock initializes pinned tools from the root's edge lists. A missing original
+        // dock is valid: Dock can find or create an aligned destination when unpinning.
+        foreach (var edge in pins.GroupBy(pin => ParseAlignment(pin.Alignment)))
+        {
+            var pinned = Factory.CreateList<IDockable>();
+            foreach (var pin in edge)
+            {
+                var tool = _tools[pin.Tool];
+                tool.OriginalOwner = owners.FirstOrDefault(owner => owner.Alignment == edge.Key &&
+                    string.Equals(owner.Id, pin.Group, StringComparison.Ordinal));
+                pinned.Add(tool);
+            }
+
+            switch (edge.Key)
+            {
+                case Alignment.Left: root.LeftPinnedDockables = pinned; break;
+                case Alignment.Right: root.RightPinnedDockables = pinned; break;
+                case Alignment.Top: root.TopPinnedDockables = pinned; break;
+                case Alignment.Bottom: root.BottomPinnedDockables = pinned; break;
+            }
+        }
+    }
+
+    private void RestoreLostPanes()
+    {
+        if (_disposed)
+            return;
+
+        foreach (var tool in _tools.Values.Where(IsDetached))
+        {
+            var owner = Descendants(Root).OfType<IToolDock>()
+                .FirstOrDefault(group => string.Equals(group.Id, tool.DefaultGroup, StringComparison.Ordinal))
+                ?? CreateRecoveryGroup(tool.DefaultGroup);
+            Factory.AddDockable(owner, tool);
+            owner.ActiveDockable ??= tool;
+        }
+
+        foreach (var document in _documents.Values.Where(IsDetached))
+        {
+            var owner = Descendants(Root).OfType<IDocumentDock>().FirstOrDefault();
+            if (owner is null)
+            {
+                owner = Factory.CreateDocumentDock();
+                owner.Id = "documents";
+                Factory.SplitToDock(Root.VisibleDockables!.OfType<IDock>().First(), owner, DockOperation.Right);
+            }
+            Factory.AddDockable(owner, document);
+            owner.ActiveDockable ??= document;
+        }
+    }
+
+    private bool IsDetached(IDockable dockable) =>
+        Factory.FindRoot(dockable) is not { } root || (!ReferenceEquals(root, Root) && root.Window?.Owner is null);
+
+    private IToolDock CreateRecoveryGroup(string id)
+    {
+        var (alignment, operation) = id switch
+        {
+            "left" => (Alignment.Left, DockOperation.Left),
+            "bottom" => (Alignment.Bottom, DockOperation.Bottom),
+            _ => (Alignment.Right, DockOperation.Right),
+        };
+        var owner = Factory.CreateToolDock();
+        owner.Id = id;
+        owner.Alignment = alignment;
+        var anchor = Descendants(Root).OfType<IDocumentDock>().FirstOrDefault() as IDock
+            ?? Root.VisibleDockables!.OfType<IDock>().First();
+        Factory.SplitToDock(anchor, owner, operation);
+        return owner;
+    }
+
+    private void Publish(string? id)
+    {
+        ActiveToolId = id;
+        if (!_suppress)
+        {
+            Revision++;
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private static double? Size(double size) => double.IsFinite(size) && size > 0 ? size : null;
+
+    private static string? GroupId(string? id) =>
+        id is { Length: > 0 and <= 128 } && id.All(static character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.')
+            ? id : null;
+
+    private static Alignment ParseAlignment(string? alignment) => alignment switch
+    {
+        "Left" or "Unset" => Alignment.Left,
+        "Top" => Alignment.Top,
+        "Bottom" => Alignment.Bottom,
+        _ => Alignment.Right,
+    };
+
+    private static IEnumerable<IDockable> Descendants(IDock dock)
+    {
+        foreach (var child in dock.VisibleDockables ?? [])
+        {
+            yield return child;
+            if (child is IDock branch)
+            {
+                foreach (var descendant in Descendants(branch))
+                    yield return descendant;
+            }
+        }
+    }
+
+    private static DockNode DefaultTopology() => new("vertical", "main", Children:
+    [
+        new("horizontal", "columns", 0.73, Children:
+        [
+            new("tool-tabs", "left", 0.20, Children: [new("tool", "explorer")], Alignment: "Left"),
+            new("splitter"),
+            new("document-tabs", "documents", 0.56, "start",
+                [new("document", "start"), new("document", "emulation"), new("document", "disassembly"), new("document", "test-results")]),
+            new("splitter"),
+            new("tool-tabs", "right", 0.24, "registers", [new("tool", "registers"), new("tool", "call-stack")], "Right"),
+        ]),
+        new("splitter"),
+        new("tool-tabs", "bottom", 0.27, "output",
+            [new("tool", "output"), new("tool", "problems"), new("tool", "serial"), new("tool", "breakpoints"), new("tool", "mcp-activity")], "Bottom"),
+    ]);
+}
+
+internal sealed class ShellTool : Tool
+{
+    public ShellTool(string id, string title, string message, string defaultGroup, InteractionBlocks interaction)
+    {
+        Id = id;
+        Title = title;
+        Message = message;
+        DefaultGroup = defaultGroup;
+        Interaction = interaction;
+        CanClose = false;
+        CanFloat = true;
+        CanPin = true;
+    }
+
+    public string Message { get; }
+    public string DefaultGroup { get; }
+    public InteractionBlocks Interaction { get; }
+}
+
+internal sealed class ShellDocument : Document
+{
+    public ShellDocument(string id, string title, string message, InteractionBlocks interaction)
+    {
+        Id = id;
+        Title = title;
+        Message = message;
+        Interaction = interaction;
+        CanClose = false;
+        CanFloat = false;
+    }
+
+    public string Message { get; }
+    public InteractionBlocks Interaction { get; }
+}

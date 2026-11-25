@@ -12,6 +12,10 @@ The [emulator adapter contract](emulator-adapter-contract.md) defines the .NET f
 
 Retro IDE exposes every supported feature as an MCP tool using the official .NET MCP hosting extensions. ViewModels define the public context contracts for those tools. CLI and desktop clients attach to the same IDE session and dispatch typed operations through the shared controller and CQRS handlers. [MCP tool contract](mcp-tools.md)
 
+## Phase 01 implementation
+
+The [candidate C4 model](architecture/structurizr/README.md) records the running Avalonia workbench, shared focus command and both MCP transports. The hosted tools cover context read and tool focus. The desktop persists dock layout independently of emulator state. The [verification receipt](receipts/phase-01-remotecontrol-verification.md) describes the separate input-free Windows and isolated Linux test runs. Backend adapters, editor, Git and LSP integration are later increments.
+
 ## MVVM Toolkit, SimpleMVC, and CQRS
 
 Avalonia menus, command bars, and keyboard bindings use the predefined command catalog. Each registration provides a stable ID and one shared `ICommand` instance per activation scope. A preset supplies target data to the command. [Avalonia commanding](https://docs.avaloniaui.net/docs/input-interaction/commanding)

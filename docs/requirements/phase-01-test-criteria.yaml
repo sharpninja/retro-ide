@@ -1,0 +1,28 @@
+# Phase 01 test-criterion IDs projected from QBrain effective requirements.
+# Update this projection from QBrain when the Phase 01 links change.
+# QBrain export SHA256: e3a9759a3ddae2d6997efe37a8c7efdf34c1244a980d458c1658d6bd71a2e181.
+payload:
+  result:
+    testing:
+    - id: TEST-RETRO-001
+      acceptanceCriteria:
+      - id: verify-ac-behavior-desktop-1
+      - id: verify-ac-behavior-desktop-2
+      - id: verify-ac-contract-desktop-1
+      - id: verify-ac-contract-desktop-2
+    - id: TEST-RETRO-007
+      acceptanceCriteria:
+      - id: ac-test-cqrs-unit-of-work
+      - id: ac-test-simplemvc-views
+      - id: ac-test-system-wait-cursor
+      - id: ac-test-toolkit-bindings
+      - id: ac-test-view-result-routing
+    - id: TEST-RETRO-008
+      acceptanceCriteria:
+      - id: ac-test-gesture-parity
+    - id: TEST-RETRO-015
+      acceptanceCriteria:
+      - id: ac-test-mcp-inventory
+      - id: ac-test-mcp-same-instance
+      - id: ac-test-mcp-scope
+      - id: ac-test-mcp-viewmodel-context

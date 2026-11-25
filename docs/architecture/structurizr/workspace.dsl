@@ -1,4 +1,4 @@
-workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design moved from UAE Developer." {
+workspace "Retro IDE" "Shared emulator IDE with an implemented workbench and a scoped MCP focus workflow." {
     !identifiers hierarchical
 
     model {
@@ -6,42 +6,42 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
 
         retro = softwareSystem "Retro IDE" "Shared cross-platform development environment and capability-driven emulator integrations." {
             properties {
-                "Baseline" "design-12-mcp-viewmodel-context"
-                "Implementation status" "Wireframes and target presets exist. Desktop and runtime adapter components are planned."
+                "Baseline" "implementation-01-workbench-mcp-candidate"
+                "Implementation status" "Phase 01 delivers the workbench and scoped focus through the UI and both MCP transports. Emulator integration is planned."
                 "QBrain workspace" "/home/sharpninja/github/retro-ide"
             }
 
-            desktop = container "Retro IDE Desktop" "Owns the workbench, user workflows, selected-session state, and emulator adapter components." ".NET, Avalonia, Dock.Avalonia" "Planned" {
-                shell = component "Workbench and Docking (View)" "Hosts menus, command bars, keyboard bindings, documents, and docked tools. Presents command metadata and localization, and applies the system wait cursor to logically blocked UI." "Avalonia and Dock.Avalonia" "Planned" {
+            desktop = container "Retro IDE Desktop" "Owns the workbench, user workflows, selected-session state, and emulator adapter components." ".NET, Avalonia, Dock.Avalonia" "Phase 01" {
+                shell = component "Workbench and Docking (View)" "Hosts menus, command bars, keyboard bindings, documents, and docked tools. Presents command metadata and localization, and applies the system wait cursor to logically blocked UI." "Avalonia and Dock.Avalonia" "Phase 01" {
                     properties {
                         "Requirements" "FR-RETRO-001, TR-RETRO-DESKTOP-001, FR-RETRO-007, FR-RETRO-008, TR-RETRO-COMMAND-007#ac-system-wait-cursor"
                         "Storyboard" "STB01 Arrange tool windows and restore an IDE workspace"
                     }
                 }
-                commands = component "Predefined Command Catalog" "Registers typed IDE commands and queries with stable IDs and required capabilities. Pairs UI commands with Toolkit bindings and localized metadata. Supplies the MCP tool registry." "CommunityToolkit.Mvvm and typed .NET requests" "Planned" {
+                commands = component "Predefined Command Catalog" "Registers typed IDE commands and queries with stable IDs and required capabilities. Pairs UI commands with Toolkit bindings and localized metadata. Supplies the MCP tool registry." "CommunityToolkit.Mvvm and typed .NET requests" "Phase 01" {
                     properties {
                         "Requirements" "FR-RETRO-007, TR-RETRO-COMMAND-007, FR-RETRO-008, TR-RETRO-LOCALIZATION-008"
                     }
                 }
-                localizer = component "Localization Service" "Resolves typed text and image slugs through exact locale, parent locales, and bundled English. Formats messages and refreshes workbench presentation when the UI culture changes." ".NET localization" "Planned" {
+                localizer = component "Localization Service" "Resolves typed text and image slugs through exact locale, parent locales, and bundled English. Formats messages and refreshes workbench presentation when the UI culture changes." ".NET localization" "Phase 01" {
                     properties {
                         "Requirements" "FR-RETRO-008, TR-RETRO-LOCALIZATION-008"
                     }
                 }
-                localeCatalog = component "Locale Catalogs" "Supplies versioned catalogs of strings, message patterns, and local SVG or PNG resources. Includes the bundled default catalog and validated language packs." "BCP 47 locale tags" "DataStore,Planned"
-                controller = component "Main MVC Controller" "Owns dispatch and result delivery for views registered directly with it. Provides the shared execution entry point for typed requests from all controllers into the custom Unit of Work." "GPS.SimpleMVC 2.0.0" "Planned"
+                localeCatalog = component "Locale Catalogs" "Supplies versioned catalogs of strings, message patterns, and local SVG or PNG resources. Includes the bundled default catalog and validated language packs." "BCP 47 locale tags" "DataStore,Phase 01"
+                controller = component "Main MVC Controller" "Owns dispatch and result delivery for views registered directly with it. Provides the shared execution entry point for typed requests from all controllers into the custom Unit of Work." "GPS.SimpleMVC 2.0.0" "Phase 01"
                 documentController = component "Document Controller" "Owns dispatch for editor views that register directly with it. Receives their events, dispatches typed document requests through the shared CQRS entry point, and delivers results to the originating tab." "GPS.SimpleMVC 2.0.0" "Planned" {
                     properties {
                         "Requirements" "TR-RETRO-COMMAND-007#ac-controller-ownership, TR-RETRO-COMMAND-007#ac-mdi-dispatch"
                         "Storyboard" "STB14 Edit, build, boot, and debug a UAE project"
                     }
                 }
-                unitOfWork = component "CQRS Unit of Work" "Owns IDE application logic. Dispatches typed commands and read-only queries to registered handlers with scoped context, validates eligibility, and returns or publishes their outcomes." "Custom .NET command and query handlers" "Planned" {
+                unitOfWork = component "CQRS Unit of Work" "Owns IDE application logic. Dispatches typed commands and read-only queries to registered handlers with scoped context, validates eligibility, and returns or publishes their outcomes." "Custom .NET command and query handlers" "Phase 01" {
                     properties {
                         "Requirements" "TR-RETRO-COMMAND-007#ac-cqrs-unit-of-work"
                     }
                 }
-                viewModels = component "IDE ViewModels (View)" "Implement IView with a stable ViewKey. Raise CommandRequested, receive correlated results on the UI thread, and expose observable properties through ObservableObject." "CommunityToolkit.Mvvm.ComponentModel and SimpleMVC" "Planned" {
+                viewModels = component "IDE ViewModels (View)" "Implement IView with a stable ViewKey. Raise CommandRequested, receive correlated results on the UI thread, and expose observable properties through ObservableObject." "CommunityToolkit.Mvvm.ComponentModel and SimpleMVC" "Phase 01" {
                     properties {
                         "Requirements" "TR-RETRO-COMMAND-007#ac-simplemvc-views, TR-RETRO-COMMAND-007#ac-toolkit-viewmodels"
                     }
@@ -71,8 +71,8 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
                         "Storyboard" "STB14 Edit, build, boot, and debug a UAE project"
                     }
                 }
-                uiDispatcher = component "Avalonia UI Dispatcher" "Schedules callbacks on the UI thread. The dispatch owner checks its originating registration inside the callback before applying the result." "Avalonia Dispatcher.UIThread" "Planned"
-                ideState = component "IDE State (Model)" "Provides observable workspace, presentation culture, active document and target, selected session, availability, operation state, interaction blocks by scope, and diagnostics." ".NET" "Planned"
+                uiDispatcher = component "Avalonia UI Dispatcher" "Schedules callbacks on the UI thread. The dispatch owner checks its originating registration inside the callback before applying the result." "Avalonia Dispatcher.UIThread" "Implemented"
+                ideState = component "IDE State (Model)" "Provides observable workspace, presentation culture, active document and target, selected session, availability, operation state, interaction blocks by scope, and diagnostics." ".NET" "Phase 01"
                 launch = component "Project and Launch Workflow" "Selects the target preset, runs the configured build, opens source diagnostics, and launches or attaches after a successful build." ".NET" "Planned" {
                     properties {
                         "Requirements" "FR-RETRO-002, TR-RETRO-PROFILE-002"
@@ -106,7 +106,7 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
                     }
                 }
                 agentGateway = component "Agent Gateway" "Handles configured process launch and attach for authorized agent workflows." ".NET and MCP" "Planned"
-                mcpHost = component "Retro IDE MCP Host" "Exposes tools for every supported IDE feature. Generates context schemas from the declared public ViewModel members, validates scope and live context, and uses shared CQRS dispatch." "Official MCP C# SDK, Microsoft.Extensions.Hosting, ASP.NET Core" "Planned" {
+                mcpHost = component "Retro IDE MCP Host" "Exposes tools for every supported IDE feature. Generates context schemas from the declared public ViewModel members, validates scope and live context, and uses shared CQRS dispatch." "Official MCP C# SDK, Microsoft.Extensions.Hosting, ASP.NET Core" "Phase 01" {
                     properties {
                         "Requirements" "FR-RETRO-015, TR-RETRO-MCP-015"
                     }
@@ -130,7 +130,7 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
             workspaceFiles = container "Local Workspace Settings" "Stores IDE layout, workspace roots and explorer state, preferences, language server registrations, bucket configuration, and project settings with target preset, pinned bundle, and artifact references." "Local files" "DataStore,Planned"
             workspaceContent = container "Workspace Project and Folder Files" "Contains selected projects, source files, artifacts, and Git worktrees and metadata where present." "Local filesystem" "DataStore"
             bundleStore = container "Local Emulator Bundle Store" "Holds verified, versioned emulator archives and expanded binaries, bindings, install receipts, and the last valid bucket metadata for offline use." "Per-user filesystem" "DataStore,Planned"
-            mcpStdio = container "MCP Stdio Bridge" "Launched by CLI clients to attach MCP tools to the selected running Retro IDE instance." ".NET, ModelContextProtocol" "Planned"
+            mcpStdio = container "MCP Stdio Bridge" "Launched by CLI clients to attach MCP tools to the selected running Retro IDE instance." ".NET, ModelContextProtocol" "Implemented"
         }
 
         uae = softwareSystem "UAE Developer" "Owns the UAE40 profile, control service, isolated worker and UAE-specific protocol and diagnostics. The desktop-facing interface is pending." "External" {
@@ -305,6 +305,26 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
             retro.desktop.uiDispatcher -> retro.desktop.viewModels "Apply the result on the UI thread if the originating view is still registered"
             retro.desktop.viewModels -> retro.desktop.ideState "Observe the updated build output and diagnostics"
             retro.desktop.shell -> retro.desktop.viewModels "Render updated observable properties"
+            autoLayout lr
+        }
+        dynamic retro.desktop "WorkbenchFocusParity" "Phase 01 shared tool-window focus through the workbench, stdio bridge, or Streamable HTTP" {
+            developer -> retro.desktop.shell "Invoke Focus tool pane using the menu, command bar, or shortcut"
+            retro.desktop.shell -> retro.desktop.commands "Execute the shared workbench.view.focus Toolkit command"
+            retro.desktop.commands -> retro.desktop.viewModels "Capture tool ID and live public workbench context"
+            retro.desktop.viewModels -> retro.desktop.controller "Raise CommandRequested on the registered view"
+            retro.desktop.controller -> retro.desktop.unitOfWork "Dispatch the typed focus command"
+            retro.desktop.unitOfWork -> retro.desktop.ideState "Focus the eligible dockable and publish the new revision"
+            retro.desktop.controller -> retro.desktop.uiDispatcher "Schedule the correlated result"
+            retro.desktop.uiDispatcher -> retro.desktop.viewModels "Deliver to the originating live registration"
+            aiAgent -> retro.mcpStdio "Attach a CLI client with the selected workbench descriptor"
+            retro.mcpStdio -> retro.desktop.mcpHost "Forward discovery and calls over authenticated loopback Streamable HTTP"
+            aiAgent -> retro.desktop.mcpHost "A desktop client may invoke the same tools directly over Streamable HTTP"
+            retro.desktop.mcpHost -> retro.desktop.commands "Discover the same focus command and its public context schema"
+            retro.desktop.mcpHost -> retro.desktop.controller "Submit workbench_focus_tool with the captured ViewModel context"
+            retro.desktop.controller -> retro.desktop.unitOfWork "Validate scope, live registration and revision on the UI thread"
+            retro.desktop.unitOfWork -> retro.desktop.ideState "Apply the same Dock focus operation and publish the new revision"
+            retro.desktop.controller -> retro.desktop.mcpHost "Return the correlated outcome and new public context snapshot"
+            retro.desktop.mcpHost -> aiAgent "Return the structured tool result to the requesting client"
             autoLayout lr
         }
         dynamic retro.desktop "McpToolDispatch" "An agent reads a ViewModel context, then invokes the same typed editor operation used by the workbench" {
@@ -524,6 +544,14 @@ workspace "Retro IDE" "C4 baseline for the shared emulator IDE after its design 
             }
             element "External" {
                 background #57636b
+                color #ffffff
+            }
+            element "Phase 01" {
+                stroke #4eb9aa
+                strokeWidth 3
+            }
+            element "Implemented" {
+                background #235c49
                 color #ffffff
             }
             element "Planned" {

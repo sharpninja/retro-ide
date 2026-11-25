@@ -114,6 +114,16 @@ documents:
     platforms:
       - github
       - azure
+  - id: implementation-plan
+    title: BDPv4 Implementation Plan
+    source: docs/plans/PLAN-RETROIDE-001.md
+    target: Implementation-Plan.md
+    platforms: [github, azure]
+  - id: phase01-verification
+    title: Phase 01 Verification
+    source: docs/receipts/phase-01-remotecontrol-verification.md
+    target: Phase-01-Verification.md
+    platforms: [github, azure]
 navigation:
   - document: home
   - document: project-overview
@@ -128,6 +138,8 @@ navigation:
       - document: git-integration
       - document: language-servers
       - document: mcp-tools
+      - document: implementation-plan
+      - document: phase01-verification
   - document: functional
   - document: technical
   - document: testing

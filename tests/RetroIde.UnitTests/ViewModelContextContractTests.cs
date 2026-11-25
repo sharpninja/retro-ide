@@ -1,0 +1,63 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using RetroIde.Application;
+using RetroIde.Workbench;
+using Xunit;
+
+namespace RetroIde.UnitTests;
+
+/// <summary>Checks the published workbench context and typed feature inventory.</summary>
+public sealed class ViewModelContextContractTests
+{
+    /// <summary>TEST-RETRO-015#ac-test-mcp-viewmodel-context</summary>
+    [Fact]
+    public void Public_schema_and_snapshot_share_an_exact_allowlist()
+    {
+        var contract = new ViewContextContract(typeof(WorkbenchViewModel));
+        var view = new WorkbenchViewModel(Guid.NewGuid());
+        var schema = contract.Schema;
+        var snapshot = contract.Capture(view);
+        string[] expected = ["activeToolId", "viewKey", "workbenchRevision", "workspaceId"];
+
+        Assert.Equal(expected, Fields(schema.GetProperty("properties")));
+        Assert.Equal(expected, Fields(snapshot));
+        Assert.False(schema.GetProperty("additionalProperties").GetBoolean());
+        Assert.Equal(view.ViewKey, snapshot.GetProperty("viewKey").GetGuid());
+        Assert.Equal(view.WorkspaceId, snapshot.GetProperty("workspaceId").GetGuid());
+        Assert.Equal(0, snapshot.GetProperty("workbenchRevision").GetInt64());
+        var typedSnapshot = JsonSerializer.SerializeToElement(view.Address, WireJson.Options);
+        Assert.Equal(JsonValueKind.Null, typedSnapshot.GetProperty("activeToolId").ValueKind);
+        Assert.True(contract.TryRead(typedSnapshot, out var restored));
+        Assert.Equal(view.Address, restored);
+        var properties = schema.GetProperty("properties");
+        Assert.Equal(0, properties.GetProperty("workbenchRevision").GetProperty("minimum").GetInt32());
+        Assert.Equal(Guid.Empty, properties.GetProperty("viewKey").GetProperty("not").GetProperty("const").GetGuid());
+        Assert.Equal(Guid.Empty, properties.GetProperty("workspaceId").GetProperty("not").GetProperty("const").GetGuid());
+
+        var submitted = JsonNode.Parse(snapshot.GetRawText())!.AsObject();
+        submitted["workbenchRevision"] = -1;
+        Assert.False(contract.TryRead(JsonSerializer.SerializeToElement(submitted), out var negative));
+        Assert.Null(negative);
+        submitted["workbenchRevision"] = 0;
+        submitted["viewKey"] = Guid.Empty;
+        Assert.False(contract.TryRead(JsonSerializer.SerializeToElement(submitted), out var empty));
+        Assert.Null(empty);
+        Assert.False(contract.TryRead(JsonSerializer.SerializeToElement(new { view.ViewKey, command = "hidden" }, WireJson.Options), out _));
+    }
+
+    /// <summary>TEST-RETRO-015#ac-test-mcp-inventory</summary>
+    [Fact]
+    public void Every_feature_has_a_unique_tool_and_context_contract()
+    {
+        var contract = new ViewContextContract(typeof(WorkbenchViewModel));
+        var registry = new FeatureRegistry(contract);
+        Assert.Equal(["workbench_focus_tool", "workbench_get_context"], registry.Features.Select(x => x.ToolName).Order(StringComparer.Ordinal), StringComparer.Ordinal);
+        Assert.Equal(registry.Features.Count, registry.Features.Select(x => x.Id).Distinct(StringComparer.Ordinal).Count());
+        var focus = registry.Describe(registry.FocusTool);
+        var read = registry.Describe(registry.GetContext);
+        Assert.Equal(contract.Schema.GetRawText(), focus.InputSchema.GetProperty("properties").GetProperty("context").GetRawText());
+        Assert.Equal(contract.Schema.GetRawText(), read.OutputSchema.GetProperty("properties").GetProperty("context").GetRawText());
+    }
+
+    private static string[] Fields(JsonElement element) => element.EnumerateObject().Select(x => x.Name).Order(StringComparer.Ordinal).ToArray();
+}

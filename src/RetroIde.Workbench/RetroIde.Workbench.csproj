@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <EmbeddedResource Include="Resources/en.json" />
+    <InternalsVisibleTo Include="RetroIde.UnitTests" />
+    <InternalsVisibleTo Include="RetroIde.IntegrationTests" />
+    <InternalsVisibleTo Include="RetroIde.NativeTests" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Dock.Avalonia" />
+    <PackageReference Include="Dock.Avalonia.Themes.Fluent" />
+    <PackageReference Include="Dock.Model.Mvvm" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="GPS.SimpleMVC" />
+    <ProjectReference Include="../RetroIde.Application/RetroIde.Application.csproj" />
+    <ProjectReference Include="../RetroIde.Mcp/RetroIde.Mcp.csproj" />
+  </ItemGroup>
+</Project>

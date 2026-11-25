@@ -1,0 +1,46 @@
+name: Workbench build and tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  workbench:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore RetroIde.sln
+      - run: dotnet build RetroIde.sln -c Release --no-restore
+      - run: dotnet test RetroIde.sln -c Release --no-build
+      - name: Verify compiled Phase 01 requirement trace
+        shell: pwsh
+        run: ./eng/Verify-Phase01Trace.ps1 -QBrainExport docs/requirements/phase-01-test-criteria.yaml
+      - name: Install X11 test display
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb xauth libxtst6 libice6 libsm6 libx11-6 libxext6 libxfixes3 libfontconfig1
+      - name: Native Linux docking, wait cursor, and two-desktop MCP
+        if: runner.os == 'Linux'
+        env:
+          # The native cursor check compares the actual cursor image. Use a static X11 core cursor.
+          XCURSOR_THEME: core
+          XCURSOR_PATH: /nonexistent
+        run: |
+          test ! -e /tmp/.X11-unix/X177 && test ! -e /tmp/.X177-lock
+          xvfb-run -n 177 -s '-screen 0 1600x1000x24 -extension GLX' dotnet run --project tests/RetroIde.NativeTests -c Release --no-build
+      - name: Win32 workbench and docking through RemoteControl
+        if: runner.os == 'Windows'
+        run: dotnet run --project tests/RetroIde.NativeTests -c Release --no-build -- --remote-control
+      - name: Optional native Windows docking, wait cursor, and two-desktop MCP
+        if: runner.os == 'Windows' && vars.RETRO_IDE_RUN_NATIVE_POINTER_TESTS == '1'
+        run: dotnet run --project tests/RetroIde.NativeTests -c Release --no-build
