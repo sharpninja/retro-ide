@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Globalization;
-using System.Text;
 
 namespace RetroIde.Application.Git;
 
@@ -194,7 +193,7 @@ internal static class GitHistoryOperations
             return await operation(selection).ConfigureAwait(false);
         }
         catch (Win32Exception) { return new("git_unavailable", "Git could not be started."); }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or DecoderFallbackException or ArgumentException)
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             return new("git_history_unavailable", "Git could not read repository history.");
         }
