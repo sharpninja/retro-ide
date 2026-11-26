@@ -38,7 +38,19 @@ internal sealed class GitFeatures
 
     public Feature<GitFileOperations.DiffInput> Diff { get; } = new("git.diff.read", "git_get_diff",
         "Read a literal file's staged or working diff in the selected worktree.",
-        GitFileOperations.DiffAsync, typeof(GitFileOperations.DiffResult));
+        static (input, view, token) => GitFileOperations.DiffAsync(input, view, openTab: false, token),
+        typeof(GitFileOperations.DiffResult));
+
+    public Feature<GitFileOperations.DiffInput> OpenDiff { get; } = new("git.diff.open", "git_open_diff",
+        "Open or refresh a file's staged or working diff in the attached workbench.",
+        static (input, view, token) => GitFileOperations.DiffAsync(input, view, openTab: true, token),
+        typeof(GitFileOperations.DiffTab), mutation: true);
+
+    public Feature<GitFileOperations.CloseDiffInput> CloseDiff { get; } = new("git.diff.close", "git_close_diff",
+        "Close a Git diff tab in the attached workbench.", mutation: true,
+        static (input, view) => view is IGitRegistration git && git.CloseDiff(input.ViewKey)
+            ? new("ok", "Git diff tab closed.")
+            : new("view_closed", "The Git diff tab is not open in this workbench."));
 
     public Feature<GitFileOperations.FileInput> Stage { get; } = new("git.file.stage", "git_stage_file",
         "Stage a whole file in the selected worktree's index.",

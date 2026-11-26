@@ -88,7 +88,7 @@ public sealed partial class Phase02EditorSaveContractTests
             var view = _tabs[name].View;
             var dockable = Assert.IsType<ShellDocument>(_session.Layout.Factory.FindDockable(_session.Layout.Root,
                 candidate => string.Equals(candidate.Id, view.Scope, StringComparison.Ordinal)));
-            _session.Layout.ActivateSourceDocument(dockable);
+            _session.Layout.ActivateDocument(dockable);
             Assert.Same(view, _session.Layout.CurrentSource);
             return Task.CompletedTask;
         }

@@ -49,6 +49,8 @@ The Phase 03 candidate exposes native Git discovery, selection, status, file dif
 | `git_initialize_repository` | Absolute `destination`, current workbench `context` | The registered workspace `root` and `repository` in `data`. The IDE selects both after setup. Requires a write-enabled attachment. |
 | `git_clone_repository` | Git `source`, absolute `destination`, current workbench `context` | The installed workspace `root` and selected `repository` in `data`. Requires a write-enabled attachment and a new or empty destination. |
 | `git_get_diff` | Selected `worktreePath`, literal `path`, `layer` of `staged` or `working` | A Git patch and its layer, path, and repository identity. An unchanged layer returns an empty patch. |
+| `git_open_diff` | Selected `worktreePath`, literal `path`, `layer` of `staged` or `working`, current workbench `context` | The view key, workspace, repository, path, and layer of the displayed tab. Reuses the tab for an already-open worktree, path, and layer. Requires a write-enabled attachment. |
+| `git_close_diff` | The tab's `viewKey`, current workbench `context` | Closes the registered tab in the attached workbench. Requires a write-enabled attachment. |
 | `git_stage_file` | Selected `worktreePath`, literal `path`, current workbench `context` | The path and repository with `staged: true`. Requires a write-enabled attachment. |
 | `git_unstage_file` | Selected `worktreePath`, literal `path`, current workbench `context` | The path and repository with `staged: false`. Requires a write-enabled attachment. |
 

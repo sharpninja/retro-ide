@@ -44,9 +44,12 @@ public sealed class WorkbenchApp : Avalonia.Application
         DataTemplates.Add(new FuncDataTemplate<ShellTool>((tool, _) =>
             tool?.Interaction.Wrap(tool.Id, CreateToolContent(tool))));
         DataTemplates.Add(new FuncDataTemplate<ShellDocument>((document, _) =>
-            document?.Interaction.Wrap(document.Id, document.Source is { } source
-                ? DocumentSurface.Create(source)
-                : PaneContent(document.Localization, document.Id, document: true))));
+            document?.Interaction.Wrap(document.Id, document switch
+            {
+                { Source: { } source } => DocumentSurface.Create(source),
+                { GitDiff: { } diff } => GitDiffSurface.Create(diff),
+                _ => PaneContent(document!.Localization, document.Id, document: true),
+            })));
     }
 
     /// <inheritdoc />

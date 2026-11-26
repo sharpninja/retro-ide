@@ -9,10 +9,12 @@ internal static class GitFileOperations
 {
     internal sealed record DiffInput(string WorktreePath, string Path, string Layer);
     internal sealed record FileInput(string WorktreePath, string Path);
+    internal sealed record CloseDiffInput(Guid ViewKey);
     internal sealed record DiffResult(GitWorktree Repository, string Path, string Layer, string Patch);
+    internal sealed record DiffTab(Guid ViewKey, Guid WorkspaceId, GitWorktree Repository, string Path, string Layer);
     internal sealed record FileResult(GitWorktree Repository, string Path, bool Staged);
 
-    internal static async Task<FeatureOutcome> DiffAsync(DiffInput input, IWorkbenchRegistration view, CancellationToken token)
+    internal static async Task<FeatureOutcome> DiffAsync(DiffInput input, IWorkbenchRegistration view, bool openTab, CancellationToken token)
     {
         if (input.Layer is not ("staged" or "working"))
             return new("git_invalid_diff_layer", "Choose the staged or working diff layer.");
@@ -38,11 +40,19 @@ internal static class GitFileOperations
             if (patch is null)
                 return new("git_diff_failed", "Git could not return a file diff.");
 
+            var diff = new DiffResult(repository, scopedPath, input.Layer, patch);
             return new FeatureOutcome("ok", "Git file diff read.")
             {
-                Commit = current => HasSameSelection(current, selection)
-                    ? FeatureOutcome.Success("Git file diff read.", new DiffResult(repository, scopedPath, input.Layer, patch))
-                    : SelectionChanged(),
+                Commit = current =>
+                {
+                    if (current is not IGitRegistration git || !HasSameSelection(current, selection))
+                        return SelectionChanged();
+                    if (!openTab)
+                        return FeatureOutcome.Success("Git file diff read.", diff);
+                    return git.ShowDiff(diff) is { } tab
+                        ? FeatureOutcome.Success("Git diff tab opened.", tab)
+                        : new("view_closed", "The workbench cannot open a Git diff tab.");
+                },
             };
         }, token).ConfigureAwait(false);
     }

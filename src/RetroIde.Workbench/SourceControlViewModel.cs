@@ -15,6 +15,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
 
     private WorkspaceExplorer.Address? _explorerSelection;
     private bool _available;
+    private (string Path, string Layer)? _file;
 
     public Guid ViewKey { get; } = Guid.NewGuid();
 
@@ -59,6 +60,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         Dispatcher.UIThread.VerifyAccess();
         Status = null;
         Repository = repository;
+        SelectFile(null, "working");
         LastResult = null;
     }
 
@@ -66,6 +68,21 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     {
         Dispatcher.UIThread.VerifyAccess();
         Status = status;
+        if (_file is { } current && !(string.Equals(current.Layer, "staged", StringComparison.Ordinal) ? Staged : Working.Concat(Conflicts))
+            .Any(entry => string.Equals(entry.Path, current.Path, StringComparison.Ordinal)))
+            SelectFile(null, current.Layer);
+    }
+
+    internal void SelectFile(GitStatusEntry? entry, string layer)
+    {
+        _file = entry is null ? null : (entry.Path, layer);
+        NotifyFileCommands();
+    }
+
+    internal void ClearFile(GitStatusEntry entry, string layer)
+    {
+        if (_file == (entry.Path, layer))
+            SelectFile(null, layer);
     }
 
     internal void SetAvailability(WorkspaceExplorer.Address? selection, bool available)
@@ -79,11 +96,49 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         RefreshStatusCommand.NotifyCanExecuteChanged();
         InitializeRepositoryCommand.NotifyCanExecuteChanged();
         CloneRepositoryCommand.NotifyCanExecuteChanged();
+        NotifyFileCommands();
+    }
+
+    private void NotifyFileCommands()
+    {
+        OpenDiffCommand.NotifyCanExecuteChanged();
+        StageFileCommand.NotifyCanExecuteChanged();
+        UnstageFileCommand.NotifyCanExecuteChanged();
     }
 
     private bool CanOpenPane() => _available;
     private bool CanSelectRepository() => _available && _explorerSelection is not null;
     private bool CanRefreshStatus() => _available && Repository is not null;
+    private bool CanOpenDiff() => CanRefreshStatus() && _file is not null;
+    private bool CanStageFile() => CanOpenDiff() && _file is { Layer: "working" };
+    private bool CanUnstageFile() => CanOpenDiff() && _file is { Layer: "staged" };
+
+    [RelayCommand(CanExecute = nameof(CanOpenDiff))]
+    private Task OpenDiffAsync(CancellationToken cancellationToken) =>
+        Repository is { } repo && _file is { } file
+            ? RequestAsync(registry.Git.OpenDiff, new GitFileOperations.DiffInput(repo.WorktreePath, file.Path, file.Layer), cancellationToken)
+            : Task.CompletedTask;
+
+    [RelayCommand(CanExecute = nameof(CanStageFile))]
+    private Task StageFileAsync(CancellationToken cancellationToken) =>
+        UpdateIndexAsync(registry.Git.Stage, "working", cancellationToken);
+
+    [RelayCommand(CanExecute = nameof(CanUnstageFile))]
+    private Task UnstageFileAsync(CancellationToken cancellationToken) =>
+        UpdateIndexAsync(registry.Git.Unstage, "staged", cancellationToken);
+
+    private async Task UpdateIndexAsync(Feature<GitFileOperations.FileInput> feature, string layer, CancellationToken cancellationToken)
+    {
+        if (Repository is not { } repo || _file is not { } file || !string.Equals(file.Layer, layer, StringComparison.Ordinal))
+            return;
+
+        interaction.Begin(PaneId);
+        try
+        {
+            await RequestAsync(feature, new GitFileOperations.FileInput(repo.WorktreePath, file.Path), cancellationToken).ConfigureAwait(true);
+        }
+        finally { interaction.End(PaneId); }
+    }
 
     [RelayCommand(CanExecute = nameof(CanOpenPane))]
     private Task OpenPaneAsync(CancellationToken cancellationToken) =>

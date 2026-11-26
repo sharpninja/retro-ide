@@ -276,6 +276,12 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                     DispatchToViewAsync(git, registration, _registry.Git.Initialize, initialize, request, refreshOrigin: registration),
                 GitFeatures.CloneInput clone when string.Equals(request.CommandId, _registry.Git.Clone.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.Clone, clone, request, refreshOrigin: registration),
+                GitFileOperations.DiffInput diff when string.Equals(request.CommandId, _registry.Git.OpenDiff.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.OpenDiff, diff, request),
+                GitFileOperations.FileInput stage when string.Equals(request.CommandId, _registry.Git.Stage.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.Stage, stage, request),
+                GitFileOperations.FileInput unstage when string.Equals(request.CommandId, _registry.Git.Unstage.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.Unstage, unstage, request),
                 _ => null,
             };
         }
@@ -406,6 +412,10 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
             Controller.PublishExplorerState();
             return new GitProvisionedWorkspace(root, repository);
         }
+
+        public GitFileOperations.DiffTab? ShowDiff(GitFileOperations.DiffResult diff) => Controller._documents?.ShowDiff(diff);
+
+        public bool CloseDiff(Guid viewKey) => Controller._documents?.CloseDiff(viewKey) == true;
 
         public bool HasExplorer => Controller._explorerView?.ParentViewKey == View.ViewKey;
         public bool CanChangeExplorer => Controller.CanChangeExplorer();

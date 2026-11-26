@@ -11,6 +11,9 @@ internal static class WorkbenchText
     internal const string GitStaged = "git.status.group.staged";
     internal const string GitWorking = "git.status.group.working";
     internal const string GitConflicts = "git.status.group.conflicts";
+    internal const string GitDiffTitle = "git.diff.title";
+    internal const string GitDiffStaged = "git.diff.layer.staged";
+    internal const string GitDiffWorking = "git.diff.layer.working";
     internal const string GitBadgeTracked = "explorer.git.tracked";
     internal const string GitBadgeUntracked = "explorer.git.untracked";
     internal const string GitBadgeIgnored = "explorer.git.ignored";
@@ -38,7 +41,7 @@ internal static class WorkbenchText
 
     internal static IReadOnlyList<string> Required { get; } =
         [FileMenu, ViewMenu, LanguageMenu, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
-            ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts,
+            ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts, GitDiffStaged, GitDiffWorking,
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel,
             GitBadgeTracked, GitBadgeUntracked, GitBadgeIgnored, GitBadgeModified, GitBadgeStaged, GitBadgeStagedModified, GitBadgeConflicted];
 
@@ -52,6 +55,13 @@ internal static class WorkbenchText
     }
 
     internal static string PaneTitle(string id) => $"pane.{id}.title";
+
+    internal static string GitDiffName(WorkbenchLocalization localization, string path, string layer) =>
+        localization.Text(GitDiffTitle, new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["path"] = path,
+            ["layer"] = localization.Text(string.Equals(layer, "staged", StringComparison.Ordinal) ? GitDiffStaged : GitDiffWorking),
+        });
 
     internal static string PaneDescription(string id) => $"pane.{id}.description";
 }

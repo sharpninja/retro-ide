@@ -25,6 +25,12 @@ internal interface IGitRegistration
     /// <param name="readOrder">The captured read order.</param>
     void DisplayGitStatus(GitStatus? status, long readOrder);
 
+    /// <summary>Opens a scoped, read-only Git diff in the attached document workbench.</summary>
+    GitFileOperations.DiffTab? ShowDiff(GitFileOperations.DiffResult diff);
+
+    /// <summary>Closes an existing Git diff tab by its registration key.</summary>
+    bool CloseDiff(Guid viewKey);
+
     /// <summary>Registers the installed checkout as a workspace root and makes it the selected Git worktree.</summary>
     /// <param name="repository">The installed native checkout.</param>
     /// <returns>The registered root and worktree identity.</returns>

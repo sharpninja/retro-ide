@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Input;
 using Dock.Model.Core.Events;
 using GPS.SimpleMVC.Controllers;
 using RetroIde.Application;
+using RetroIde.Application.Git;
 using RetroIde.Application.Workspaces;
 
 namespace RetroIde.Workbench;
@@ -16,6 +18,7 @@ internal sealed class DocumentController : SimpleControllerBase
     private Guid? _closingView;
     private readonly WorkbenchController _dispatch;
     private readonly Dictionary<WorkspaceExplorer.Address, ShellDocument> _open = new(WorkspaceExplorer.AddressEquality);
+    private readonly Dictionary<(string Worktree, string Path, string Layer), ShellDocument> _diffs = [];
 
     public DocumentController(WorkbenchViewModel workbench, DockLayout layout, InteractionBlocks interaction,
         FeatureRegistry features, WorkbenchController dispatch)
@@ -27,6 +30,7 @@ internal sealed class DocumentController : SimpleControllerBase
         _dispatch = dispatch;
         _layout.Factory.DockableClosed += OnTabClosed;
         _layout.Factory.DockableClosing += OnTabClosing;
+        (_workbench.Localization ?? WorkbenchLocalization.English).Changed += OnDiffLanguageChanged;
         Initialize();
     }
 
@@ -35,7 +39,7 @@ internal sealed class DocumentController : SimpleControllerBase
     internal bool HasDocument(WorkspaceExplorer.Address address) => _open.ContainsKey(address);
 
     internal bool Owns(Guid viewKey, Guid parentKey) =>
-        parentKey == _workbench.ViewKey && GetView<IView>(viewKey) is DocumentViewModel;
+        parentKey == _workbench.ViewKey && GetView<IView>(viewKey) is DocumentViewModel or GitDiffViewModel;
 
     internal DocumentContext? OpenOrActivate(WorkspaceExplorer.Address address, WorkspaceExplorer.SourceFile? source, SourcePosition? position)
     {
@@ -57,17 +61,53 @@ internal sealed class DocumentController : SimpleControllerBase
             _open.Add(address, document);
             view.CommandRequested += OnCommandRequested;
             view.PropertyChanged += OnDocumentStateChanged;
-            _layout.AddSourceDocument(document);
+            _layout.AddTransientDocument(document);
         }
 
         var active = document.Source!;
         if (position is not null)
             active.GoTo(position);
-        _layout.ActivateSourceDocument(document);
+        _layout.ActivateDocument(document);
         return active.Capture();
     }
 
     internal DocumentContext? ReadContext(Guid key) => GetView<IView>(key) is DocumentViewModel view ? view.Capture() : null;
+
+    internal GitFileOperations.DiffTab? ShowDiff(GitFileOperations.DiffResult diff)
+    {
+        Dispatcher.UIThread.VerifyAccess();
+        var key = (diff.Repository.WorktreePath, diff.Path, diff.Layer);
+        if (!_diffs.TryGetValue(key, out var document))
+        {
+            var view = new GitDiffViewModel(_workbench, _features.Git.CloseDiff, diff);
+            if (!AddOrUpdateView(view))
+                return null;
+            view.CommandRequested += OnDiffCommandRequested;
+            document = new ShellDocument($"git-diff-{view.ViewKey:N}", view.Title, "", _interaction)
+            {
+                GitDiff = view,
+                CanClose = true,
+                CanFloat = true,
+            };
+            _diffs.Add(key, document);
+            _layout.AddTransientDocument(document);
+        }
+        var active = document.GitDiff!;
+        active.DisplayPatch(diff.Patch);
+        _layout.ActivateDocument(document);
+        return active.Capture();
+    }
+
+    internal bool CloseDiff(Guid viewKey)
+    {
+        if (GetView<IView>(viewKey) is not GitDiffViewModel view || !_diffs.TryGetValue(view.Identity, out var document))
+            return false;
+        var previous = _closingView;
+        _closingView = viewKey;
+        try { _layout.Factory.CloseDockable(document); }
+        finally { _closingView = previous; }
+        return !_diffs.ContainsKey(view.Identity);
+    }
 
     internal FeatureOutcome Find(DocumentFeatures.FindInput input)
     {
@@ -190,6 +230,8 @@ internal sealed class DocumentController : SimpleControllerBase
     {
         foreach (var document in _open.Values.ToArray())
             RemoveDocument(document);
+        foreach (var document in _diffs.Values.ToArray())
+            RemoveDiff(document);
     }
 
     protected override void Dispose(bool disposing)
@@ -198,6 +240,7 @@ internal sealed class DocumentController : SimpleControllerBase
         {
             _layout.Factory.DockableClosed -= OnTabClosed;
             _layout.Factory.DockableClosing -= OnTabClosing;
+            (_workbench.Localization ?? WorkbenchLocalization.English).Changed -= OnDiffLanguageChanged;
             DetachViews();
         }
         base.Dispose(disposing);
@@ -205,14 +248,18 @@ internal sealed class DocumentController : SimpleControllerBase
 
     private void OnTabClosing(object? sender, DockableClosingEventArgs args)
     {
-        if (args.Dockable is ShellDocument { Source: { } view } && _closingView != view.ViewKey &&
+        if (args.Dockable is not ShellDocument document)
+            return;
+        IView? view = (IView?)document.Source ?? document.GitDiff;
+        IAsyncRelayCommand? close = document.Source?.CloseCommand ?? document.GitDiff?.CloseCommand;
+        if (view is not null && close is not null && _closingView != view.ViewKey &&
             ReferenceEquals(GetView<IView>(view.ViewKey), view))
         {
             args.Cancel = true;
             Dispatcher.UIThread.Post(() =>
             {
                 if (ReferenceEquals(GetView<IView>(view.ViewKey), view))
-                    view.CloseCommand.Execute(null);
+                    close.Execute(null);
             }, DispatcherPriority.Background);
         }
     }
@@ -226,11 +273,29 @@ internal sealed class DocumentController : SimpleControllerBase
 
     private void OnTabClosed(object? sender, DockableClosedEventArgs args)
     {
-        if (args.Dockable is ShellDocument { Source: not null } document)
+        if (args.Dockable is ShellDocument { IsTransient: true } document)
         {
-            RemoveDocument(document);
+            if (document.GitDiff is not null)
+                RemoveDiff(document);
+            else
+                RemoveDocument(document);
             _layout.AdvanceWorkspaceRevision();
         }
+    }
+
+    private void OnDiffLanguageChanged(object? sender, EventArgs args)
+    {
+        foreach (var document in _diffs.Values)
+            document.Title = document.GitDiff!.Title;
+    }
+
+    private void RemoveDiff(ShellDocument document)
+    {
+        if (document.GitDiff is not { } view || !_diffs.Remove(view.Identity))
+            return;
+        view.CommandRequested -= OnDiffCommandRequested;
+        RemoveView(view);
+        _layout.ForgetTransientDocument(document);
     }
 
     private void RemoveDocument(ShellDocument document)
@@ -240,7 +305,7 @@ internal sealed class DocumentController : SimpleControllerBase
         view.CommandRequested -= OnCommandRequested;
         view.PropertyChanged -= OnDocumentStateChanged;
         RemoveView(view);
-        _layout.ForgetSourceDocument(document);
+        _layout.ForgetTransientDocument(document);
     }
 
     private void OnCommandRequested(object? sender, ViewCommandRequested request)
@@ -269,7 +334,16 @@ internal sealed class DocumentController : SimpleControllerBase
         };
     }
 
-    private async Task CompleteAsync<TInput>(DocumentViewModel origin, Feature<TInput> feature, TInput input,
+    private void OnDiffCommandRequested(object? sender, ViewCommandRequested request)
+    {
+        if (request.Completion is null && sender is GitDiffViewModel view && request.OriginViewKey == view.ViewKey &&
+            ReferenceEquals(GetView<IView>(view.ViewKey), view) &&
+            string.Equals(request.CommandId, _features.Git.CloseDiff.Id, StringComparison.Ordinal) &&
+            request.Payload is GitFileOperations.CloseDiffInput close && close.ViewKey == view.ViewKey)
+            request.Completion = CompleteAsync(view, _features.Git.CloseDiff, close, request);
+    }
+
+    private async Task CompleteAsync<TInput>(IView origin, Feature<TInput> feature, TInput input,
         ViewCommandRequested request) where TInput : class
     {
         var result = await _dispatch.DispatchDocumentAsync(feature, input, request).ConfigureAwait(false);

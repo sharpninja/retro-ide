@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -20,6 +21,13 @@ internal static class SourceControlPane
         AutomationProperties.SetAutomationId(select, WorkbenchCommands.SelectRepository.Id + ".pane");
         var refresh = CommandPresentation.CreateButton(WorkbenchCommands.RefreshGitStatus, view.RefreshStatusCommand, localization);
         AutomationProperties.SetAutomationId(refresh, WorkbenchCommands.RefreshGitStatus.Id + ".pane");
+        var actions = new WrapPanel { Orientation = Orientation.Horizontal };
+        foreach (var (descriptor, command) in FileActions(view))
+        {
+            var button = CommandPresentation.CreateButton(descriptor, command, localization);
+            AutomationProperties.SetAutomationId(button, descriptor.Id + ".pane");
+            actions.Children.Add(button);
+        }
 
         var path = BoundText("git.selection.path", "Repository.WorktreePath", view);
         path.FontWeight = FontWeight.SemiBold;
@@ -29,6 +37,11 @@ internal static class SourceControlPane
         prompt.Bind(Visual.IsVisibleProperty, new Binding("!HasRepository") { Source = view });
         localization.Observe(prompt, () => prompt.Text = localization.Text(WorkbenchText.PaneDescription(SourceControlViewModel.PaneId)));
 
+        var staged = CreateGroup(view, "git.status.staged", WorkbenchText.GitStaged, nameof(view.Staged));
+        var working = CreateGroup(view, "git.status.working", WorkbenchText.GitWorking, nameof(view.Working));
+        var conflicts = CreateGroup(view, "git.status.conflicts", WorkbenchText.GitConflicts, nameof(view.Conflicts));
+        BindFileSelection(view, staged.List, working.List, conflicts.List);
+
         var groups = new StackPanel
         {
             Spacing = 8,
@@ -36,9 +49,10 @@ internal static class SourceControlPane
             {
                 path,
                 branch,
-                CreateGroup(view, "git.status.staged", WorkbenchText.GitStaged, nameof(view.Staged)),
-                CreateGroup(view, "git.status.working", WorkbenchText.GitWorking, nameof(view.Working)),
-                CreateGroup(view, "git.status.conflicts", WorkbenchText.GitConflicts, nameof(view.Conflicts)),
+                actions,
+                staged.Panel,
+                working.Panel,
+                conflicts.Panel,
             },
         };
         groups.Bind(Visual.IsVisibleProperty, new Binding(nameof(view.HasRepository)) { Source = view });
@@ -64,7 +78,7 @@ internal static class SourceControlPane
                 CommandPresentation.CreateMenuItem(WorkbenchCommands.CloneRepository, view.CloneRepositoryCommand, view.Localization),
                 CommandPresentation.CreateMenuItem(WorkbenchCommands.SelectRepository, view.SelectRepositoryCommand, view.Localization),
                 CommandPresentation.CreateMenuItem(WorkbenchCommands.RefreshGitStatus, view.RefreshStatusCommand, view.Localization),
-            },
+            }.Concat(FileActions(view).Select(action => CommandPresentation.CreateMenuItem(action.Descriptor, action.Command, view.Localization))).ToArray(),
         };
         AutomationProperties.SetAutomationId(menu, WorkbenchText.GitMenu);
         view.Localization.Observe(menu, () => menu.Header = view.Localization.Text(WorkbenchText.GitMenu));
@@ -78,6 +92,39 @@ internal static class SourceControlPane
         WorkbenchWindow.RegisterShortcut(window, view.CloneRepositoryCommand, CommandPresentation.Create(WorkbenchCommands.CloneRepository).Gesture);
         WorkbenchWindow.RegisterShortcut(window, view.SelectRepositoryCommand, CommandPresentation.Create(WorkbenchCommands.SelectRepository).Gesture);
         WorkbenchWindow.RegisterShortcut(window, view.RefreshStatusCommand, CommandPresentation.Create(WorkbenchCommands.RefreshGitStatus).Gesture);
+        foreach (var (descriptor, command) in FileActions(view))
+            WorkbenchWindow.RegisterShortcut(window, command, CommandPresentation.Create(descriptor).Gesture);
+    }
+
+    private static (CommandDescriptor Descriptor, ICommand Command)[] FileActions(SourceControlViewModel view) =>
+        [(WorkbenchCommands.OpenGitDiff, view.OpenDiffCommand), (WorkbenchCommands.StageGitFile, view.StageFileCommand),
+            (WorkbenchCommands.UnstageGitFile, view.UnstageFileCommand)];
+
+    private static void BindFileSelection(SourceControlViewModel view, ListBox staged, ListBox working, ListBox conflicts)
+    {
+        ListBox[] lists = [staged, working, conflicts];
+        foreach (var list in lists)
+        {
+            var layer = ReferenceEquals(staged, list) ? "staged" : "working";
+            list.SelectionChanged += (_, args) =>
+            {
+                if (args.AddedItems.Count == 0 || list.SelectedItem is not GitStatusEntry entry)
+                {
+                    if (args.RemovedItems.Count > 0 && args.RemovedItems[0] is GitStatusEntry removed)
+                        view.ClearFile(removed, layer);
+                    return;
+                }
+                foreach (var other in lists)
+                    if (!ReferenceEquals(other, list))
+                        other.SelectedItem = null;
+                view.SelectFile(entry, layer);
+            };
+            list.DoubleTapped += (_, _) =>
+            {
+                if (list.SelectedItem is GitStatusEntry && view.OpenDiffCommand.CanExecute(null))
+                    view.OpenDiffCommand.Execute(null);
+            };
+        }
     }
 
     private static TextBlock BoundText(string id, string path, SourceControlViewModel view)
@@ -88,11 +135,11 @@ internal static class SourceControlPane
         return label;
     }
 
-    private static Control CreateGroup(SourceControlViewModel view, string id, string slug, string property)
+    private static (Control Panel, ListBox List) CreateGroup(SourceControlViewModel view, string id, string slug, string property)
     {
         var header = new TextBlock { FontWeight = FontWeight.SemiBold };
         view.Localization.Observe(header, () => header.Text = view.Localization.Text(slug));
-        var list = new ItemsControl
+        var list = new ListBox
         {
             ItemTemplate = new FuncDataTemplate<GitStatusEntry>((entry, _) => new TextBlock
             {
@@ -102,6 +149,6 @@ internal static class SourceControlPane
         };
         AutomationProperties.SetAutomationId(list, id);
         list.Bind(ItemsControl.ItemsSourceProperty, new Binding(property) { Source = view });
-        return new StackPanel { Spacing = 3, Children = { header, list } };
+        return (new StackPanel { Spacing = 3, Children = { header, list } }, list);
     }
 }

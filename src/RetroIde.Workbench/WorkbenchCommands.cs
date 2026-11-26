@@ -27,12 +27,15 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor RefreshGitStatus = Create("git.status.read", "Ctrl+Alt+Shift+R");
     public static readonly CommandDescriptor InitializeRepository = Create("git.repository.initialize", "Ctrl+Alt+I");
     public static readonly CommandDescriptor CloneRepository = Create("git.repository.clone", "Ctrl+Alt+Shift+C");
+    public static readonly CommandDescriptor OpenGitDiff = Create("git.diff.open", "Ctrl+Alt+D");
+    public static readonly CommandDescriptor StageGitFile = Create("git.file.stage", "Ctrl+Alt+S");
+    public static readonly CommandDescriptor UnstageGitFile = Create("git.file.unstage", "Ctrl+Alt+Shift+S");
 
     // A document key binding can be active inside a main or floating workbench window.
     // All commands in this catalog can share that input route, so check them together.
     private static readonly CommandDescriptor[] Commands =
         [FocusTool, OpenFolder, OpenProject, Save, Reveal, Search, Next, Previous, Replace, ReplaceAll, Undo, Redo, Close, Discard,
-            OpenSourceControl, SelectRepository, RefreshGitStatus, InitializeRepository, CloneRepository];
+            OpenSourceControl, SelectRepository, RefreshGitStatus, InitializeRepository, CloneRepository, OpenGitDiff, StageGitFile, UnstageGitFile];
 
     internal static void ValidateBundledResources()
     {
@@ -41,6 +44,7 @@ internal static class WorkbenchCommands
             if (string.IsNullOrWhiteSpace(english.Text(slug)))
                 throw new InvalidDataException($"The required English resource '{slug}' is empty.");
         _ = WorkbenchText.ExplorerRoot(english, WorkspaceExplorer.RootKind.Folder, "example", unavailable: false);
+        _ = WorkbenchText.GitDiffName(english, "example.asm", "staged");
         _ = WorkbenchText.ExplorerRoot(english, WorkspaceExplorer.RootKind.Project, "example", unavailable: true);
         Validate(Commands, english);
     }

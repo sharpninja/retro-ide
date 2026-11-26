@@ -15,7 +15,7 @@ public sealed class DockLayout : IDisposable
     private readonly WorkbenchLocalization _localization;
     private readonly Dictionary<string, ShellTool> _tools;
     private readonly Dictionary<string, ShellDocument> _documents;
-    private readonly HashSet<ShellDocument> _sources = [];
+    private readonly HashSet<ShellDocument> _transientDocuments = [];
     private readonly DockBranch[] _floating;
     private bool _suppress;
     private bool _shown;
@@ -150,15 +150,15 @@ public sealed class DockLayout : IDisposable
     /// <summary>Selects a shell document within its current Dock group.</summary>
     public void SelectDocument(string id) => Factory.SetActiveDockable(_documents[id]);
 
-    internal void AddSourceDocument(ShellDocument document)
+    internal void AddTransientDocument(ShellDocument document)
     {
-        _sources.Add(document);
+        _transientDocuments.Add(document);
         Factory.AddDockable(FindDocumentGroup(), document);
     }
 
-    internal void ForgetSourceDocument(ShellDocument document) => _sources.Remove(document);
+    internal void ForgetTransientDocument(ShellDocument document) => _transientDocuments.Remove(document);
 
-    internal void ActivateSourceDocument(ShellDocument document)
+    internal void ActivateDocument(ShellDocument document)
     {
         if (IsDetached(document))
             Factory.AddDockable(FindDocumentGroup(), document);
@@ -237,7 +237,7 @@ public sealed class DockLayout : IDisposable
     }
 
     private static bool HasPersistablePanes(IRootDock root) =>
-        Descendants(root).Any(child => child is ShellTool or ShellDocument { Source: null }) ||
+        Descendants(root).Any(child => child is ShellTool or ShellDocument { IsTransient: false }) ||
         (root.LeftPinnedDockables?.Count ?? 0) + (root.RightPinnedDockables?.Count ?? 0) +
         (root.TopPinnedDockables?.Count ?? 0) + (root.BottomPinnedDockables?.Count ?? 0) > 0;
 
@@ -365,7 +365,7 @@ public sealed class DockLayout : IDisposable
         string? CapturedId(IDockable? item) => item switch
         {
             IDock dock => groupIds.GetValueOrDefault(dock),
-            ShellDocument { Source: not null } => null,
+            ShellDocument { IsTransient: true } => null,
             _ => GroupId(item?.Id),
         };
 
@@ -384,7 +384,7 @@ public sealed class DockLayout : IDisposable
         DockNode CaptureGroup(IDock dock, string kind, string? alignment = null) =>
             new(kind, CapturedId(dock), dock.Proportion is > 0 and <= 1 ? dock.Proportion : null,
                 CapturedId(dock.ActiveDockable), (dock.VisibleDockables ?? [])
-                    .Where(child => child is not ShellDocument { Source: not null }).Select(CaptureNode).ToArray(), alignment);
+                    .Where(child => child is not ShellDocument { IsTransient: true }).Select(CaptureNode).ToArray(), alignment);
     }
 
     private static Dictionary<IDock, string> CaptureDockGroupIds(IRootDock root)
@@ -451,7 +451,7 @@ public sealed class DockLayout : IDisposable
             owner.ActiveDockable ??= tool;
         }
 
-        foreach (var document in _documents.Values.Concat(_sources).Where(IsDetached))
+        foreach (var document in _documents.Values.Concat(_transientDocuments).Where(IsDetached))
         {
             var owner = FindDocumentGroup();
             Factory.AddDockable(owner, document);
@@ -613,6 +613,8 @@ internal sealed class ShellDocument : Document
     }
 
     internal DocumentViewModel? Source { get; init; }
+    internal GitDiffViewModel? GitDiff { get; init; }
+    internal bool IsTransient => Source is not null || GitDiff is not null;
     internal WorkbenchLocalization Localization { get; set; } = WorkbenchLocalization.English;
     public string Message { get; }
     public InteractionBlocks Interaction { get; }

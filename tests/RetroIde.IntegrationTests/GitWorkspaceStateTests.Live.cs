@@ -214,18 +214,28 @@ public sealed partial class GitWorkspaceStateTests
             return ChangeAsync("workspace_set_expanded", args);
         }
 
-        internal async Task<JsonElement> ChangeAsync(string name, Dictionary<string, object?> args)
+        internal async Task<McpClient> ConnectStdioAsync(string file)
+        {
+            host.CreateAttachment("workspace-git-stdio", canMutate: true).Write(file);
+            return await McpClient.CreateAsync(new StdioClientTransport(new()
+            {
+                Command = "dotnet",
+                Arguments = [typeof(RetroIde.Mcp.Stdio.BridgeEntryPoint).Assembly.Location, file],
+            }), cancellationToken: token).ConfigureAwait(false);
+        }
+
+        internal async Task<JsonElement> ChangeAsync(string name, Dictionary<string, object?> args, McpClient? transport = null)
         {
             var context = await CallAsync("workbench_get_context").ConfigureAwait(false);
             args["context"] = context.GetProperty("context");
-            var result = await CallAsync(name, args).ConfigureAwait(false);
+            var result = await CallAsync(name, args, transport).ConfigureAwait(false);
             Assert.Equal("ok", result.GetProperty("code").GetString());
             return result;
         }
 
-        internal async Task<JsonElement> CallAsync(string name, Dictionary<string, object?>? args = null)
+        internal async Task<JsonElement> CallAsync(string name, Dictionary<string, object?>? args = null, McpClient? transport = null)
         {
-            var response = await client.CallToolAsync(name, args, cancellationToken: token).ConfigureAwait(false);
+            var response = await (transport ?? client).CallToolAsync(name, args, cancellationToken: token).ConfigureAwait(false);
             Assert.NotNull(response.StructuredContent);
             return response.StructuredContent.Value;
         }
