@@ -99,7 +99,7 @@ IDE chrome reference: [Visual Studio window layouts and tabs](https://learn.micr
 - `frames/STB06/06-memory-unmapped.svg` {#stb06-unmapped}
   - Loop: Try another guest address -> stb06-mapped
 
-<!-- Traceability: FR-UAE-011#ac-behavior-machine-1, FR-UAE-011#ac-behavior-machine-2, FR-UAE-011#ac-behavior-machine-3, TEST-UAE-011. -->
+<!-- Traceability: FR-UAE-011#ac-behavior-machine-1, FR-UAE-011#ac-behavior-machine-2, FR-UAE-011#ac-behavior-machine-3, TEST-UAE-011. STB17 follows the machine description from an emulator package into the debugger. -->
 
 ### Storyboard: STB07 Mount and safely eject media {#stb07-mount-and-eject}
 
@@ -261,8 +261,43 @@ IDE chrome reference: [Visual Studio window layouts and tabs](https://learn.micr
 - `frames/STB02/01-profile-draft.svg` {#uae-profile}
   - Loop: Change target -> targets
 - `frames/STB16/02-vice-emulation.svg` {#vice-running}
+  - Branch: Pause and inspect the C64 machine description in the debugger -> vice-debugger
   - Loop: Change target -> targets
 - `frames/STB16/03-vice-sharp-emulation.svg` {#vice-sharp-running}
   - Loop: Change target -> targets
+- `frames/STB17/02-c64-disassembly.svg` {#vice-debugger}
+  - Loop: Resume C64 emulation -> vice-running
 
-<!-- Retro IDE traceability: FR-RETRO-002#ac-target-presets, TEST-RETRO-002. The adapter connections shown are design scenarios. -->
+<!-- Retro IDE traceability: FR-RETRO-002#ac-target-presets, TEST-RETRO-002, FR-RETRO-017#ac-machine-description-discovery. The adapter connections shown are design scenarios. -->
+
+### Storyboard: STB17 Debug a machine from an emulator package {#stb17-package-debugger}
+
+- `frames/STB17/01-emulator-package.svg` {#stb17-package}
+  - Branch: Open the pinned C64 package and read its machine description -> stb17-c64
+  - Branch: Attach a legacy monitor with raw reads -> stb17-raw
+- `frames/STB17/02-c64-disassembly.svg` {#stb17-c64}
+  - Branch: Inspect memory using the emulator default -> stb17-default
+  - Branch: Switch to the clock fixture with phase stepping -> stb17-clock
+  - Branch: Select the UAE40 target and rebind the debugger -> stb17-uae
+- `frames/STB17/03-clock-phase.svg` {#stb17-clock}
+  - Loop: Step another advertised clock phase -> stb17-clock
+  - Loop: Return to the C64 target -> stb17-c64
+- `frames/STB17/04-memory-default.svg` {#stb17-default}
+  - Branch: Set Big-endian display -> stb17-big
+  - Branch: Set Little-endian display explicitly -> stb17-little
+  - Loop: Return to disassembly -> stb17-c64
+- `frames/STB17/05-memory-big-endian.svg` {#stb17-big}
+  - Branch: Inspect the RAM bank under the I/O window -> stb17-bank
+  - Loop: Restore Emulator default -> stb17-default
+- `frames/STB17/06-memory-bank.svg` {#stb17-bank}
+  - Loop: Return to CPU view with the saved display preference -> stb17-big
+- `frames/STB17/07-uae-disassembly.svg` {#stb17-uae}
+  - Loop: Select an installed package -> stb17-package
+- `frames/STB17/08-raw-inspection.svg` {#stb17-raw}
+  - Loop: Select a compatible installed package -> stb17-package
+- `frames/STB17/09-memory-little-endian.svg` {#stb17-little}
+  - Loop: Restore Emulator default -> stb17-default
+
+<!-- Traceability: FR-RETRO-016, TR-RETRO-CPU-016, TEST-RETRO-016, FR-RETRO-017, TR-RETRO-MACHINE-017, TEST-RETRO-017. CPU state, sample memory, clock events, package versions, and capability availability are design fixtures. -->
+
+The example CPU definitions and platform conventions come from the original [Commodore 64 guide](https://www.commodore.ca/wp-content/uploads/2018/11/c64-programmers_reference_guide-07-appendices.pdf), [W65C02S datasheet](https://www.wdc65xx.com/wdc/documentation/w65c02s.pdf), and [Motorola M68000 family programmer’s reference](https://www.nxp.com/docs/en/reference-manual/M68000PRM.pdf).

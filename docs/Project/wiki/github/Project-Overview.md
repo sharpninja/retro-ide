@@ -4,6 +4,8 @@ Retro IDE is a shared Windows and Linux development environment for retrocomputi
 
 Phases 01 and 02 passed independent review and native UI verification on Windows and Linux. Phase 02 passed 130 managed tests per host. [Phase 01 verification](docs/receipts/phase-01-workbench-mcp.md) · [Phase 02 verification](docs/receipts/phase-02-workbench-explorer-editor.md)
 
+Phase 03 covers Git, the integrated terminal, language servers, and shared operation handles. [Phase 03 plan](docs/plans/PLAN-RETROIDE-001.md#03--git-terminal-and-language-servers)
+
 The initial target presets are [UAE](profiles/uae.json), [VICE](profiles/vice.json), and [ViceSharp](profiles/vice-sharp.json). Each selects an emulator bundle from the planned **Emulators** manager. The [bundle publishing and adapter design](docs/architecture.md#emulator-bundles-and-buckets) describes the catalog, package lifecycle, and integration for each target.
 
 The debugger design describes how an emulator package supplies the machine configuration and platform-specific debugger layouts. The [package debugger storyboard](docs/design/_manifest.md#stb17-package-debugger) follows the workflow through CPU selection, clock phases, banking, and the memory display byte-order preference.

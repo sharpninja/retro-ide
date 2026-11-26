@@ -1,10 +1,14 @@
 # Retro IDE
 
-Retro IDE is a shared Windows and Linux development environment for retrocomputing emulators. The initial Avalonia workbench has docked and floating tools, document tabs including Emulation, and a focus command shared by the menu, command bar, shortcut, and MCP clients. Project browsing, editing, Git, and emulator integration are planned in the [implementation plan](docs/plans/PLAN-RETROIDE-001.md).
+Retro IDE is a shared Windows and Linux development environment for retrocomputing emulators. The Avalonia workbench includes docked and floating tools, document tabs including Emulation, Project Explorer, AvaloniaEdit source tabs, and language packs. The desktop and its scoped MCP clients share command and context contracts. The [implementation plan](docs/plans/PLAN-RETROIDE-001.md) tracks each phase.
 
-The Phase 01 candidate remains under independent review. See the [verified Windows and Linux results](docs/receipts/phase-01-remotecontrol-verification.md).
+Phases 01 and 02 passed independent review and native UI verification on Windows and Linux. Phase 02 passed 130 managed tests per host. [Phase 01 verification](docs/receipts/phase-01-workbench-mcp.md) · [Phase 02 verification](docs/receipts/phase-02-workbench-explorer-editor.md)
+
+Phase 03 covers Git, the integrated terminal, language servers, and shared operation handles. [Phase 03 plan](docs/plans/PLAN-RETROIDE-001.md#03--git-terminal-and-language-servers)
 
 The initial target presets are [UAE](profiles/uae.json), [VICE](profiles/vice.json), and [ViceSharp](profiles/vice-sharp.json). Each selects an emulator bundle from the planned **Emulators** manager. The [bundle publishing and adapter design](docs/architecture.md#emulator-bundles-and-buckets) describes the catalog, package lifecycle, and integration for each target.
+
+The debugger design describes how an emulator package supplies the machine configuration and platform-specific debugger layouts. The [package debugger storyboard](docs/design/_manifest.md#stb17-package-debugger) follows the workflow through CPU selection, clock phases, banking, and the memory display byte-order preference.
 
 - [Wireframe and storyboard manifest](docs/design/_manifest.md)
 - [Shared SVG components](docs/design/components/README.md)
@@ -23,13 +27,22 @@ dotnet build RetroIde.sln -c Release
 dotnet run --project src/RetroIde.Workbench -c Release --no-build
 ```
 
-Start the desktop with `-- --mcp` to issue an observer attachment or `-- --mcp-mutate` to allow the attached client to focus tools. The workbench shows the path to its private attachment file. A stdio client can launch `dotnet` with the built `RetroIde.Mcp.Stdio.dll` and that file path as arguments. A Streamable HTTP client uses the loopback endpoint and bearer token from the same file. Call `workbench_get_context` to capture the public ViewModel context, then supply that context with a tool ID such as `registers` to `workbench_focus_tool`.
+Start the desktop with `-- --mcp` to issue an observer attachment or `-- --mcp-mutate` to allow scoped writes. The workbench shows the path to its private attachment file. A stdio client can launch `dotnet` with the built `RetroIde.Mcp.Stdio.dll` and that file path as arguments. A Streamable HTTP client uses the loopback endpoint and bearer token from the same file. Call `workbench_get_context` to capture the public ViewModel context, then supply that context with a tool ID such as `registers` to `workbench_focus_tool`. [Explorer, editor and language tools](docs/mcp-tools.md)
 
-Run `dotnet test RetroIde.sln -c Release --no-build` for the managed tests. The UI suite drives the workbench through SharpNinja.Avalonia.RemoteControl on Avalonia Headless and needs no physical keyboard or mouse. RemoteControl is loaded only by the test projects. Run `pwsh -File eng/Verify-Phase01Trace.ps1 -QBrainExport docs/requirements/phase-01-test-criteria.yaml` to verify the compiled requirement trace.
+Run `dotnet test RetroIde.sln -c Release --no-build` for the managed tests. The UI suite drives the workbench through SharpNinja.Avalonia.RemoteControl on Avalonia Headless and needs no physical keyboard or mouse. The test projects load RemoteControl. Run `pwsh -File eng/Verify-Phase01Trace.ps1 -ThroughPhase 02` with `-QBrainExport` and the effective requirements export to check the compiled criterion IDs against QBrain.
 
-The Windows build also runs `dotnet run --project tests/RetroIde.NativeTests -c Release --no-build -- --remote-control` to focus a real Win32 workbench and verify distinct main and floating windows through Dock’s float and redock operations.
+For the native-window UI suite on Windows and Linux, run `dotnet run --project tests/RetroIde.NativeTests -c Release --no-build -- --remote-control`. With SharpNinja.Avalonia.RemoteControl, the suite exercises the scoped Wait cursor, native floating and redocking, mixed-root Explorer, source editing and save, and live localization and persistence. It uses application-scoped input and fixture paths for file selection.
 
-The separate native smoke test checks platform cursor rendering and the interactive tear-away and redock gestures. Run `dotnet run --project tests/RetroIde.NativeTests -c Release --no-build` from an available Windows desktop. The Windows CI job runs this smoke test when `RETRO_IDE_RUN_NATIVE_POINTER_TESTS` is set to `1`. Linux CI runs it on an isolated Xvfb display with the static X11 core cursor.
+The Linux platform smoke also checks effective X11 cursor rendering and interactive tear-away and redock gestures. For Linux, choose an explicit unused display number and verify that its socket and lock are absent before launching the test. The example uses display `:177`.
+
+```sh
+test ! -e /tmp/.X11-unix/X177 && test ! -e /tmp/.X177-lock &&
+  XCURSOR_THEME=core XCURSOR_PATH=/nonexistent xvfb-run -n 177 \
+    -s '-screen 0 1600x1000x24 -extension GLX' \
+    dotnet run --project tests/RetroIde.NativeTests -c Release --no-build
+```
+
+Run acceptance on the designated local development hosts. Build `win-x64` on LAB-OMARCHY, transfer a verified runtime bundle, and execute the managed and RemoteControl suites on LEGION2. The signed-in Windows pointer smoke is supplemental. [Local verification policy](docs/plans/PLAN-RETROIDE-001.md#local-verification-for-every-phase) · [Phase 02 verification status](docs/plans/PLAN-RETROIDE-001.md#phase-02-verification-status)
 
 ## Review the design
 

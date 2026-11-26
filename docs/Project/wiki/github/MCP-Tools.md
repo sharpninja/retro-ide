@@ -6,9 +6,9 @@ Every supported Retro IDE feature has a Model Context Protocol (MCP) tool. CLI a
 
 Phase 01 exposes `workbench_get_context` and `workbench_focus_tool`. They share one local IDE instance through Streamable HTTP or its stdio bridge. The four public context members are `viewKey`, `workspaceId`, `activeToolId`, and `workbenchRevision`. A missing selection is an explicit null. Mutations require a live registration, the current context and a write-enabled attachment. The rest of this page describes the broader implementation contract. [Cross-platform verification](receipts/phase-01-workbench-mcp.md)
 
-## Phase 02 candidate tools
+## Phase 02 tool inventory
 
-The display language, Project Explorer, and source editor operations below passed local verification on Windows and Linux. Their Phase 02 acceptance is open. [Verification status](plans/PLAN-RETROIDE-001.md#phase-02-verification-status)
+The display language, Project Explorer, and source editor operations below passed cross-platform verification and independent Phase 02 review. [Phase 02 verification](receipts/phase-02-workbench-explorer-editor.md)
 
 ### Display language
 

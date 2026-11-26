@@ -1,6 +1,6 @@
 # PLAN-RETROIDE-001 — Retro IDE BDPv4 implementation plan
 
-**Status.** Phases 01 and 02 were accepted on 2026-11-26. Phase 03 is next. [Phase 01 verification](../receipts/phase-01-workbench-mcp.md) · [Phase 02 verification](../receipts/phase-02-workbench-explorer-editor.md)
+**Status.** Phases 01 and 02 were accepted on 2026-11-26. Phase 03 is in development. [Phase 01 verification](../receipts/phase-01-workbench-mcp.md) · [Phase 02 verification](../receipts/phase-02-workbench-explorer-editor.md)
 
 **Baseline.** The original Retro IDE QBrain baseline has 15 functional, 15 technical, and 15 testing records across 15 mappings and 176 acceptance criteria. The current requirements also include the debugger CPU and emulator machine description groups in the traceability table below. Published source `e066c7325f3ad3c9a14c1310fbeba0c8b531edda` and wiki `13fc5aa1f0729e0879e9e515824ce2d9d56d4cb7` document local validation. [Published architecture](https://github.com/sharpninja/retro-ide/wiki/Architecture) · [MCP Tools](https://github.com/sharpninja/retro-ide/wiki/MCP-Tools) · [Accepted Phase 01 C4 model](../architecture/structurizr/versions/implementation-01-workbench-mcp/manifest.json)
 

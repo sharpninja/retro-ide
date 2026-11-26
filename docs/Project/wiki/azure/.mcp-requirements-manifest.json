@@ -1,7 +1,7 @@
 {
   "schema": "mcp-requirements-wiki/v1",
   "platform": "azure",
-  "generatedAtUtc": "2026-11-25T01:35:41.1363146+00:00",
+  "generatedAtUtc": "2026-11-26T17:36:18.7216636+00:00",
   "documents": [
     "Home.md",
     "Functional-Requirements.md",
@@ -20,6 +20,7 @@
     "Language-Server-Support.md",
     "MCP-Tools.md",
     "Implementation-Plan.md",
-    "Phase-01-Verification.md"
+    "Phase-01-Verification.md",
+    "Phase-02-Verification.md"
   ]
 }
