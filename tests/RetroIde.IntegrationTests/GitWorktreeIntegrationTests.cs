@@ -82,7 +82,7 @@ public sealed partial class GitWorktreeIntegrationTests
         Assert.Equal(new GitEntry(GitWorktreeFixture.ChangedPath, null, ".", "M"), Assert.Single(linkedStatus.Entries));
 
         var nested = await port.DiscoverAsync(mainRoot, Nested + "/" + NestedFile);
-        Assert.Equal(Path.Combine(sample.Primary, Nested), nested.WorktreePath, PathComparer);
+        Assert.Equal(Path.GetFullPath(Path.Combine(sample.Primary, Nested)), nested.WorktreePath, PathComparer);
         Assert.NotEqual(main.CommonDirectory, nested.CommonDirectory, PathComparer);
         await port.SelectAsync(mainRoot, Nested);
         var nestedStatus = await port.StatusAsync();
@@ -129,7 +129,7 @@ public sealed partial class GitWorktreeIntegrationTests
                 return Task.FromResult(new GitRepository(path, fault == "shared-index" ? common : Path.Combine(common, "worktrees", "linked checkout"), common));
             if (relativePath.StartsWith(Nested, StringComparison.Ordinal) && fault != "wrong-nested-repository")
             {
-                var nested = Path.Combine(path, Nested);
+                var nested = Path.GetFullPath(Path.Combine(path, Nested));
                 return Task.FromResult(new GitRepository(nested, Path.Combine(nested, ".git"), Path.Combine(nested, ".git")));
             }
             return Task.FromResult(new GitRepository(path, common, common));
