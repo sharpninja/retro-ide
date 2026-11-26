@@ -1,4 +1,5 @@
 using Avalonia.Headless.XUnit;
+using RetroIde.Application;
 using RetroIde.Application.Git;
 using RetroIde.Testing;
 using RetroIde.Workbench;
@@ -47,8 +48,78 @@ public sealed partial class GitWorkspaceStateTests
             var latest = await WaitForRefreshAsync(session, sample.Linked, "fixture-linked", "MM", token);
             VerifyRefresh(latest, sample.Linked, "fixture-linked", "MM");
             Assert.Empty(await ReadBadgeAsync(window, primary, GitWorktreeFixture.ChangedPath, token));
+
+            Directory.Move(sample.Linked, sample.Linked + "-temporarily-offline");
+            await WaitForConditionAsync(() => session.SourceControl.Status is null, "A missing checkout retained its old Git status.", token);
+            Directory.Move(sample.Linked + "-temporarily-offline", sample.Linked);
+            await WaitForRefreshAsync(session, sample.Linked, "fixture-linked", "MM", token);
         }
         finally { window.Close(); }
+    }
+
+    /// <summary>Holds a real controller read open across selection and overlapping refresh completions.</summary>
+    [AvaloniaFact]
+    public async Task Older_Git_status_reads_cannot_overwrite_current_desktop_status()
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var token = deadline.Token;
+        using var sample = await GitWorktreeFixture.CreateAsync("git", token);
+        using var session = new WorkbenchSession(Guid.NewGuid());
+        await using var connection = await WorkspaceConnection.ConnectAsync(session, token);
+        var primary = await connection.AddRootAsync(sample.Primary);
+        var linked = await connection.AddRootAsync(sample.Linked);
+        await connection.ChangeAsync("git_select_repository", Address(primary, ""));
+        await WaitForConditionAsync(() => session.SourceControl.Status?.Branch == "main", "The primary watcher did not start.", token);
+
+        var oldScope = await BeginHeldReadAsync(session, token);
+        Assert.Equal(sample.Primary, oldScope.Selection.Repository.WorktreePath, NativePaths);
+        await connection.ChangeAsync("git_select_repository", Address(linked, ""));
+        await WaitForConditionAsync(() => session.SourceControl.Status?.Branch == "fixture-linked", "The linked watcher did not start.", token);
+        Assert.Equal("git_selection_changed", (await oldScope.FinishAsync("obsolete-worktree")).Code);
+        Assert.Equal("fixture-linked", session.SourceControl.Status?.Branch);
+
+        var older = await BeginHeldReadAsync(session, token);
+        var newer = await BeginHeldReadAsync(session, token);
+        Assert.Equal("ok", (await newer.FinishAsync("fresh-status")).Code);
+        Assert.Equal("ok", (await older.FinishAsync("superseded-status")).Code);
+        Assert.True(string.Equals("fresh-status", session.SourceControl.Status?.Branch, StringComparison.Ordinal),
+            "A superseded read replaced the current Git status.");
+    }
+
+    private static async Task<HeldGitRead> BeginHeldReadAsync(WorkbenchSession session, CancellationToken token)
+    {
+        var start = new TaskCompletionSource<GitSelection>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var features = new GitFeatures(async (selection, cancel) =>
+        {
+            start.TrySetResult(selection);
+            var branch = await release.Task.WaitAsync(cancel).ConfigureAwait(false);
+            return new GitStatus(selection.Repository, branch, null, null, null, null, []);
+        });
+        var actor = new ActorGrant("test-held-read", session.View.WorkspaceId, session.View.ViewKey, canMutate: false);
+        var running = session.Controller.DispatchAsync(features.Status, new GitFeatures.StatusInput { DisplayOnly = true },
+            context: null, actor, Guid.NewGuid(), token);
+        return new HeldGitRead(await start.Task.WaitAsync(token).ConfigureAwait(false), release, running);
+    }
+
+    private sealed record HeldGitRead(GitSelection Selection, TaskCompletionSource<string> Release, Task<OperationResult> Running)
+    {
+        internal Task<OperationResult> FinishAsync(string branch)
+        {
+            Release.SetResult(branch);
+            return Running;
+        }
+    }
+
+    private static async Task WaitForConditionAsync(Func<bool> predicate, string failure, CancellationToken token)
+    {
+        var until = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (!predicate())
+        {
+            if (DateTimeOffset.UtcNow >= until)
+                throw new Xunit.Sdk.XunitException(failure);
+            await Task.Delay(30, token).ConfigureAwait(true);
+        }
     }
 
     private static async Task<RefreshState> WaitForRefreshAsync(WorkbenchSession session, string path, string branch, string state, CancellationToken token)
