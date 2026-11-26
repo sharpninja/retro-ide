@@ -95,6 +95,7 @@ public sealed class WorkbenchApp : Avalonia.Application
         string? writtenPath = null;
         try
         {
+            await session.GitRestoration.WaitAsync(token).ConfigureAwait(false);
             host = await LoopbackMcpHost.StartAsync(session.Registry, session.Controller, session.View.Address, token).ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
             var directory = Directory.CreateDirectory(Path.Combine(folder, "attachments")).FullName;

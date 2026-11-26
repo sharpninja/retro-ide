@@ -14,7 +14,8 @@ internal interface IGitRegistration
 
     /// <summary>Changes the worktree selection and publishes the resulting workbench revision.</summary>
     /// <param name="selection">The validated identity and scope to publish.</param>
-    void SelectGit(GitSelection selection);
+    /// <param name="address">The authorized workspace-relative directory for later discovery.</param>
+    void SelectGit(GitSelection selection, WorkspaceExplorer.Address address);
 
     /// <summary>Publishes the status of the current selection to its desktop pane.</summary>
     /// <param name="status">The validated worktree status to display.</param>

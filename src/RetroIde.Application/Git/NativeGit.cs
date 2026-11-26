@@ -8,6 +8,7 @@ namespace RetroIde.Application.Git;
 /// <remarks>2026-11-26 · TR-RETRO-GIT-013#ac-git-native-host, ac-git-machine-state. Use literal argument arrays and preserve the user's native Git configuration.</remarks>
 internal static class NativeGit
 {
+    private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
     private static readonly string[] WorkspaceOverrides =
     [
         "GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE", "GIT_PREFIX", "GIT_INTERNAL_SUPER_PREFIX",
@@ -54,15 +55,13 @@ internal static class NativeGit
         var repo = selection.Repository;
         // Recheck the administrative directories in case the selected working directory was replaced.
         var found = await DiscoverAsync(selection.ScopeRoot, "", token).ConfigureAwait(false);
-        var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-        if (found is null || !comparer.Equals(found.Repository.WorktreePath, repo.WorktreePath) ||
-            !comparer.Equals(found.Repository.GitDirectory, repo.GitDirectory) || !comparer.Equals(found.Repository.CommonDirectory, repo.CommonDirectory))
+        if (found is null || !IsSameWorktree(found.Repository, repo))
             return null;
 
         var args = new List<string> { "--no-optional-locks", "--literal-pathspecs", "--git-dir", repo.GitDirectory,
             "--work-tree", repo.WorktreePath, "-c", "core.fsmonitor=false", "status",
             "--porcelain=v2", "-z", "--branch", "--renames", "--untracked-files=all", "--ignored=matching" };
-        if (!comparer.Equals(repo.WorktreePath, selection.ScopeRoot))
+        if (!PathComparer.Equals(repo.WorktreePath, selection.ScopeRoot))
         {
             args.Add("--");
             args.Add(Path.GetRelativePath(repo.WorktreePath, selection.ScopeRoot));
@@ -70,6 +69,12 @@ internal static class NativeGit
         var output = await RunAsync(repo.WorktreePath, args, token).ConfigureAwait(false);
         return output is null ? null : GitStatus.Parse(repo, output);
     }
+
+    /// <summary>Compares a worktree and both administrative directories using native path rules.</summary>
+    internal static bool IsSameWorktree(GitWorktree left, GitWorktree right) =>
+        PathComparer.Equals(left.WorktreePath, right.WorktreePath) &&
+        PathComparer.Equals(left.GitDirectory, right.GitDirectory) &&
+        PathComparer.Equals(left.CommonDirectory, right.CommonDirectory);
 
     /// <summary>Checks path containment using native separators and volume rules.</summary>
     private static bool Contains(string root, string path)

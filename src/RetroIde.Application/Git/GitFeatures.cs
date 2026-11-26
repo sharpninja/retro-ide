@@ -115,14 +115,31 @@ internal sealed class GitFeatures
         if (!select)
             return FeatureOutcome.Success("Git worktree discovered.", located.Repository);
 
+        var address = new WorkspaceExplorer.Address(scope.Entry.RootId, Path.GetRelativePath(scope.RootPath, located.ScopeRoot));
         return new FeatureOutcome("ok", "Git worktree selected.")
         {
             Commit = current =>
             {
-                ((IGitRegistration)current).SelectGit(located);
+                ((IGitRegistration)current).SelectGit(located, address);
                 return FeatureOutcome.Success("Git worktree selected.", located.Repository);
             },
         };
+    }
+
+    /// <summary>Rechecks a saved worktree against the currently permitted workspace directory.</summary>
+    internal static async Task<GitSelection?> RestoreSelectionAsync(WorkspaceExplorer explorer, GitWorkspaceLocation location, CancellationToken token)
+    {
+        try
+        {
+            var scope = explorer.ResolvePath(location.Address);
+            var found = await NativeGit.DiscoverAsync(scope.RootPath, scope.Entry.RelativePath, token).ConfigureAwait(false);
+            return found is not null && NativeGit.IsSameWorktree(found.Repository, location.Repository) ? found : null;
+        }
+        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or
+            InvalidOperationException or NotSupportedException or Win32Exception)
+        {
+            return null;
+        }
     }
 
     /// <summary>Reads the captured status and rejects it if the worktree selection changed before completion.</summary>

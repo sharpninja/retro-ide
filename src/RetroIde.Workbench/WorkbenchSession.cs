@@ -46,6 +46,7 @@ public sealed class WorkbenchSession : IDisposable
         Controller.Register(View);
         Controller.RegisterExplorer(ExplorerView, View, Documents);
         Controller.RegisterSourceControl(SourceControl, View);
+        GitRestoration = Controller.RestoreGitAsync(View);
     }
 
     internal WorkspaceExplorer Explorer { get; }
@@ -54,6 +55,7 @@ public sealed class WorkbenchSession : IDisposable
     internal SourceControlViewModel SourceControl { get; }
     internal DocumentController Documents { get; }
     internal WorkspaceExplorerStore? ExplorerStore { get; }
+    internal Task GitRestoration { get; }
 
     /// <summary>Gets the live Dock model and its integration.</summary>
     public DockLayout Layout { get; }

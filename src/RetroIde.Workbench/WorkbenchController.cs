@@ -144,6 +144,22 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         RefreshSourceControl();
     }
 
+    internal async Task RestoreGitAsync(WorkbenchViewModel view)
+    {
+        if (Resolve(view.ViewKey) is not { } origin || _workspaceExplorer.Snapshot().GitSelection is not { } saved)
+            return;
+
+        var token = _shutdown.Token;
+        try
+        {
+            var restored = await GitFeatures.RestoreSelectionAsync(_workspaceExplorer, saved, token).ConfigureAwait(true);
+            if (restored is not null && !token.IsCancellationRequested &&
+                ReferenceEquals(Resolve(view.ViewKey), origin) && origin.SelectedGit is null)
+                origin.SelectGit(restored, saved.Address);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+    }
+
     /// <inheritdoc />
     public Task<OperationResult> DispatchAsync<TInput>(Feature<TInput> feature, TInput input, WorkbenchAddress? context,
         ActorGrant actor, Guid operationId, CancellationToken cancellationToken) where TInput : class =>
@@ -317,12 +333,15 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         public GitSelection? SelectedGit { get; private set; }
 
         /// <inheritdoc />
-        public void SelectGit(GitSelection selection)
+        public void SelectGit(GitSelection selection, WorkspaceExplorer.Address address)
         {
             SelectedGit = selection;
             Controller._layout.AdvanceWorkspaceRevision();
             if (Controller._sourceControlView is { } pane && pane.ParentViewKey == View.ViewKey)
+            {
+                Explorer.RememberGitSelection(new GitWorkspaceLocation(address, selection.Repository));
                 pane.SetScope(selection.Repository);
+            }
         }
 
         /// <inheritdoc />
@@ -338,8 +357,9 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
             var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
             var root = Explorer.Roots.FirstOrDefault(item => comparer.Equals(item.Path, repository.WorktreePath))
                 ?? Explorer.AddRoot(repository.WorktreePath, WorkspaceExplorer.RootKind.Folder);
-            Explorer.Select(new WorkspaceExplorer.Address(root.Id, ""));
-            SelectGit(new GitSelection(repository, root.Path));
+            var address = new WorkspaceExplorer.Address(root.Id, "");
+            Explorer.Select(address);
+            SelectGit(new GitSelection(repository, root.Path), address);
             Controller.PublishExplorerState();
             return new GitProvisionedWorkspace(root, repository);
         }

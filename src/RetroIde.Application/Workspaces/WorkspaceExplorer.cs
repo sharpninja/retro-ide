@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using RetroIde.Application.Git;
 
 namespace RetroIde.Application.Workspaces;
 
@@ -14,13 +15,15 @@ internal sealed class WorkspaceExplorer
     internal sealed record SourceAddress(Address Entry, string RootPath);
     internal sealed record SourceFile(SourceAddress Address, string Text, Encoding Encoding);
 
-    internal sealed record State(int Version, Guid WorkspaceId, Root[] Roots, Address[] Expanded, Address? Selection = null);
+    internal sealed record State(int Version, Guid WorkspaceId, Root[] Roots, Address[] Expanded, Address? Selection = null,
+        GitWorkspaceLocation? GitSelection = null);
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
     private readonly Lock _gate = new();
     private readonly Dictionary<Guid, Root> _roots = [];
     private readonly HashSet<Address> _expanded = new(AddressEquality);
     private Address? _selection;
+    private GitWorkspaceLocation? _gitSelection;
 
     public WorkspaceExplorer(Guid workspaceId, IEnumerable<Root>? savedRoots = null)
     {
@@ -86,7 +89,13 @@ internal sealed class WorkspaceExplorer
     public State Snapshot()
     {
         lock (_gate)
-            return new State(1, WorkspaceId, _roots.Values.ToArray(), _expanded.ToArray(), _selection);
+            return new State(1, WorkspaceId, _roots.Values.ToArray(), _expanded.ToArray(), _selection, _gitSelection);
+    }
+
+    internal void RememberGitSelection(GitWorkspaceLocation location)
+    {
+        lock (_gate)
+            _gitSelection = location with { Address = NormalizeAddress(location.Address) };
     }
 
     public static WorkspaceExplorer Restore(State state)
@@ -98,6 +107,11 @@ internal sealed class WorkspaceExplorer
         foreach (var address in state.Expanded)
             explorer.SetExpanded(address, isExpanded: true);
         explorer.Select(state.Selection);
+        if (state.GitSelection is { Repository: not null } git)
+        {
+            try { explorer.RememberGitSelection(git); }
+            catch (Exception error) when (error is ArgumentException or IOException or NotSupportedException) { }
+        }
         return explorer;
     }
 
