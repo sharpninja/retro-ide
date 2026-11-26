@@ -68,6 +68,36 @@ public sealed partial class GitSourceControlTests
         VerifyMigration(reopened.Layout.Capture());
     }
 
+    /// <summary>Verifies the Git menu command remains available if Source Control reopens in a floating host.</summary>
+    /// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-multiple-repos. The main workbench owns the command before Dock materializes the floating window.</remarks>
+    [AvaloniaFact]
+    public async Task Git_menu_can_focus_Source_Control_restored_in_a_floating_host()
+    {
+        var legacy = LegacyLayout();
+        var floating = Assert.Single(legacy.Floating);
+        var restoredGroup = floating.Content with { Children = [.. floating.Content.Children!, new("tool", Pane)] };
+        using var session = new WorkbenchSession(Guid.NewGuid(), legacy with
+        {
+            ActiveTool = null,
+            Floating = [floating with { Content = restoredGroup }],
+        });
+        var window = new WorkbenchWindow(session);
+        window.Show();
+        try
+        {
+            window.UpdateLayout();
+            Assert.Single(session.Layout.Root.Windows!);
+            var menu = Find<MenuItem>(window, "menu.git");
+            var actions = Assert.IsAssignableFrom<IEnumerable<MenuItem>>(menu.ItemsSource);
+            var focus = Assert.Single(actions, action => HasId(action, "git.source-control.focus.menu"));
+            var command = Assert.IsAssignableFrom<IAsyncRelayCommand>(focus.Command);
+            Assert.True(command.CanExecute(null), "The Git menu cannot focus a restored floating Source Control pane.");
+            await command.ExecuteAsync(null);
+            Assert.True(session.Layout.IsFocused(Pane));
+        }
+        finally { window.Close(); }
+    }
+
     private static T Find<T>(Window window, string id) where T : Control
     {
         var found = window.GetVisualDescendants().OfType<T>().SingleOrDefault(item => HasId(item, id));
