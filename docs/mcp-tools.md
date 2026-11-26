@@ -62,6 +62,9 @@ The Phase 03 candidate exposes native Git discovery, selection, status, file dif
 | `git_commit` | Selected `worktreePath`, commit `preimage`, `message`, current workbench `context` | Commits the reviewed index and returns the previous and new HEAD. Requires a write-enabled attachment. |
 | `git_amend` | Selected `worktreePath`, commit `preimage`, `message`, current workbench `context` | Replaces the reviewed HEAD and returns the previous and new HEAD. Requires a write-enabled attachment. |
 | `git_list_refs` | Selected `worktreePath` | Full ref names, object IDs, upstreams, peeled annotated tags, and linked worktrees. |
+| `git_get_tag` | Selected `worktreePath`, short `tagName`, optional `expectedObjectId` | Returns the tag object ID, target object, tagger and annotation. |
+| `git_create_tag` | Selected `worktreePath`, short `tagName`, full `targetCommit`, optional `message`, current workbench `context` | Creates a tag at the selected commit using native Git signing settings. |
+| `git_delete_tag` | Selected `worktreePath`, short `tagName`, `expectedObjectId`, current workbench `context` | Deletes the ref only if it still points to the reviewed tag object. Use `objectId` from inspection, which is distinct from `targetObjectId` for an annotated tag. [Git update-ref](https://git-scm.com/docs/git-update-ref) |
 | `git_get_history` | Selected `worktreePath`, optional full `refName`, `anchor`, `offset`, and `limit` | Topologically sorted commits with parent IDs and refs. Reuse the returned `anchor` with the next offset to keep pages on the same history. |
 | `git_get_commit_details` | Selected `worktreePath`, full `commitId` | Commit metadata, message, and file statuses compared with the first parent. An initial commit compares with the empty tree. |
 | `git_open_history` | History arguments and current workbench `context` | Opens or reuses a Git History tab and returns its view key, page, and reference data. Requires a write-enabled attachment. |

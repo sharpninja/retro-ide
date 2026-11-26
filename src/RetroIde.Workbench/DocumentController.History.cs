@@ -75,6 +75,12 @@ internal sealed partial class DocumentController
                 CompleteAsync(view, _features.Git.RenameBranch, rename, request),
             GitBranchOperations.DeleteInput delete when string.Equals(request.CommandId, _features.Git.DeleteBranch.Id, StringComparison.Ordinal) =>
                 CompleteAsync(view, _features.Git.DeleteBranch, delete, request),
+            GitTagOperations.CreateInput createTag when string.Equals(request.CommandId, _features.Git.CreateTag.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.CreateTag, createTag, request),
+            GitTagOperations.ReadInput readTag when string.Equals(request.CommandId, _features.Git.InspectTag.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.InspectTag, readTag, request),
+            GitTagOperations.DeleteInput deleteTag when string.Equals(request.CommandId, _features.Git.DeleteTag.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.DeleteTag, deleteTag, request),
             GitRemoteOperations.ListInput remotes when string.Equals(request.CommandId, _features.Git.Remotes.Id, StringComparison.Ordinal) =>
                 CompleteAsync(view, _features.Git.Remotes, remotes, request),
             GitHistoryOperations.RefsInput refs when string.Equals(request.CommandId, _features.Git.Refs.Id, StringComparison.Ordinal) =>

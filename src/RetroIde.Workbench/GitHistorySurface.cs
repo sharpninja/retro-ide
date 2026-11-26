@@ -43,6 +43,8 @@ internal static class GitHistorySurface
             Button(WorkbenchCommands.RenameGitBranch, view.RenameBranchCommand),
             Button(WorkbenchCommands.DeleteGitBranch, view.DeleteBranchCommand),
             Button(WorkbenchCommands.SetGitUpstream, view.SetUpstreamCommand),
+            Button(WorkbenchCommands.InspectGitTag, view.InspectTagCommand),
+            Button(WorkbenchCommands.DeleteGitTag, view.DeleteTagCommand),
         } };
         var refPane = CreateRefPane(view, refActions);
         Place(refPane, 1, 0);
@@ -71,7 +73,8 @@ internal static class GitHistorySurface
         {
             Children = { Button(WorkbenchCommands.InspectGitCommit, view.InspectCommand),
                 Button(WorkbenchCommands.StartGitOperation, view.StartOperationCommand),
-                Button(WorkbenchCommands.ResetToGitCommit, view.ResetToCommitCommand) },
+                Button(WorkbenchCommands.ResetToGitCommit, view.ResetToCommitCommand),
+                Button(WorkbenchCommands.CreateGitTag, view.CreateTagCommand) },
         };
         Place(CreateDetails(view, commitActions), 2, 1);
         layout.KeyBindings.Add(new KeyBinding { Command = view.CloseCommand, Gesture = KeyGesture.Parse(WorkbenchCommands.Close.EffectiveGesture) });
@@ -104,6 +107,8 @@ internal static class GitHistorySurface
                 () => new GitStartOperationDialog(view.Localization, checkout, target), token);
         Func<GitReset.Review, CancellationToken, Task<GitResetDialog.Choice?>> reset =
             (review, token) => ShowAsync<GitResetDialog.Choice>(() => new GitResetDialog(view.Localization, review), token);
+        Func<GitTagDialog.Prompt, CancellationToken, Task<GitTagDialog.Choice?>> tag =
+            (prompt, token) => ShowAsync<GitTagDialog.Choice>(() => new GitTagDialog(view.Localization, prompt), token);
         surface.AttachedToVisualTree += (_, _) =>
         {
             view.PromptBranchAsync = branch;
@@ -111,6 +116,7 @@ internal static class GitHistorySurface
             view.PromptUpstreamAsync = upstream;
             view.PromptStartAsync = start;
             view.PromptResetAsync = reset;
+            view.PromptTagAsync = tag;
         };
         surface.DetachedFromVisualTree += (_, _) =>
         {
@@ -124,6 +130,8 @@ internal static class GitHistorySurface
                 view.PromptStartAsync = null;
             if (view.PromptResetAsync == reset)
                 view.PromptResetAsync = null;
+            if (view.PromptTagAsync == tag)
+                view.PromptTagAsync = null;
         };
 
         async Task<T?> ShowAsync<T>(Func<Window> create, CancellationToken token) where T : class

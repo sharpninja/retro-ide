@@ -87,6 +87,12 @@ internal static class WorkbenchText
     internal const string GitHistoryGraph = "git.history.graph";
     internal const string GitHistoryWorktrees = "git.history.worktrees";
     internal const string GitBranchName = "git.branch.name";
+    internal const string GitTagName = "git.tag.name";
+    internal const string GitTagObject = "git.tag.object";
+    internal const string GitTagTarget = "git.tag.target";
+    internal const string GitTagAuthor = "git.tag.author";
+    internal const string GitTagDate = "git.tag.date";
+    internal const string GitTagAnnotation = "git.tag.annotation";
     internal const string GitBranchCheckout = "git.branch.checkout";
     internal const string GitRemoteTitle = "git.remotes.title";
     internal const string GitRemoteName = "git.remotes.name";
@@ -131,6 +137,7 @@ internal static class WorkbenchText
             GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,
             GitHistoryTitle, GitHistoryRefs, GitHistoryGraph, GitHistoryWorktrees,
             GitBranchName, GitBranchCheckout,
+            GitTagName, GitTagObject, GitTagTarget, GitTagAuthor, GitTagDate, GitTagAnnotation,
             GitRemoteTitle, GitRemoteName, GitRemoteUrl, GitRemotePush, GitRemoteClose, GitUpstreamClear,
             GitSyncLocalBranch, GitSyncRemoteBranch, GitSyncStrategy, GitSyncFastForward, GitSyncMerge, GitSyncRebase,
             GitSyncForceWithLease, GitSyncExpectedRemoteHead,

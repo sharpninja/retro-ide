@@ -63,6 +63,9 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor SwitchGitBranch = Create("git.branch.switch", "Ctrl+Alt+Shift+V");
     public static readonly CommandDescriptor RenameGitBranch = Create("git.branch.rename", "Ctrl+Alt+Shift+N");
     public static readonly CommandDescriptor DeleteGitBranch = Create("git.branch.delete", "Ctrl+Alt+Delete");
+    public static readonly CommandDescriptor CreateGitTag = Create("git.tag.create", "Ctrl+Alt+F8");
+    public static readonly CommandDescriptor InspectGitTag = Create("git.tag.read", "Ctrl+Alt+Shift+F8");
+    public static readonly CommandDescriptor DeleteGitTag = Create("git.tag.delete", "Ctrl+Alt+Shift+F7");
     public static readonly CommandDescriptor ShowGitRemotes = Create("git.remotes.open", "Ctrl+Alt+Shift+T");
     public static readonly CommandDescriptor RefreshGitRemotes = Create("git.remotes.read", "Alt+Shift+R");
     public static readonly CommandDescriptor AddGitRemote = Create("git.remote.add", "Ctrl+Alt+A");
@@ -84,6 +87,7 @@ internal static class WorkbenchCommands
             PopGitStash, DropGitStash, OpenGitPatches, ExportGitPatch, ReviewGitPatch, ApplyGitPatch,
             OpenGitHistory, CurrentGitHistory,
             ShowGitRefHistory, PreviousGitHistoryPage, NextGitHistoryPage, InspectGitCommit, CreateGitBranch, SwitchGitBranch,
+            CreateGitTag, InspectGitTag, DeleteGitTag,
             RenameGitBranch, DeleteGitBranch, ShowGitRemotes, RefreshGitRemotes, AddGitRemote, EditGitRemote,
             RenameGitRemote, RemoveGitRemote, FetchGitRemote, PushGitRemote, PullGitRemote, SetGitUpstream];
 

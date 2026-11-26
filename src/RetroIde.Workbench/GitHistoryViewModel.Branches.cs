@@ -126,5 +126,8 @@ internal sealed partial class GitHistoryViewModel
         SetUpstreamCommand.NotifyCanExecuteChanged();
         StartOperationCommand.NotifyCanExecuteChanged();
         ResetToCommitCommand.NotifyCanExecuteChanged();
+        CreateTagCommand.NotifyCanExecuteChanged();
+        InspectTagCommand.NotifyCanExecuteChanged();
+        DeleteTagCommand.NotifyCanExecuteChanged();
     }
 }

@@ -77,6 +77,7 @@ internal static class RemoteControlGitTests
             }).ConfigureAwait(true);
             await VerifyCommitAsync(window, session, sample, token).ConfigureAwait(true);
             await VerifyHistoryAsync(window, session, token).ConfigureAwait(true);
+            await VerifyTagsAsync(window, sample, token).ConfigureAwait(true);
             await VerifyBranchAsync(window, sample, token).ConfigureAwait(true);
             await VerifyBranchMaintenanceAsync(window, sample, token).ConfigureAwait(true);
             await VerifyRemoteSyncAsync(window, sample, token).ConfigureAwait(true);
@@ -102,6 +103,60 @@ internal static class RemoteControlGitTests
             }
         }
         finally { window.Close(); }
+    }
+
+    private static async Task VerifyTagsAsync(Window window, GitWorktreeFixture sample, CancellationToken token)
+    {
+        const string TagName = "native-checkpoint";
+        const string Message = "Annotated by the native workbench.";
+        await sample.GitAsync(sample.Primary, token, "config", "--local", "tag.gpgSign", "false").ConfigureAwait(true);
+        var graph = await FindAsync<ListBox>(window, "git.history.graph", token).ConfigureAwait(true);
+        var commit = ((IEnumerable<GitHistoryGraph.Row>)graph.ItemsSource!).First();
+        graph.SelectedItem = commit;
+
+        var (create, createCommand) = await OpenAsync("git.tag.create.toolbar").ConfigureAwait(true);
+        (await FindAsync<TextBox>(create, "git.tag.name", token).ConfigureAwait(true)).Text = TagName;
+        (await FindAsync<TextBox>(create, "git.tag.message", token).ConfigureAwait(true)).Text = Message;
+        await AnswerAsync(create, createCommand, "git.tag.submit").ConfigureAwait(true);
+        var referenceName = GitTagOperations.Prefix + TagName;
+        var target = await sample.GitAsync(sample.Primary, token, "rev-parse", referenceName + "^{}").ConfigureAwait(true);
+        if (!string.Equals(target.Trim(), commit.Commit.Id, StringComparison.Ordinal))
+            throw new InvalidOperationException("New Tag did not use the selected commit.");
+
+        var refs = await FindAsync<ListBox>(window, "git.history.refs", token).ConfigureAwait(true);
+        refs.SelectedItem = ((IEnumerable<GitHistoryOperations.Reference>)refs.ItemsSource!).Single(reference =>
+            string.Equals(reference.Name, referenceName, StringComparison.Ordinal));
+        var (inspect, inspectCommand) = await OpenAsync("git.tag.read.toolbar").ConfigureAwait(true);
+        var annotation = await FindAsync<TextBox>(inspect, "git.tag.annotation", token).ConfigureAwait(true);
+        if (!annotation.IsReadOnly || !string.Equals(annotation.Text, Message, StringComparison.Ordinal))
+            throw new InvalidOperationException("Inspect Tag did not show the native annotation.");
+        await AnswerAsync(inspect, inspectCommand, "git.tag.cancel").ConfigureAwait(true);
+
+        var (cancel, cancelCommand) = await OpenAsync("git.tag.delete.toolbar").ConfigureAwait(true);
+        await AnswerAsync(cancel, cancelCommand, "git.tag.cancel").ConfigureAwait(true);
+        _ = await sample.GitAsync(sample.Primary, token, "rev-parse", "--verify", referenceName).ConfigureAwait(true);
+        var (confirm, confirmCommand) = await OpenAsync("git.tag.delete.toolbar").ConfigureAwait(true);
+        await AnswerAsync(confirm, confirmCommand, "git.tag.submit").ConfigureAwait(true);
+        if ((await sample.RunAsync(sample.Primary, token, "rev-parse", "--verify", referenceName).ConfigureAwait(true)).ExitCode == 0)
+            throw new InvalidOperationException("Delete Tag left the reviewed tag in the repository.");
+        Console.WriteLine("RemoteControl created and inspected an annotated Git tag, cancelled its removal, and then confirmed deletion.");
+
+        async Task<(Window Dialog, IAsyncRelayCommand Command)> OpenAsync(string id)
+        {
+            var button = await FindAsync<Button>(window, id, token).ConfigureAwait(true);
+            button.BringIntoView();
+            await WorkbenchRemoteControl.ClickAsync(window, id).ConfigureAwait(true);
+            while (window.OwnedWindows.Count == 0)
+                await Task.Delay(20, token).ConfigureAwait(true);
+            return (window.OwnedWindows.Single(), (IAsyncRelayCommand)button.Command!);
+        }
+
+        async Task AnswerAsync(Window dialog, IAsyncRelayCommand command, string id)
+        {
+            await WorkbenchRemoteControl.ClickAsync(dialog, id).ConfigureAwait(true);
+            await (command.ExecutionTask ?? throw new InvalidOperationException("The tag command did not dispatch."))
+                .WaitAsync(token).ConfigureAwait(true);
+        }
     }
 
     private static async Task VerifyBlameAsync(Window window, SourceControlViewModel view, string expected, CancellationToken token)
