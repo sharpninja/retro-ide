@@ -50,6 +50,7 @@ internal static class SourceControlPane
                 path,
                 branch,
                 actions,
+                CreateRecovery(view),
                 staged.Panel,
                 working.Panel,
                 conflicts.Panel,
@@ -78,7 +79,8 @@ internal static class SourceControlPane
                 CommandPresentation.CreateMenuItem(WorkbenchCommands.CloneRepository, view.CloneRepositoryCommand, view.Localization),
                 CommandPresentation.CreateMenuItem(WorkbenchCommands.SelectRepository, view.SelectRepositoryCommand, view.Localization),
                 CommandPresentation.CreateMenuItem(WorkbenchCommands.RefreshGitStatus, view.RefreshStatusCommand, view.Localization),
-            }.Concat(FileActions(view).Select(action => CommandPresentation.CreateMenuItem(action.Descriptor, action.Command, view.Localization))).ToArray(),
+            }.Concat(FileActions(view).Concat(RecoveryActions(view))
+                .Select(action => CommandPresentation.CreateMenuItem(action.Descriptor, action.Command, view.Localization))).ToArray(),
         };
         AutomationProperties.SetAutomationId(menu, WorkbenchText.GitMenu);
         view.Localization.Observe(menu, () => menu.Header = view.Localization.Text(WorkbenchText.GitMenu));
@@ -92,7 +94,7 @@ internal static class SourceControlPane
         WorkbenchWindow.RegisterShortcut(window, view.CloneRepositoryCommand, CommandPresentation.Create(WorkbenchCommands.CloneRepository).Gesture);
         WorkbenchWindow.RegisterShortcut(window, view.SelectRepositoryCommand, CommandPresentation.Create(WorkbenchCommands.SelectRepository).Gesture);
         WorkbenchWindow.RegisterShortcut(window, view.RefreshStatusCommand, CommandPresentation.Create(WorkbenchCommands.RefreshGitStatus).Gesture);
-        foreach (var (descriptor, command) in FileActions(view))
+        foreach (var (descriptor, command) in FileActions(view).Concat(RecoveryActions(view)))
             WorkbenchWindow.RegisterShortcut(window, command, CommandPresentation.Create(descriptor).Gesture);
     }
 
@@ -100,6 +102,39 @@ internal static class SourceControlPane
         [(WorkbenchCommands.OpenGitDiff, view.OpenDiffCommand), (WorkbenchCommands.StageGitFile, view.StageFileCommand),
             (WorkbenchCommands.UnstageGitFile, view.UnstageFileCommand), (WorkbenchCommands.CreateCommit, view.CommitCommand),
             (WorkbenchCommands.AmendCommit, view.AmendCommand), (WorkbenchCommands.OpenGitHistory, view.OpenHistoryCommand)];
+
+    private static (CommandDescriptor Descriptor, ICommand Command)[] RecoveryActions(SourceControlViewModel view) =>
+        [(WorkbenchCommands.ContinueGitOperation, view.ContinueOperationCommand), (WorkbenchCommands.AbortGitOperation, view.AbortOperationCommand)];
+
+    private static Control CreateRecovery(SourceControlViewModel view)
+    {
+        var title = new TextBlock { FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
+        AutomationProperties.SetAutomationId(title, "git.operation.status");
+        var buttons = new WrapPanel();
+        foreach (var (descriptor, command) in RecoveryActions(view))
+            buttons.Children.Add(CommandPresentation.CreateButton(descriptor, command, view.Localization));
+        var group = new StackPanel { Spacing = 4, Children = { title, buttons } };
+        void Update()
+        {
+            var kind = view.OperationKind;
+            title.Text = kind is null ? null : WorkbenchText.GitOperation(view.Localization, kind);
+            group.IsVisible = kind is not null;
+            buttons.IsVisible = GitOperationRecovery.IsSupported(kind);
+        }
+        System.ComponentModel.PropertyChangedEventHandler changed = (_, args) =>
+        {
+            if (string.Equals(args.PropertyName, nameof(view.OperationKind), StringComparison.Ordinal))
+                Update();
+        };
+        group.AttachedToVisualTree += (_, _) =>
+        {
+            view.PropertyChanged += changed;
+            Update();
+        };
+        group.DetachedFromVisualTree += (_, _) => view.PropertyChanged -= changed;
+        view.Localization.Observe(group, Update);
+        return group;
+    }
 
     private static void BindFileSelection(SourceControlViewModel view, ListBox staged, ListBox working, ListBox conflicts)
     {

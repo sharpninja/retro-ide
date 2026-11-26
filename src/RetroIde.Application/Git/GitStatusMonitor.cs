@@ -66,8 +66,8 @@ internal sealed class GitStatusMonitor : IDisposable
         if (path.EndsWith(".lock", StringComparison.Ordinal))
             return false;
         return path is "index" or "HEAD" or "packed-refs" or "config" or "config.worktree" or "info/exclude" or
-            "MERGE_HEAD" or "CHERRY_PICK_HEAD" or "REVERT_HEAD" or "rebase-apply" or "rebase-merge" or "refs" ||
-            path.StartsWith("refs/", StringComparison.Ordinal);
+            "MERGE_HEAD" or "CHERRY_PICK_HEAD" or "REVERT_HEAD" or "rebase-apply" or "rebase-merge" or "sequencer" or "refs" ||
+            path.StartsWith("refs/", StringComparison.Ordinal) || path.StartsWith("sequencer/", StringComparison.Ordinal);
     }
 
     private void MarkPending() => Volatile.Write(ref _pending, 1);

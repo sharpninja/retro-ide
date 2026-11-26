@@ -10,25 +10,36 @@ internal sealed partial class DocumentController
         OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
     private readonly HashSet<string> _switchingWorktrees = new(
         OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+    private readonly HashSet<string> _switchingScopes = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
 
-    internal IGitBranchSwitch? BeginBranchSwitch(GitWorktree repo, string[] relativePaths)
+    internal IGitBranchSwitch? BeginBranchSwitch(GitWorktree repo, string[]? relativePaths)
     {
         Dispatcher.UIThread.VerifyAccess();
-        var paths = relativePaths.Select(path => Path.GetFullPath(path, repo.WorktreePath)).ToArray();
-        if (_switchingWorktrees.Contains(repo.WorktreePath) || paths.Any(_switchingPaths.Contains))
+        var root = repo.WorktreePath;
+        var paths = relativePaths?.Select(path => Path.GetFullPath(path, root)).ToArray() ?? [];
+        var wide = relativePaths is null;
+        if (_switchingWorktrees.Contains(root) || paths.Any(IsSwitchingPath) ||
+            (wide && _switchingWorktrees.Any(other => NativeGit.ContainsPath(root, other) || NativeGit.ContainsPath(other, root))))
             return null;
 
         var checkedPaths = paths.ToHashSet(_switchingPaths.Comparer);
-        var documents = _open.Values.Where(document => document.Source is { } view && checkedPaths.Contains(view.FullPath)).ToArray();
+        var documents = _open.Values.Where(document => document.Source is { } view &&
+            (wide ? NativeGit.ContainsPath(root, view.FullPath) : checkedPaths.Contains(view.FullPath))).ToArray();
         if (documents.Any(document => document.Source!.IsDirty || _interaction.IsBlocked(document.Source.Scope)))
             return null;
 
         _switchingPaths.UnionWith(paths);
-        _switchingWorktrees.Add(repo.WorktreePath);
+        _switchingWorktrees.Add(root);
+        if (wide)
+            _switchingScopes.Add(root);
         foreach (var document in documents)
             _interaction.Begin(document.Source!.Scope);
-        return new BranchSwitch(this, repo.WorktreePath, paths, documents);
+        return new BranchSwitch(this, root, paths, documents);
     }
+
+    private bool IsSwitchingPath(string path) => _switchingPaths.Contains(path) ||
+        _switchingScopes.Any(root => NativeGit.ContainsPath(root, path));
 
     private sealed class BranchSwitch(DocumentController owner, string worktree, string[] paths, ShellDocument[] documents) : IGitBranchSwitch
     {
@@ -62,6 +73,7 @@ internal sealed partial class DocumentController
                 {
                     owner._switchingPaths.ExceptWith(paths);
                     owner._switchingWorktrees.Remove(worktree);
+                    owner._switchingScopes.Remove(worktree);
                     foreach (var document in documents)
                         owner._interaction.End(document.Source!.Scope);
                 });

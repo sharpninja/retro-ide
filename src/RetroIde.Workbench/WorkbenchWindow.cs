@@ -100,6 +100,7 @@ public sealed class WorkbenchWindow : Window
         session.ExplorerView.PickDirectoryAsync = PickWorkspaceDirectoryAsync;
         session.SourceControl.PromptSetupAsync = PromptGitSetupAsync;
         session.SourceControl.PromptCommitAsync = PromptGitCommitAsync;
+        session.SourceControl.PromptAbortAsync = PromptGitAbortAsync;
         session.Layout.Factory.DefaultHostWindowLocator = () =>
         {
             var floating = new HostWindow();
@@ -122,6 +123,7 @@ public sealed class WorkbenchWindow : Window
             session.ExplorerView.PickDirectoryAsync = null;
             session.SourceControl.PromptSetupAsync = null;
             session.SourceControl.PromptCommitAsync = null;
+            session.SourceControl.PromptAbortAsync = null;
             session.Controller.Unregister(session.View);
         };
 
@@ -196,6 +198,19 @@ public sealed class WorkbenchWindow : Window
                 dialog.Close();
         }));
         return await dialog.ShowDialog<string?>(this).ConfigureAwait(true);
+    }
+
+    private async Task<bool> PromptGitAbortAsync(GitOperationRecovery.State state, CancellationToken token)
+    {
+        if (token.IsCancellationRequested || _closed)
+            return false;
+        var dialog = new GitAbortOperationDialog(_session.Localization, state) { FlowDirection = FlowDirection };
+        using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
+        {
+            if (dialog.IsVisible)
+                dialog.Close(false);
+        }));
+        return await dialog.ShowDialog<bool>(this).ConfigureAwait(true);
     }
 
     private void TrackFloatingInteraction(HostWindow floating)

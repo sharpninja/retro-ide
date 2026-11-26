@@ -44,7 +44,7 @@ internal sealed partial class DocumentController : SimpleControllerBase
     internal DocumentContext? OpenOrActivate(WorkspaceExplorer.Address address, WorkspaceExplorer.SourceFile? source, SourcePosition? position)
     {
         Dispatcher.UIThread.VerifyAccess();
-        if (source is not null && _switchingPaths.Contains(Path.GetFullPath(address.RelativePath, source.Address.RootPath)))
+        if (source is not null && IsSwitchingPath(Path.GetFullPath(address.RelativePath, source.Address.RootPath)))
             return null;
         if (!_open.TryGetValue(address, out var document))
         {
@@ -67,7 +67,7 @@ internal sealed partial class DocumentController : SimpleControllerBase
         }
 
         var active = document.Source!;
-        if (_switchingPaths.Contains(active.FullPath))
+        if (IsSwitchingPath(active.FullPath))
             return null;
         if (position is not null)
             active.GoTo(position);

@@ -55,9 +55,10 @@ public sealed class ViewModelContextContractTests
         [
             "editor_close_document", "editor_edit_text", "editor_find_text", "editor_get_document",
             "editor_redo", "editor_replace_text", "editor_save_document", "editor_undo",
-            "git_add_remote", "git_amend", "git_clone_repository", "git_close_diff", "git_close_history", "git_commit",
+            "git_abort_operation", "git_add_remote", "git_amend", "git_clone_repository", "git_close_diff", "git_close_history", "git_commit",
+            "git_continue_operation",
             "git_create_branch", "git_delete_branch", "git_discover_repository", "git_fetch",
-            "git_get_commit_details", "git_get_commit_state", "git_get_diff", "git_get_history", "git_get_status",
+            "git_get_commit_details", "git_get_commit_state", "git_get_diff", "git_get_history", "git_get_operation", "git_get_status",
             "git_initialize_repository", "git_list_refs", "git_list_remotes", "git_open_diff", "git_open_history",
             "git_pull", "git_push", "git_remove_remote", "git_rename_branch", "git_rename_remote",
             "git_select_repository", "git_set_remote_url", "git_set_upstream", "git_stage_file", "git_stage_hunks", "git_switch_branch",

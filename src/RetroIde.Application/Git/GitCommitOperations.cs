@@ -29,6 +29,8 @@ internal static class GitCommitOperations
 
         return WithSnapshotAsync(input.WorktreePath, view, (selection, snapshot) =>
         {
+            if (GitOperationRecovery.ReadKind(selection.Repository) is not null)
+                return OperationInProgress();
             if (!string.Equals(input.Preimage, snapshot.State.Preimage, StringComparison.Ordinal))
                 return Changed();
             if (amend && snapshot.State.Head is null)
@@ -113,6 +115,8 @@ internal static class GitCommitOperations
                 return new("git_index_busy", "Another process owns the index lock. Retry after it finishes.");
 
             var current = await CaptureAsync(selection, token).ConfigureAwait(false);
+            if (GitOperationRecovery.ReadKind(repository) is not null)
+                return OperationInProgress();
             if (!string.Equals(current?.State.Preimage, expected.State.Preimage, StringComparison.Ordinal))
                 return Changed();
 
@@ -171,5 +175,8 @@ internal static class GitCommitOperations
 
     private static FeatureOutcome Changed() => new("git_commit_state_changed", "HEAD or the Git index changed. Review the current staged state and try again.");
     private static FeatureOutcome SelectionChanged() => new("git_selection_changed", "The selected Git worktree changed.");
+    private static FeatureOutcome OperationInProgress() =>
+        new("git_operation_in_progress", "Continue or abort the paused Git operation before using Commit or Amend.");
+
     private sealed record Snapshot(CommitState State, byte[]? Index);
 }

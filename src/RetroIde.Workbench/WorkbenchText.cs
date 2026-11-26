@@ -11,6 +11,12 @@ internal static class WorkbenchText
     internal const string GitStaged = "git.status.group.staged";
     internal const string GitWorking = "git.status.group.working";
     internal const string GitConflicts = "git.status.group.conflicts";
+    internal const string GitAbortExplanation = "git.operation.abort-explanation";
+    private const string GitMergeOperation = "git.operation.merge";
+    private const string GitRebaseOperation = "git.operation.rebase";
+    private const string GitCherryPickOperation = "git.operation.cherry-pick";
+    private const string GitRevertOperation = "git.operation.revert";
+    private const string GitOtherOperation = "git.operation.other";
     internal const string GitDiffTitle = "git.diff.title";
     internal const string GitDiffStaged = "git.diff.layer.staged";
     internal const string GitDiffWorking = "git.diff.layer.working";
@@ -68,6 +74,7 @@ internal static class WorkbenchText
     internal static IReadOnlyList<string> Required { get; } =
         [FileMenu, ViewMenu, LanguageMenu, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
             ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts, GitDiffStaged, GitDiffWorking, GitDiffHunks,
+            GitAbortExplanation, GitMergeOperation, GitRebaseOperation, GitCherryPickOperation, GitRevertOperation, GitOtherOperation,
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel,
             GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,
             GitHistoryTitle, GitHistoryRefs, GitHistoryGraph, GitHistoryWorktrees,
@@ -87,6 +94,15 @@ internal static class WorkbenchText
     }
 
     internal static string PaneTitle(string id) => $"pane.{id}.title";
+
+    internal static string GitOperation(WorkbenchLocalization localization, string kind) => localization.Text(kind switch
+    {
+        "merge" => GitMergeOperation,
+        "rebase" => GitRebaseOperation,
+        "cherry-pick" => GitCherryPickOperation,
+        "revert" => GitRevertOperation,
+        _ => GitOtherOperation,
+    });
 
     internal static string GitRemoteDivergence(WorkbenchLocalization localization, int ahead, int behind) =>
         localization.Text(GitDivergence, new Dictionary<string, object>(StringComparer.Ordinal)

@@ -272,6 +272,12 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                     DispatchToViewAsync(git, registration, _registry.Git.Select, locate, request),
                 GitFeatures.StatusInput status when string.Equals(request.CommandId, _registry.Git.Status.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.Status, status, request),
+                GitOperationRecovery.ReadInput op when string.Equals(request.CommandId, _registry.Git.Operation.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.Operation, op, request),
+                GitOperationRecovery.RecoverInput resume when string.Equals(request.CommandId, _registry.Git.ContinueOperation.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.ContinueOperation, resume, request),
+                GitOperationRecovery.RecoverInput abort when string.Equals(request.CommandId, _registry.Git.AbortOperation.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.AbortOperation, abort, request),
                 GitFeatures.InitializeInput initialize when string.Equals(request.CommandId, _registry.Git.Initialize.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.Initialize, initialize, request, refreshOrigin: registration),
                 GitFeatures.CloneInput clone when string.Equals(request.CommandId, _registry.Git.Clone.Id, StringComparison.Ordinal) =>
@@ -433,13 +439,13 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         public IGitBranchSwitch? BeginBranchSwitch(GitWorktree repository, string[] paths) =>
             Controller._documents?.BeginBranchSwitch(repository, paths);
 
-        public Task<GitIntegrationLease> BeginIntegrationAsync(GitSelection selection, string[] paths, CancellationToken token) =>
+        public Task<GitIntegrationLease> BeginIntegrationAsync(GitSelection selection, string[]? paths, CancellationToken token) =>
             Dispatcher.UIThread.InvokeAsync(() =>
             {
                 token.ThrowIfCancellationRequested();
                 if (!ReferenceEquals(Controller.Resolve(View.ViewKey), this) || !ReferenceEquals(SelectedGit, selection))
                     return new GitIntegrationLease(null, "git_selection_changed");
-                return new GitIntegrationLease(BeginBranchSwitch(selection.Repository, paths));
+                return new GitIntegrationLease(Controller._documents?.BeginBranchSwitch(selection.Repository, paths));
             }).GetTask();
 
         public bool HasExplorer => Controller._explorerView?.ParentViewKey == View.ViewKey;

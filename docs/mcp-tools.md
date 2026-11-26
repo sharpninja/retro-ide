@@ -75,6 +75,9 @@ The Phase 03 candidate exposes native Git discovery, selection, status, file dif
 | `git_fetch` | Selected `worktreePath`, remote `name`, `revision`, optional `prune`, current workbench `context` | Fetches tracking refs and returns the active branch’s upstream and divergence when available. |
 | `git_push` | Selected `worktreePath`, remote `name`, configuration `revision`, local `branchName` and full `expectedHead`, `remoteBranch`, current workbench `context` | Pushes the reviewed local tip to the named branch. `forceWithLease: true` requires a full `expectedRemoteHead` and rejects stale remote tips. |
 | `git_pull` | Selected `worktreePath`, remote `name`, configuration `revision`, checked-out `branchName` and full `expectedHead`, `remoteBranch`, current workbench `context`, optional `strategy` | Fetches and integrates the named branch with `fast-forward` (default), `merge`, or `rebase`. Reports divergence, local file protection, and paused conflict state. |
+| `git_get_operation` | Selected `worktreePath` | Reads the active operation, unresolved literal paths, and the revision to review before recovery. `kind` is `none` if Git has no paused operation. |
+| `git_continue_operation` | Selected `worktreePath`, operation `revision`, current workbench `context` | Continues a merge, rebase, cherry-pick, or revert after conflict resolutions are staged. If Git pauses at another conflict, the response includes its updated state. |
+| `git_abort_operation` | Selected `worktreePath`, operation `revision`, current workbench `context` | Aborts the reviewed native operation in that checkout and returns its resulting state. |
 | `git_set_upstream` | Selected `worktreePath`, local `branchName`, `expectedHead`, optional full `upstream`, current workbench `context` | Sets tracking for the reviewed branch. Omit `upstream` to clear tracking. |
 
 Selection is scoped to the attached workbench. Desktop commands and attached clients share the selection and status shown in Source Control and Project Explorer. On desktop restart, the workspace revalidates the saved checkout before issuing a new attachment. Select a worktree before reading status. If its selection changes while status is being prepared, refresh the context and read again. [Git integration](git-integration.md)
@@ -92,6 +95,8 @@ Branch commands operate on the entire open worktree. A stale tip returns `git_br
 Rename protects branches checked out in another worktree. Delete returns `git_branch_in_use` for every checked-out branch and `git_branch_unmerged` when its commits are not fully merged. Refresh references after either operation.
 
 Remote configuration, fetch, push, and pull require write-enabled attachments. Refresh `git_list_remotes` when `git_remote_changed` is returned and `git_list_refs` when `git_branch_changed` is returned. Fetch accepts configured tracking and tag destinations to preserve local branch refs. [Git fetch](https://git-scm.com/docs/git-fetch) · [Git push](https://git-scm.com/docs/git-push) · [Git pull](https://git-scm.com/docs/git-pull)
+
+Operation recovery uses the selected worktree root and a write-enabled attachment. Review `git_get_operation` again after stage, after an external Git change, or when recovery returns `git_operation_changed`. Recovery rejects unsaved editor buffers in the selected checkout. [Git rebase](https://git-scm.com/docs/git-rebase) · [Git cherry-pick](https://git-scm.com/docs/git-cherry-pick)
 
 ## One feature registry
 

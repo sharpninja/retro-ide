@@ -166,13 +166,10 @@ internal static partial class GitRemoteOperations
             throw new InvalidDataException("Git could not read the paths affected by integration.");
     }
 
-    private static bool HasIntegrationState(GitWorktree repo) =>
-        File.Exists(Path.Combine(repo.GitDirectory, "MERGE_HEAD")) ||
-        Directory.Exists(Path.Combine(repo.GitDirectory, "rebase-merge")) ||
-        Directory.Exists(Path.Combine(repo.GitDirectory, "rebase-apply"));
+    private static bool HasIntegrationState(GitWorktree repo) => GitOperationRecovery.ReadKind(repo) is not null;
 
     private static FeatureOutcome IntegrationInProgress() =>
-        new("git_pull_in_progress", "Finish or abort the current merge or rebase before pulling.");
+        new("git_pull_in_progress", "Finish or abort the current Git operation before pulling.");
 
     private static bool AffectsIgnoredPath(string ignored, string[] changedPaths)
     {

@@ -231,7 +231,8 @@ public sealed class FeatureRegistry
             Git.Discover, Git.Select, Git.Status, Git.Initialize, Git.Clone, Git.Diff, Git.OpenDiff, Git.CloseDiff,
             Git.Stage, Git.Unstage, Git.StageHunks, Git.UnstageHunks, Git.CommitState, Git.Commit, Git.Amend,
             Git.Refs, Git.History, Git.CommitDetails, Git.OpenHistory, Git.CloseHistory, Git.CreateBranch, Git.SwitchBranch, Git.RenameBranch, Git.DeleteBranch,
-            Git.Remotes, Git.AddRemote, Git.SetRemoteUrl, Git.RenameRemote, Git.RemoveRemote, Git.Fetch, Git.SetUpstream, Git.Push, Git.Pull);
+            Git.Remotes, Git.AddRemote, Git.SetRemoteUrl, Git.RenameRemote, Git.RemoveRemote, Git.Fetch, Git.SetUpstream, Git.Push, Git.Pull,
+            Git.Operation, Git.ContinueOperation, Git.AbortOperation);
     }
 
     internal ExplorerFeatures Explorer { get; }

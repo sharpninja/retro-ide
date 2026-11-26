@@ -18,7 +18,7 @@ internal static class RemoteControlGitTests
     /// <remarks>TEST-RETRO-013#ac-test-git-stage-and-push; TEST-RETRO-015#ac-test-mcp-same-instance.</remarks>
     internal static async Task RunAsync()
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(50));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(65));
         var token = timeout.Token;
         using var sample = await GitWorktreeFixture.CreateAsync("git", token).ConfigureAwait(true);
         const string Change = "native Source Control change";
@@ -79,6 +79,8 @@ internal static class RemoteControlGitTests
             await VerifyBranchAsync(window, sample, token).ConfigureAwait(true);
             await VerifyBranchMaintenanceAsync(window, sample, token).ConfigureAwait(true);
             await VerifyRemoteSyncAsync(window, sample, token).ConfigureAwait(true);
+            _ = await MutateAsync("workbench_focus_tool", new(StringComparer.Ordinal) { ["toolId"] = "source-control" }).ConfigureAwait(true);
+            await VerifyRecoveryAsync(window, session, sample, token).ConfigureAwait(true);
 
             async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments)
             {
@@ -271,6 +273,57 @@ internal static class RemoteControlGitTests
             await WorkbenchRemoteControl.ClickAsync(dialog, id).ConfigureAwait(true);
             await (((IAsyncRelayCommand)button.Command!).ExecutionTask ??
                 throw new InvalidOperationException($"The Git Remotes dialog did not dispatch {id}.")).WaitAsync(token).ConfigureAwait(true);
+        }
+    }
+
+    private static async Task VerifyRecoveryAsync(Window window, WorkbenchSession session, GitWorktreeFixture sample, CancellationToken token)
+    {
+        var worktree = sample.Primary;
+        var path = GitWorktreeFixture.ConflictPath;
+        const string Original = "native local branch\n";
+        GitWorktreeFixture.Write(worktree, path, Original);
+        GitWorktreeFixture.Write(sample.Linked, path, "native linked branch\n");
+        await CommitSideAsync(worktree, "Local side").ConfigureAwait(true);
+        await CommitSideAsync(sample.Linked, "Linked side").ConfigureAwait(true);
+        var before = (await sample.GitAsync(worktree, token, "rev-parse", "HEAD").ConfigureAwait(true)).Trim();
+        var incoming = (await sample.GitAsync(sample.Linked, token, "rev-parse", "HEAD").ConfigureAwait(true)).Trim();
+        if ((await sample.RunAsync(worktree, token, "merge", "--no-edit", incoming).ConfigureAwait(true)).ExitCode == 0)
+            throw new InvalidOperationException("The native recovery fixture did not leave an unresolved merge.");
+
+        var banner = await FindAsync<TextBlock>(window, "git.operation.status", token).ConfigureAwait(true);
+        var resume = await FindAsync<Button>(window, "git.operation.continue.toolbar", token).ConfigureAwait(true);
+        while (resume.IsEffectivelyEnabled || !session.SourceControl.Conflicts.Any(entry =>
+            string.Equals(entry.Path, path, StringComparison.Ordinal)))
+            await Task.Delay(20, token).ConfigureAwait(true);
+        if (!string.Equals(banner.Text, "Merge in progress", StringComparison.Ordinal))
+            throw new InvalidOperationException($"Source Control showed an unexpected Git operation label: {banner.Text}");
+
+        await ConfirmAsync("git.operation.abort.cancel").ConfigureAwait(true);
+        _ = await sample.GitAsync(worktree, token, "rev-parse", "--verify", "MERGE_HEAD").ConfigureAwait(true);
+        await ConfirmAsync("git.operation.abort.confirm").ConfigureAwait(true);
+        if ((await sample.RunAsync(worktree, token, "rev-parse", "--verify", "MERGE_HEAD").ConfigureAwait(true)).ExitCode == 0 ||
+            !string.Equals(before, (await sample.GitAsync(worktree, token, "rev-parse", "HEAD").ConfigureAwait(true)).Trim(), StringComparison.Ordinal) ||
+            !string.Equals(Original, await File.ReadAllTextAsync(Path.Combine(worktree, path), token).ConfigureAwait(true), StringComparison.Ordinal))
+            throw new InvalidOperationException("The confirmed Abort did not restore the selected Git worktree.");
+        Console.WriteLine("RemoteControl identified a native merge conflict, canceled an abort, then confirmed recovery in the selected checkout.");
+
+        async Task CommitSideAsync(string root, string message)
+        {
+            await sample.GitAsync(root, token, "add", "--", path).ConfigureAwait(true);
+            await sample.GitAsync(root, token, "commit", "-m", message).ConfigureAwait(true);
+        }
+
+        async Task ConfirmAsync(string id)
+        {
+            const string Abort = "git.operation.abort.toolbar";
+            var abort = await FindAsync<Button>(window, Abort, token).ConfigureAwait(true);
+            abort.BringIntoView();
+            await WorkbenchRemoteControl.ClickAsync(window, Abort).ConfigureAwait(true);
+            while (window.OwnedWindows.Count == 0)
+                await Task.Delay(20, token).ConfigureAwait(true);
+            await WorkbenchRemoteControl.ClickAsync(window.OwnedWindows.Single(), id).ConfigureAwait(true);
+            await (session.SourceControl.AbortOperationCommand.ExecutionTask ??
+                throw new InvalidOperationException("The Abort command was not dispatched.")).WaitAsync(token).ConfigureAwait(true);
         }
     }
 

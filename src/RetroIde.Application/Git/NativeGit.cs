@@ -63,10 +63,20 @@ internal static class NativeGit
             return null;
         if (tracked.Length > 0 && !tracked.EndsWith('\0'))
             throw new InvalidDataException("Git index output is missing its final path terminator.");
-        var output = await ReadAsync(["status", "--porcelain=v2", "-z", "--branch", "--renames", "--untracked-files=all", "--ignored=matching"]).ConfigureAwait(false);
+        string[] statusCommand = ["status", "--porcelain=v2", "-z", "--branch", "--renames", "--untracked-files=all", "--ignored=matching"];
+        var wholeWorktree = PathComparer.Equals(repo.WorktreePath, selection.ScopeRoot);
+        var operation = wholeWorktree ? GitOperationRecovery.ReadKind(repo) : null;
+        var output = await ReadAsync(statusCommand).ConfigureAwait(false);
+        if (wholeWorktree && !string.Equals(operation, GitOperationRecovery.ReadKind(repo), StringComparison.Ordinal))
+        {
+            // A native command can publish its operation marker while the first status read is in progress.
+            operation = GitOperationRecovery.ReadKind(repo);
+            output = await ReadAsync(statusCommand).ConfigureAwait(false);
+        }
         return output is null ? null : GitStatus.Parse(repo, output) with
         {
             TrackedPaths = tracked.Split('\0', StringSplitOptions.RemoveEmptyEntries),
+            OperationKind = operation,
         };
 
         Task<string?> ReadAsync(string[] command)
@@ -131,7 +141,7 @@ internal static class NativeGit
     internal sealed record CommandResult(int ExitCode, byte[] Output, string? Error);
 
     internal static async Task<CommandResult> RunCaptureAsync(string directory, IReadOnlyList<string> arguments, CancellationToken token,
-        string? indexPath = null, bool captureError = false)
+        string? indexPath = null, bool captureError = false, bool reuseCommitMessage = false)
     {
         var start = new ProcessStartInfo("git")
         {
@@ -142,6 +152,8 @@ internal static class NativeGit
             start.Environment.Remove(name);
         if (indexPath is not null)
             start.Environment["GIT_INDEX_FILE"] = indexPath;
+        if (reuseCommitMessage)
+            start.Environment["GIT_EDITOR"] = "true";
         foreach (var argument in arguments)
             start.ArgumentList.Add(argument);
 

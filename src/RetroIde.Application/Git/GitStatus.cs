@@ -9,6 +9,9 @@ internal sealed record GitStatus(GitWorktree Repository, string Branch, string? 
     /// <summary>Gets the worktree-relative Git index paths within the captured workspace scope.</summary>
     public string[] TrackedPaths { get; init; } = [];
 
+    /// <summary>Gets the operation paused in the selected worktree, when it has an active native operation.</summary>
+    public string? OperationKind { get; init; }
+
     /// <summary>Parses one NUL-terminated native status response.</summary>
     /// <param name="repository">The worktree captured for the invocation.</param>
     /// <param name="status">The complete Git porcelain v2 status, fetched with branch headers.</param>

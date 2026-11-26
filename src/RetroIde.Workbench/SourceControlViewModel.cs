@@ -28,6 +28,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
 
     internal Func<bool, CancellationToken, Task<GitSetupDialog.Choice?>>? PromptSetupAsync { get; set; }
     internal Func<GitCommitOperations.CommitState, bool, CancellationToken, Task<string?>>? PromptCommitAsync { get; set; }
+    internal Func<GitOperationRecovery.State, CancellationToken, Task<bool>>? PromptAbortAsync { get; set; }
 
     public event EventHandler<ViewCommandRequested>? CommandRequested;
 
@@ -41,7 +42,8 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     public bool HasRepository => Repository is not null;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Staged), nameof(Working), nameof(Conflicts))]
+    [NotifyPropertyChangedFor(nameof(Staged), nameof(Working), nameof(Conflicts), nameof(OperationKind))]
+    [NotifyCanExecuteChangedFor(nameof(ContinueOperationCommand), nameof(AbortOperationCommand), nameof(CommitCommand), nameof(AmendCommand))]
     public partial GitStatus? Status { get; private set; }
 
     [ObservableProperty]
@@ -51,6 +53,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     public IEnumerable<GitStatusEntry> Staged => Status?.Entries.Where(entry => !entry.IsUnmerged && entry.Index is not ("." or "?" or "!")) ?? [];
     public IEnumerable<GitStatusEntry> Working => Status?.Entries.Where(entry => !entry.IsUnmerged && entry.Worktree is not ("." or "!")) ?? [];
     public IEnumerable<GitStatusEntry> Conflicts => Status?.Entries.Where(entry => entry.IsUnmerged) ?? [];
+    public string? OperationKind => Status?.OperationKind;
     public string? ErrorMessage => LastResult is { Code: not "ok" } result ? result.Summary : null;
 
     public void Receive(OperationResult result)
@@ -103,6 +106,8 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         CommitCommand.NotifyCanExecuteChanged();
         AmendCommand.NotifyCanExecuteChanged();
         OpenHistoryCommand.NotifyCanExecuteChanged();
+        ContinueOperationCommand.NotifyCanExecuteChanged();
+        AbortOperationCommand.NotifyCanExecuteChanged();
         NotifyFileCommands();
     }
 
@@ -119,6 +124,9 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     private bool CanOpenDiff() => CanRefreshStatus() && _file is not null;
     private bool CanStageFile() => CanOpenDiff() && _file is { Layer: "working" };
     private bool CanUnstageFile() => CanOpenDiff() && _file is { Layer: "staged" };
+    private bool CanCommit() => CanRefreshStatus() && OperationKind is null;
+    private bool CanAbortOperation() => CanRefreshStatus() && GitOperationRecovery.IsSupported(OperationKind);
+    private bool CanContinueOperation() => CanAbortOperation() && !Conflicts.Any();
 
     [RelayCommand(CanExecute = nameof(CanOpenDiff))]
     private Task OpenDiffAsync(CancellationToken cancellationToken) =>
@@ -171,11 +179,40 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     private Task CloneRepositoryAsync(CancellationToken cancellationToken) =>
         ProvisionAsync(clone: true, cancellationToken);
 
-    [RelayCommand(CanExecute = nameof(CanRefreshStatus))]
+    [RelayCommand(CanExecute = nameof(CanCommit))]
     private Task CommitAsync(CancellationToken cancellationToken) => CommitOrAmendAsync(amend: false, cancellationToken);
 
-    [RelayCommand(CanExecute = nameof(CanRefreshStatus))]
+    [RelayCommand(CanExecute = nameof(CanCommit))]
     private Task AmendAsync(CancellationToken cancellationToken) => CommitOrAmendAsync(amend: true, cancellationToken);
+
+    [RelayCommand(CanExecute = nameof(CanContinueOperation))]
+    private Task ContinueOperationAsync(CancellationToken token) => RecoverOperationAsync(abort: false, token);
+
+    [RelayCommand(CanExecute = nameof(CanAbortOperation))]
+    private Task AbortOperationAsync(CancellationToken token) => RecoverOperationAsync(abort: true, token);
+
+    private async Task RecoverOperationAsync(bool abort, CancellationToken token)
+    {
+        if (Repository is not { } repository)
+            return;
+        var result = await RequestAsync(registry.Git.Operation, new GitOperationRecovery.ReadInput(repository.WorktreePath), token).ConfigureAwait(true);
+        if (result is not { Code: "ok", Data: { } data } ||
+            data.Deserialize<GitOperationRecovery.State>(WireJson.Options) is not { Revision: { } revision } state ||
+            (abort ? !state.CanAbort : !state.CanContinue))
+            return;
+        if (abort && (PromptAbortAsync is not { } prompt || !await prompt(state, token).ConfigureAwait(true)))
+            return;
+        if (token.IsCancellationRequested || ParentViewKey is null)
+            return;
+
+        interaction.Begin(PaneId);
+        try
+        {
+            await RequestAsync(abort ? registry.Git.AbortOperation : registry.Git.ContinueOperation,
+                new GitOperationRecovery.RecoverInput(repository.WorktreePath, revision), token).ConfigureAwait(true);
+        }
+        finally { interaction.End(PaneId); }
+    }
 
     [RelayCommand(CanExecute = nameof(CanRefreshStatus))]
     private Task OpenHistoryAsync(CancellationToken token) => Repository is { } repository
