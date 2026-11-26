@@ -101,7 +101,8 @@ internal static class SourceControlPane
     private static (CommandDescriptor Descriptor, ICommand Command)[] FileActions(SourceControlViewModel view) =>
         [(WorkbenchCommands.OpenGitDiff, view.OpenDiffCommand), (WorkbenchCommands.StageGitFile, view.StageFileCommand),
             (WorkbenchCommands.UnstageGitFile, view.UnstageFileCommand), (WorkbenchCommands.CreateCommit, view.CommitCommand),
-            (WorkbenchCommands.AmendCommit, view.AmendCommand), (WorkbenchCommands.OpenGitHistory, view.OpenHistoryCommand)];
+            (WorkbenchCommands.AmendCommit, view.AmendCommand), (WorkbenchCommands.OpenGitHistory, view.OpenHistoryCommand),
+            (WorkbenchCommands.OpenGitStashes, view.OpenStashesCommand)];
 
     private static (CommandDescriptor Descriptor, ICommand Command)[] RecoveryActions(SourceControlViewModel view) =>
         [(WorkbenchCommands.ContinueGitOperation, view.ContinueOperationCommand), (WorkbenchCommands.SkipGitOperation, view.SkipOperationCommand),

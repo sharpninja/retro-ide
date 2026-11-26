@@ -81,6 +81,7 @@ internal static class RemoteControlGitTests
             await VerifyRemoteSyncAsync(window, sample, token).ConfigureAwait(true);
             _ = await MutateAsync("workbench_focus_tool", new(StringComparer.Ordinal) { ["toolId"] = "source-control" }).ConfigureAwait(true);
             await VerifyRecoveryAsync(window, session, sample, token).ConfigureAwait(true);
+            await VerifyStashAsync(window, sample, token).ConfigureAwait(true);
 
             async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments)
             {
@@ -412,6 +413,57 @@ internal static class RemoteControlGitTests
             await WorkbenchRemoteControl.ClickAsync(resetDialog, answer).ConfigureAwait(true);
             await (((IAsyncRelayCommand)button.Command!).ExecutionTask ??
                 throw new InvalidOperationException("Reset review was not dispatched.")).WaitAsync(token).ConfigureAwait(true);
+        }
+    }
+
+    private static async Task VerifyStashAsync(Window window, GitWorktreeFixture sample, CancellationToken token)
+    {
+        var checkout = sample.Primary;
+        var file = GitWorktreeFixture.HunkPath;
+        var path = Path.Combine(checkout, file);
+        var baseline = await File.ReadAllTextAsync(path, token).ConfigureAwait(true);
+        const string Extra = "native stash untracked.txt";
+        GitWorktreeFixture.Write(checkout, file, "native staged stash text\n");
+        await sample.GitAsync(checkout, token, "add", "--", file).ConfigureAwait(true);
+        GitWorktreeFixture.Write(checkout, file, "native working stash text\n");
+        GitWorktreeFixture.Write(checkout, Extra, "native untracked stash text\n");
+
+        const string Open = "git.stash.open.pane";
+        var open = await FindAsync<Button>(window, Open, token).ConfigureAwait(true);
+        open.BringIntoView();
+        await WorkbenchRemoteControl.ClickAsync(window, Open).ConfigureAwait(true);
+        while (window.OwnedWindows.Count == 0)
+            await Task.Delay(20, token).ConfigureAwait(true);
+        var dialog = window.OwnedWindows.Single();
+        var message = await FindAsync<TextBox>(dialog, "git.stash.message", token).ConfigureAwait(true);
+        message.Text = "Native shelf";
+        (await FindAsync<CheckBox>(dialog, "git.stash.untracked", token).ConfigureAwait(true)).IsChecked = true;
+        await InvokeAsync("git.stash.create.toolbar").ConfigureAwait(true);
+        if (File.Exists(Path.Combine(checkout, Extra)) ||
+            !string.Equals(baseline, await File.ReadAllTextAsync(path, token).ConfigureAwait(true), StringComparison.Ordinal))
+            throw new InvalidOperationException("Stash creation did not clear the reviewed worktree changes.");
+        var list = await FindAsync<ListBox>(dialog, "git.stash.entries", token).ConfigureAwait(true);
+        list.SelectedItem = ((IEnumerable<GitStash.Entry>)list.ItemsSource!).Single();
+        await InvokeAsync("git.stash.inspect.toolbar").ConfigureAwait(true);
+        var patch = await FindAsync<TextBox>(dialog, "git.stash.patch", token).ConfigureAwait(true);
+        if (!patch.IsReadOnly || patch.Text?.Contains("native working stash text", StringComparison.Ordinal) != true)
+            throw new InvalidOperationException("The selected stash did not show its read-only patch.");
+        (await FindAsync<CheckBox>(dialog, "git.stash.index", token).ConfigureAwait(true)).IsChecked = true;
+        await InvokeAsync("git.stash.pop.toolbar").ConfigureAwait(true);
+        if (!string.Equals("native staged stash text\n", await sample.GitAsync(checkout, token, "show", ":" + file).ConfigureAwait(true), StringComparison.Ordinal) ||
+            !string.Equals("native working stash text\n", await File.ReadAllTextAsync(path, token).ConfigureAwait(true), StringComparison.Ordinal) ||
+            !File.Exists(Path.Combine(checkout, Extra)) || (await sample.GitAsync(checkout, token, "stash", "list").ConfigureAwait(true)).Length != 0)
+            throw new InvalidOperationException("The native Pop did not restore the stash layers and remove the applied entry.");
+        await WorkbenchRemoteControl.ClickAsync(dialog, "git.stash.close").ConfigureAwait(true);
+        await ((IAsyncRelayCommand)open.Command!).ExecutionTask!.WaitAsync(token).ConfigureAwait(true);
+        Console.WriteLine("RemoteControl created, inspected and popped a native Git stash with staged, working and untracked changes.");
+
+        async Task InvokeAsync(string id)
+        {
+            var button = await FindAsync<Button>(dialog, id, token).ConfigureAwait(true);
+            await WorkbenchRemoteControl.ClickAsync(dialog, id).ConfigureAwait(true);
+            await (((IAsyncRelayCommand)button.Command!).ExecutionTask ??
+                throw new InvalidOperationException($"The stash control did not dispatch {id}.")).WaitAsync(token).ConfigureAwait(true);
         }
     }
 

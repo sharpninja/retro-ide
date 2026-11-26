@@ -34,6 +34,10 @@ internal static class WorkbenchText
     internal const string GitResetTrackedPaths = "git.reset.tracked-paths";
     internal const string GitResetBlockedPaths = "git.reset.blocked-paths";
     internal const string GitResetApply = "git.reset.apply";
+    internal const string GitStashTitle = "git.stash.title";
+    internal const string GitStashMessage = "git.stash.message";
+    internal const string GitStashUntracked = "git.stash.untracked";
+    internal const string GitStashIndex = "git.stash.index";
     private const string GitMergeOperation = "git.operation.merge";
     private const string GitRebaseOperation = "git.operation.rebase";
     private const string GitCherryPickOperation = "git.operation.cherry-pick";
@@ -101,6 +105,7 @@ internal static class WorkbenchText
             GitStartApply, GitMainline, GitDetachedHead,
             GitResetMode, GitResetSoft, GitResetMixed, GitResetHard, GitResetSoftEffect, GitResetMixedEffect, GitResetHardEffect,
             GitResetIndexPaths, GitResetTrackedPaths, GitResetBlockedPaths, GitResetApply,
+            GitStashTitle, GitStashMessage, GitStashUntracked, GitStashIndex,
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel,
             GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,
             GitHistoryTitle, GitHistoryRefs, GitHistoryGraph, GitHistoryWorktrees,

@@ -44,6 +44,10 @@ Source Control shows when the selected worktree has a paused merge, rebase, cher
 
 Select a commit in **Git History** and choose **Reset to Commit**. **Soft** moves HEAD and keeps the index and files. **Mixed** also resets the index and keeps working files. **Hard** also replaces tracked files with the selected commit. The dialog shows the index and tracked paths affected by the selected mode. An affected unsaved editor buffer or an untracked or ignored file in the way blocks a hard reset. Retro IDE rechecks the reviewed HEAD, index, and disk contents before applying the chosen mode. [Git reset](https://git-scm.com/docs/git-reset)
 
+## Stash checkout changes
+
+Open **Stashes** from Source Control. Enter a message and choose whether to include untracked files. Select a stash to inspect its patch and optionally restore staged changes when applying it. **Apply** keeps the entry. **Pop** applies it and removes the reviewed entry after success. A conflict keeps the entry and reports the paths to resolve. **Drop** removes the selected entry from the shared stash stack. Refresh the list if another checkout changed the stack. [Git stash](https://git-scm.com/docs/git-stash)
+
 ## Workflows
 
 | Area | IDE commands and views |

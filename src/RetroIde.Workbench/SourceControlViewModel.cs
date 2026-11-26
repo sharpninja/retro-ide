@@ -17,6 +17,8 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     private WorkspaceExplorer.Address? _explorerSelection;
     private bool _available;
     private (string Path, string Layer)? _file;
+    private GitFeatures Git => registry.Git;
+    private InteractionBlocks Interaction => interaction;
 
     public Guid ViewKey { get; } = Guid.NewGuid();
 
@@ -36,6 +38,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     [NotifyCanExecuteChangedFor(nameof(RefreshStatusCommand))]
     [NotifyCanExecuteChangedFor(nameof(CommitCommand), nameof(AmendCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenHistoryCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenStashesCommand))]
     [NotifyPropertyChangedFor(nameof(HasRepository))]
     public partial GitWorktree? Repository { get; private set; }
 
@@ -67,6 +70,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     {
         Dispatcher.UIThread.VerifyAccess();
         Status = null;
+        SetStashes(null);
         Repository = repository;
         SelectFile(null, "working");
         LastResult = null;
@@ -107,6 +111,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         CommitCommand.NotifyCanExecuteChanged();
         AmendCommand.NotifyCanExecuteChanged();
         OpenHistoryCommand.NotifyCanExecuteChanged();
+        OpenStashesCommand.NotifyCanExecuteChanged();
         ContinueOperationCommand.NotifyCanExecuteChanged();
         AbortOperationCommand.NotifyCanExecuteChanged();
         SkipOperationCommand.NotifyCanExecuteChanged();

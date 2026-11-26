@@ -101,6 +101,7 @@ public sealed class WorkbenchWindow : Window
         session.SourceControl.PromptSetupAsync = PromptGitSetupAsync;
         session.SourceControl.PromptCommitAsync = PromptGitCommitAsync;
         session.SourceControl.PromptRecoveryAsync = PromptGitRecoveryAsync;
+        session.SourceControl.PromptStashesAsync = ShowGitStashesAsync;
         session.Layout.Factory.DefaultHostWindowLocator = () =>
         {
             var floating = new HostWindow();
@@ -124,6 +125,7 @@ public sealed class WorkbenchWindow : Window
             session.SourceControl.PromptSetupAsync = null;
             session.SourceControl.PromptCommitAsync = null;
             session.SourceControl.PromptRecoveryAsync = null;
+            session.SourceControl.PromptStashesAsync = null;
             session.Controller.Unregister(session.View);
         };
 
@@ -211,6 +213,19 @@ public sealed class WorkbenchWindow : Window
                 dialog.Close(false);
         }));
         return await dialog.ShowDialog<bool>(this).ConfigureAwait(true);
+    }
+
+    private async Task ShowGitStashesAsync(CancellationToken token)
+    {
+        if (token.IsCancellationRequested || _closed)
+            return;
+        var dialog = new GitStashDialog(_session.SourceControl) { FlowDirection = FlowDirection };
+        using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
+        {
+            if (dialog.IsVisible)
+                dialog.Close();
+        }));
+        await dialog.ShowDialog(this).ConfigureAwait(true);
     }
 
     private void TrackFloatingInteraction(HostWindow floating)

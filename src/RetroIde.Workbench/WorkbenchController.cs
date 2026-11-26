@@ -280,6 +280,18 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                     DispatchToViewAsync(git, registration, _registry.Git.AbortOperation, abort, request),
                 GitOperationRecovery.RecoverInput skip when string.Equals(request.CommandId, _registry.Git.SkipOperation.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.SkipOperation, skip, request),
+                GitStash.ListInput list when string.Equals(request.CommandId, _registry.Git.ListStashes.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.ListStashes, list, request),
+                GitStash.CreateInput createStash when string.Equals(request.CommandId, _registry.Git.CreateStash.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.CreateStash, createStash, request),
+                GitStash.EntryInput inspect when string.Equals(request.CommandId, _registry.Git.InspectStash.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.InspectStash, inspect, request),
+                GitStash.EntryInput apply when string.Equals(request.CommandId, _registry.Git.ApplyStash.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.ApplyStash, apply, request),
+                GitStash.EntryInput pop when string.Equals(request.CommandId, _registry.Git.PopStash.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.PopStash, pop, request),
+                GitStash.EntryInput drop when string.Equals(request.CommandId, _registry.Git.DropStash.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.DropStash, drop, request),
                 GitFeatures.InitializeInput initialize when string.Equals(request.CommandId, _registry.Git.Initialize.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.Initialize, initialize, request, refreshOrigin: registration),
                 GitFeatures.CloneInput clone when string.Equals(request.CommandId, _registry.Git.Clone.Id, StringComparison.Ordinal) =>

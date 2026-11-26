@@ -233,7 +233,7 @@ public sealed class FeatureRegistry
             Git.Refs, Git.History, Git.CommitDetails, Git.OpenHistory, Git.CloseHistory, Git.CreateBranch, Git.SwitchBranch, Git.RenameBranch, Git.DeleteBranch,
             Git.Remotes, Git.AddRemote, Git.SetRemoteUrl, Git.RenameRemote, Git.RemoveRemote, Git.Fetch, Git.SetUpstream, Git.Push, Git.Pull,
             Git.Operation, Git.ContinueOperation, Git.AbortOperation, Git.SkipOperation, Git.StartOperation,
-            Git.ReviewReset, Git.Reset);
+            Git.ReviewReset, Git.Reset, Git.ListStashes, Git.InspectStash, Git.CreateStash, Git.ApplyStash, Git.PopStash, Git.DropStash);
     }
 
     internal ExplorerFeatures Explorer { get; }

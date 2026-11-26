@@ -40,6 +40,13 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor SkipGitOperation = Create("git.operation.skip", "Ctrl+Alt+Shift+J");
     public static readonly CommandDescriptor StartGitOperation = Create("git.operation.start", "Ctrl+Alt+Shift+I");
     public static readonly CommandDescriptor ResetToGitCommit = Create("git.reset.commit", "Ctrl+Alt+Shift+X");
+    public static readonly CommandDescriptor OpenGitStashes = Create("git.stash.open", "Ctrl+Alt+Shift+U");
+    public static readonly CommandDescriptor RefreshGitStashes = Create("git.stash.list", "Alt+Shift+U");
+    public static readonly CommandDescriptor InspectGitStash = Create("git.stash.inspect", "Alt+Shift+I");
+    public static readonly CommandDescriptor CreateGitStash = Create("git.stash.create", "Alt+Shift+S");
+    public static readonly CommandDescriptor ApplyGitStash = Create("git.stash.apply", "Alt+Shift+A");
+    public static readonly CommandDescriptor PopGitStash = Create("git.stash.pop", "Alt+Shift+P");
+    public static readonly CommandDescriptor DropGitStash = Create("git.stash.drop", "Alt+Shift+D");
     public static readonly CommandDescriptor OpenGitHistory = Create("git.history.open", "Ctrl+Alt+L");
     public static readonly CommandDescriptor CurrentGitHistory = Create("git.history.current", "Ctrl+Alt+Shift+L");
     public static readonly CommandDescriptor ShowGitRefHistory = Create("git.history.ref", "Ctrl+Alt+Shift+B");
@@ -67,7 +74,8 @@ internal static class WorkbenchCommands
         [FocusTool, OpenFolder, OpenProject, Save, Reveal, Search, Next, Previous, Replace, ReplaceAll, Undo, Redo, Close, Discard,
             OpenSourceControl, SelectRepository, RefreshGitStatus, InitializeRepository, CloneRepository, OpenGitDiff, StageGitFile, UnstageGitFile,
             RefreshGitDiff, StageGitHunks, UnstageGitHunks, CreateCommit, AmendCommit, ContinueGitOperation, AbortGitOperation, SkipGitOperation,
-            StartGitOperation, ResetToGitCommit,
+            StartGitOperation, ResetToGitCommit, OpenGitStashes, RefreshGitStashes, InspectGitStash, CreateGitStash, ApplyGitStash,
+            PopGitStash, DropGitStash,
             OpenGitHistory, CurrentGitHistory,
             ShowGitRefHistory, PreviousGitHistoryPage, NextGitHistoryPage, InspectGitCommit, CreateGitBranch, SwitchGitBranch,
             RenameGitBranch, DeleteGitBranch, ShowGitRemotes, RefreshGitRemotes, AddGitRemote, EditGitRemote,
