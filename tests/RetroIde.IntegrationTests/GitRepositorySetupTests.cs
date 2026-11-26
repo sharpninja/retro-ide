@@ -47,15 +47,23 @@ public sealed partial class GitRepositorySetupTests
             Assert.True(File.Exists(Path.Combine(clone, GitWorktreeFixture.ChangedPath)));
 
             var empty = scratch.CreateSubdirectory("empty destination").FullName;
+            const UnixFileMode PrivateFolder = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+            if (OperatingSystem.IsLinux())
+                File.SetUnixFileMode(empty, PrivateFolder);
             Assert.Equal("ok", await port.CloneAsync(remote, empty).ConfigureAwait(true));
             await VerifySelectedAsync(port, empty, hasCommit: true).ConfigureAwait(true);
+            if (OperatingSystem.IsLinux())
+                Assert.True(File.GetUnixFileMode(empty) == PrivateFolder, "Clone changed the existing destination's permissions.");
 
             Assert.Equal("git_destination_not_empty", await port.CloneAsync(remote, existing).ConfigureAwait(true));
             Assert.Equal("existing data", File.ReadAllText(original));
             var failed = Path.Combine(scratch.FullName, "failed clone");
             Assert.Equal("git_clone_failed", await port.CloneAsync(Path.Combine(scratch.FullName, "no such remote"), failed).ConfigureAwait(true));
             Assert.False(Path.Exists(failed));
-            Assert.Equal(4, scratch.EnumerateFileSystemInfos().Count());
+            var failedEmpty = scratch.CreateSubdirectory("failed clone into empty folder").FullName;
+            Assert.Equal("git_clone_failed", await port.CloneAsync(Path.Combine(scratch.FullName, "no such remote"), failedEmpty).ConfigureAwait(true));
+            Assert.Empty(Directory.EnumerateFileSystemEntries(failedEmpty));
+            Assert.Equal(5, scratch.EnumerateFileSystemInfos().Count());
             Assert.Equal(4, (await port.RootsAsync().ConfigureAwait(true)).Distinct(NativePath).Count());
             await VerifySelectedAsync(port, empty, hasCommit: true).ConfigureAwait(true);
         }

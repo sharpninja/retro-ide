@@ -105,6 +105,8 @@ public sealed partial class GitRepositorySetupTests
                 await WorkbenchRemoteControl.ClickAsync(dialog, "git.setup.submit").ConfigureAwait(true);
                 await completion.WaitAsync(token).ConfigureAwait(true);
                 Assert.Equal("ok", session.SourceControl.LastResult?.Code);
+                Assert.True(string.Equals("source-control", session.View.ActiveToolId, StringComparison.Ordinal),
+                    "The setup workflow did not surface Source Control feedback.");
                 Assert.Equal(destination, session.SourceControl.Repository?.WorktreePath, NativePath);
                 Assert.Contains(session.Explorer.Roots, root => NativePath.Equals(destination, root.Path));
                 Assert.True(Directory.Exists(Path.Combine(destination, ".git")));
