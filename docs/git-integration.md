@@ -1,6 +1,8 @@
 # Git integration
 
-Retro IDE provides a Git menu, a dockable Source Control pane, and Git actions in Project Explorer and the editor. A workspace can contain several repositories and linked worktrees. The active editor and tree selection suggest a repository context, and the Source Control header identifies the selected repository, worktree, and branch or detached commit. The user can choose another repository explicitly. [Project Explorer](architecture.md#project-explorer)
+The Phase 03 workbench has a Git menu and a dockable Source Control pane. A workspace can contain several repositories and linked worktrees. Choose a folder or file in Project Explorer, open **Git → Show Source Control**, and select **Use Explorer Selection**. **Refresh Status** reads the selected checkout and displays its branch and staged, working-tree, and conflicted paths. The menu and pane use the same commands. [Project Explorer](architecture.md#project-explorer)
+
+New layouts dock Source Control beside Project Explorer. Older saved layouts get an auto-hidden Source Control tab on the left edge while keeping their existing tabs, pins, and floating windows. The rest of this page defines the Phase 03 workflows.
 
 ## Workspace and worktree context
 

@@ -47,7 +47,7 @@ The Phase 03 candidate exposes native Git discovery, selection, and status throu
 | `git_select_repository` | `rootId`, `relativePath`, current workbench `context` | The selected worktree and advanced workbench context. Requires a write-enabled attachment. |
 | `git_get_status` | None | The selected worktree's branch, HEAD, upstream and divergence when available, and entries with independent index and working-tree status. Rename and copy entries also give the original path. |
 
-Selection is scoped to the attached workbench. Select a worktree before reading status. If its selection changes while status is being prepared, refresh the context and read again. The Git menu, Source Control pane, and remaining workflows are in development. [Git integration](git-integration.md)
+Selection is scoped to the attached workbench. Desktop commands and attached clients share the selection and status shown in Source Control. Select a worktree before reading status. If its selection changes while status is being prepared, refresh the context and read again. [Git integration](git-integration.md)
 
 ## One feature registry
 
