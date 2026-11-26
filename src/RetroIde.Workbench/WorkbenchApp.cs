@@ -75,6 +75,7 @@ public sealed class WorkbenchApp : Avalonia.Application
                 { Source: { } source } => DocumentSurface.Create(source),
                 { GitDiff: { } diff } => GitDiffSurface.Create(diff),
                 { GitHistory: { } history } => GitHistorySurface.Create(history),
+                { GitBlame: { } blame } => GitBlameSurface.Create(blame),
                 { Id: "start" } => new BrandingPanel(document.Localization, _logger),
                 _ => PaneContent(document!.Localization, document.Id, document: true),
             })));

@@ -615,7 +615,8 @@ internal sealed class ShellDocument : Document
     internal DocumentViewModel? Source { get; init; }
     internal GitDiffViewModel? GitDiff { get; init; }
     internal GitHistoryViewModel? GitHistory { get; init; }
-    internal bool IsTransient => Source is not null || GitDiff is not null || GitHistory is not null;
+    internal GitBlameViewModel? GitBlame { get; init; }
+    internal bool IsTransient => Source is not null || GitDiff is not null || GitHistory is not null || GitBlame is not null;
     internal WorkbenchLocalization Localization { get; set; } = WorkbenchLocalization.English;
     public string Message { get; }
     public InteractionBlocks Interaction { get; }

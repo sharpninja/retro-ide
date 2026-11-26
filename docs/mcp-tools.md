@@ -50,6 +50,9 @@ The Phase 03 candidate exposes native Git discovery, selection, status, file dif
 | `git_clone_repository` | Git `source`, absolute `destination`, current workbench `context` | The installed workspace `root` and selected `repository` in `data`. Requires a write-enabled attachment and a new or empty destination. |
 | `git_get_diff` | Selected `worktreePath`, literal `path`, `layer` of `staged` or `working` | The Git patch and its layer, path, and repository identity. A selectable patch also returns its `preimage` and `hunks`. |
 | `git_open_diff` | Selected `worktreePath`, literal `path`, `layer` of `staged` or `working`, current workbench `context` | The displayed tab’s view key, workspace, repository, path, layer, and current hunk selection metadata. Reuses the tab for an already-open worktree, path, and layer. Requires a write-enabled attachment. |
+| `git_get_blame` | Selected `worktreePath`, literal `path`, optional full `commitId` and inclusive `firstLine` and `lastLine` | Returns the attributed lines and their originating commits and paths. The default reads the working file on disk. |
+| `git_open_blame` | The blame arguments and current workbench `context` | Opens or refreshes a read-only blame tab for the same worktree, path, commit and range and returns its view key. |
+| `git_close_blame` | The blame tab’s `viewKey` and current workbench `context` | Closes the tab in the attached workbench. |
 | `git_close_diff` | The tab's `viewKey`, current workbench `context` | Closes the registered tab in the attached workbench. Requires a write-enabled attachment. |
 | `git_stage_file` | Selected `worktreePath`, literal `path`, current workbench `context` | The path and repository with `staged: true`. Requires a write-enabled attachment. |
 | `git_unstage_file` | Selected `worktreePath`, literal `path`, current workbench `context` | The path and repository with `staged: false`. Requires a write-enabled attachment. |

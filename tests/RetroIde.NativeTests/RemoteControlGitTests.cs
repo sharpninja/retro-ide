@@ -54,6 +54,7 @@ internal static class RemoteControlGitTests
             var list = await FindAsync<ListBox>(window, "git.status.working", token).ConfigureAwait(true);
             list.SelectedItem = ((IEnumerable<GitStatusEntry>)list.ItemsSource!).Single(item =>
                 string.Equals(item.Path, GitWorktreeFixture.ChangedPath, StringComparison.Ordinal));
+            await VerifyBlameAsync(window, session.SourceControl, Change, token).ConfigureAwait(true);
             await WorkbenchRemoteControl.ClickAsync(window, "git.file.stage.pane").ConfigureAwait(true);
             await (session.SourceControl.StageFileCommand.ExecutionTask ??
                 throw new InvalidOperationException("Source Control did not dispatch Stage File.")).WaitAsync(token).ConfigureAwait(true);
@@ -101,6 +102,24 @@ internal static class RemoteControlGitTests
             }
         }
         finally { window.Close(); }
+    }
+
+    private static async Task VerifyBlameAsync(Window window, SourceControlViewModel view, string expected, CancellationToken token)
+    {
+        const string Open = "git.blame.open.pane";
+        (await FindAsync<Button>(window, Open, token).ConfigureAwait(true)).BringIntoView();
+        await WorkbenchRemoteControl.ClickAsync(window, Open).ConfigureAwait(true);
+        await (view.OpenBlameCommand.ExecutionTask ??
+            throw new InvalidOperationException("Source Control did not dispatch Open Blame.")).WaitAsync(token).ConfigureAwait(true);
+        var lines = await FindAsync<ListBox>(window, "git.blame.lines", token).ConfigureAwait(true);
+        var row = ((IEnumerable<GitBlameOperations.Line>)lines.ItemsSource!).Single();
+        if (!row.Uncommitted || !string.Equals(row.Text, expected, StringComparison.Ordinal))
+            throw new InvalidOperationException("Git Blame did not present the selected working file's attribution.");
+        lines.SelectedItem = row;
+        var detail = await FindAsync<SelectableTextBlock>(window, "git.blame.details", token).ConfigureAwait(true);
+        if (detail.Text?.Contains(expected, StringComparison.Ordinal) != true)
+            throw new InvalidOperationException("Git Blame did not expose the selected line's full source text.");
+        Console.WriteLine("RemoteControl opened working-file Git blame and inspected native line attribution without physical input.");
     }
 
     private static async Task VerifyHunkAsync(Window window, GitWorktreeFixture sample, CancellationToken token)

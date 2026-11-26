@@ -99,7 +99,8 @@ internal static class SourceControlPane
     }
 
     private static (CommandDescriptor Descriptor, ICommand Command)[] FileActions(SourceControlViewModel view) =>
-        [(WorkbenchCommands.OpenGitDiff, view.OpenDiffCommand), (WorkbenchCommands.StageGitFile, view.StageFileCommand),
+        [(WorkbenchCommands.OpenGitDiff, view.OpenDiffCommand), (WorkbenchCommands.OpenGitBlame, view.OpenBlameCommand),
+            (WorkbenchCommands.StageGitFile, view.StageFileCommand),
             (WorkbenchCommands.UnstageGitFile, view.UnstageFileCommand), (WorkbenchCommands.CreateCommit, view.CommitCommand),
             (WorkbenchCommands.AmendCommit, view.AmendCommand), (WorkbenchCommands.OpenGitHistory, view.OpenHistoryCommand),
             (WorkbenchCommands.OpenGitStashes, view.OpenStashesCommand), (WorkbenchCommands.OpenGitPatches, view.OpenPatchesCommand)];

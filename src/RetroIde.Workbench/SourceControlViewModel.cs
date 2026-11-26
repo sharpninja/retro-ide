@@ -17,6 +17,8 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     private WorkspaceExplorer.Address? _explorerSelection;
     private bool _available;
     private (string Path, string Layer)? _file;
+    private string? _explorerBlameFile;
+    private bool _preferExplorerBlame;
     private GitFeatures Git => registry.Git;
     private InteractionBlocks Interaction => interaction;
 
@@ -40,6 +42,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     [NotifyCanExecuteChangedFor(nameof(OpenHistoryCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenStashesCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenPatchesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenBlameCommand))]
     [NotifyPropertyChangedFor(nameof(HasRepository))]
     public partial GitWorktree? Repository { get; private set; }
 
@@ -89,7 +92,18 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     internal void SelectFile(GitStatusEntry? entry, string layer)
     {
         _file = entry is null ? null : (entry.Path, layer);
+        if (entry is not null)
+            _preferExplorerBlame = false;
         NotifyFileCommands();
+    }
+
+    internal void SetExplorerBlameFile(string? path)
+    {
+        if (string.Equals(_explorerBlameFile, path, StringComparison.Ordinal))
+            return;
+        _explorerBlameFile = path;
+        _preferExplorerBlame = path is not null;
+        OpenBlameCommand.NotifyCanExecuteChanged();
     }
 
     internal void ClearFile(GitStatusEntry entry, string layer)
@@ -123,6 +137,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     private void NotifyFileCommands()
     {
         OpenDiffCommand.NotifyCanExecuteChanged();
+        OpenBlameCommand.NotifyCanExecuteChanged();
         StageFileCommand.NotifyCanExecuteChanged();
         UnstageFileCommand.NotifyCanExecuteChanged();
     }
@@ -131,6 +146,8 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     private bool CanSelectRepository() => _available && _explorerSelection is not null;
     private bool CanRefreshStatus() => _available && Repository is not null;
     private bool CanOpenDiff() => CanRefreshStatus() && _file is not null;
+    private string? BlameFile => _preferExplorerBlame ? _explorerBlameFile : _file?.Path ?? _explorerBlameFile;
+    private bool CanOpenBlame() => CanRefreshStatus() && BlameFile is not null;
     private bool CanStageFile() => CanOpenDiff() && _file is { Layer: "working" };
     private bool CanUnstageFile() => CanOpenDiff() && _file is { Layer: "staged" };
     private bool CanCommit() => CanRefreshStatus() && OperationKind is null;
@@ -143,6 +160,11 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         Repository is { } repo && _file is { } file
             ? RequestAsync(registry.Git.OpenDiff, new GitFileOperations.DiffInput(repo.WorktreePath, file.Path, file.Layer), cancellationToken)
             : Task.CompletedTask;
+
+    [RelayCommand(CanExecute = nameof(CanOpenBlame))]
+    private Task OpenBlameAsync(CancellationToken token) => Repository is { } repo && BlameFile is { } path
+        ? RequestAsync(Git.OpenBlame, new GitBlameOperations.Input(repo.WorktreePath, path), token)
+        : Task.CompletedTask;
 
     [RelayCommand(CanExecute = nameof(CanStageFile))]
     private Task StageFileAsync(CancellationToken cancellationToken) =>

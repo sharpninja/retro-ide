@@ -54,6 +54,13 @@ internal static class WorkbenchText
     private const string GitRevertOperation = "git.operation.revert";
     private const string GitOtherOperation = "git.operation.other";
     internal const string GitDiffTitle = "git.diff.title";
+    private const string GitBlameTitle = "git.blame.title";
+    internal const string GitBlameWorking = "git.blame.working-file";
+    internal const string GitBlameLine = "git.blame.line";
+    internal const string GitBlameAuthor = "git.blame.author";
+    internal const string GitBlameCommit = "git.blame.commit";
+    internal const string GitBlameSource = "git.blame.source";
+    internal const string GitBlameUncommitted = "git.blame.uncommitted";
     internal const string GitDiffStaged = "git.diff.layer.staged";
     internal const string GitDiffWorking = "git.diff.layer.working";
     internal const string GitDiffHunks = "git.diff.hunks";
@@ -111,6 +118,7 @@ internal static class WorkbenchText
     internal static IReadOnlyList<string> Required { get; } =
         [FileMenu, ViewMenu, LanguageMenu, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
             ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts, GitDiffStaged, GitDiffWorking, GitDiffHunks,
+            GitBlameWorking, GitBlameLine, GitBlameAuthor, GitBlameCommit, GitBlameSource, GitBlameUncommitted,
             GitAbortExplanation, GitSkipExplanation, GitMergeOperation, GitRebaseOperation, GitCherryPickOperation, GitRevertOperation, GitOtherOperation,
             GitStartCheckout, GitStartTarget, GitStartKind, GitStartMerge, GitStartRebase, GitStartCherryPick, GitStartRevert,
             GitStartApply, GitMainline, GitDetachedHead,
@@ -160,6 +168,9 @@ internal static class WorkbenchText
             ["path"] = path,
             ["layer"] = localization.Text(string.Equals(layer, "staged", StringComparison.Ordinal) ? GitDiffStaged : GitDiffWorking),
         });
+
+    internal static string GitBlameName(WorkbenchLocalization localization, string path) =>
+        localization.Text(GitBlameTitle, new Dictionary<string, object>(StringComparer.Ordinal) { ["path"] = path });
 
     internal static string PaneDescription(string id) => $"pane.{id}.description";
 }

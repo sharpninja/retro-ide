@@ -154,7 +154,7 @@ internal static partial class GitFileOperations
         return [original, path];
     }
 
-    private static bool IsScopedFile(GitSelection selection, string path)
+    internal static bool IsScopedFile(GitSelection selection, string path)
     {
         if (string.IsNullOrEmpty(path) || Path.IsPathRooted(path) || (OperatingSystem.IsWindows() && path.Contains('\\')))
             return false;

@@ -31,6 +31,8 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor StageGitFile = Create("git.file.stage", "Ctrl+Alt+S");
     public static readonly CommandDescriptor UnstageGitFile = Create("git.file.unstage", "Ctrl+Alt+Shift+S");
     public static readonly CommandDescriptor RefreshGitDiff = Create("git.diff.refresh", "Ctrl+Alt+Shift+D");
+    public static readonly CommandDescriptor OpenGitBlame = Create("git.blame.open", "Ctrl+Alt+F9");
+    public static readonly CommandDescriptor RefreshGitBlame = Create("git.blame.refresh", "Ctrl+Alt+Shift+F9");
     public static readonly CommandDescriptor StageGitHunks = Create("git.hunks.stage", "Ctrl+Alt+K");
     public static readonly CommandDescriptor UnstageGitHunks = Create("git.hunks.unstage", "Ctrl+Alt+Shift+K");
     public static readonly CommandDescriptor CreateCommit = Create("git.commit.create", "Ctrl+Alt+C");
@@ -77,7 +79,7 @@ internal static class WorkbenchCommands
     private static readonly CommandDescriptor[] Commands =
         [FocusTool, OpenFolder, OpenProject, Save, Reveal, Search, Next, Previous, Replace, ReplaceAll, Undo, Redo, Close, Discard,
             OpenSourceControl, SelectRepository, RefreshGitStatus, InitializeRepository, CloneRepository, OpenGitDiff, StageGitFile, UnstageGitFile,
-            RefreshGitDiff, StageGitHunks, UnstageGitHunks, CreateCommit, AmendCommit, ContinueGitOperation, AbortGitOperation, SkipGitOperation,
+            RefreshGitDiff, OpenGitBlame, RefreshGitBlame, StageGitHunks, UnstageGitHunks, CreateCommit, AmendCommit, ContinueGitOperation, AbortGitOperation, SkipGitOperation,
             StartGitOperation, ResetToGitCommit, OpenGitStashes, RefreshGitStashes, InspectGitStash, CreateGitStash, ApplyGitStash,
             PopGitStash, DropGitStash, OpenGitPatches, ExportGitPatch, ReviewGitPatch, ApplyGitPatch,
             OpenGitHistory, CurrentGitHistory,
@@ -93,6 +95,7 @@ internal static class WorkbenchCommands
                 throw new InvalidDataException($"The required English resource '{slug}' is empty.");
         _ = WorkbenchText.ExplorerRoot(english, WorkspaceExplorer.RootKind.Folder, "example", unavailable: false);
         _ = WorkbenchText.GitDiffName(english, "example.asm", "staged");
+        _ = WorkbenchText.GitBlameName(english, "example.asm");
         _ = WorkbenchText.GitRemoteDivergence(english, 0, 0);
         _ = WorkbenchText.ExplorerRoot(english, WorkspaceExplorer.RootKind.Project, "example", unavailable: true);
         Validate(Commands, english);

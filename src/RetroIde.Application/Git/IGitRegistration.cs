@@ -31,6 +31,12 @@ internal interface IGitRegistration
     /// <summary>Closes an existing Git diff tab by its registration key.</summary>
     bool CloseDiff(Guid viewKey);
 
+    /// <summary>Opens or refreshes a scoped, read-only Git attribution tab.</summary>
+    GitBlameOperations.Tab? ShowBlame(GitBlameOperations.Blame blame);
+
+    /// <summary>Closes an existing Git attribution tab by its registration key.</summary>
+    bool CloseBlame(Guid viewKey);
+
     /// <summary>Opens or updates the selected worktree's history tab.</summary>
     GitHistoryOperations.HistoryTab? ShowHistory(GitHistoryOperations.HistoryPage page, GitHistoryOperations.RefState references);
 

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Avalonia.Threading;
 using GPS.SimpleMVC.Controllers;
 using Microsoft.Extensions.Logging;
@@ -92,6 +93,7 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
             _explorerWatch?.Dispose();
             _explorerWatch = null;
             explorer.CommandRequested -= OnCommandRequested;
+            explorer.PropertyChanged -= OnExplorerSelectionChanged;
             explorer.ParentViewKey = null;
             explorer.CancelPendingReads();
             explorer.SetRootEligibility(false);
@@ -125,6 +127,7 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         _documents = documents;
         view.ParentViewKey = workbench.ViewKey;
         view.CommandRequested += OnCommandRequested;
+        view.PropertyChanged += OnExplorerSelectionChanged;
         view.SetRootEligibility(CanChangeExplorer());
         _explorerWatch = new WorkspaceWatchSet(changes => Dispatcher.UIThread.Post(() =>
         {
@@ -251,6 +254,29 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         RefreshSourceControl();
     }
 
+    private void OnExplorerSelectionChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (ReferenceEquals(sender, _explorerView) &&
+            string.Equals(args.PropertyName, nameof(ExplorerViewModel.SelectedNode), StringComparison.Ordinal))
+            RefreshExplorerBlameFile();
+    }
+
+    private void RefreshExplorerBlameFile()
+    {
+        if (_sourceControlView is not { } pane)
+            return;
+        string? path = null;
+        if (_explorerView?.SelectedNode is { IsDirectory: false, Address: { } address } &&
+            pane.ParentViewKey is { } key && Resolve(key)?.SelectedGit is { } selection)
+        {
+            var source = _workspaceExplorer.ResolveSource(address);
+            var absolute = Path.GetFullPath(source.Entry.RelativePath, source.RootPath);
+            if (NativeGit.ContainsPath(selection.ScopeRoot, absolute))
+                path = Path.GetRelativePath(selection.Repository.WorktreePath, absolute).Replace(Path.DirectorySeparatorChar, '/');
+        }
+        pane.SetExplorerBlameFile(path);
+    }
+
     private void RefreshSourceControl() =>
         _sourceControlView?.SetAvailability(_explorerSelection, !_interaction.IsBlocked(SourceControlViewModel.PaneId));
 
@@ -330,6 +356,8 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                     DispatchToViewAsync(git, registration, _registry.Git.Clone, clone, request, refreshOrigin: registration),
                 GitFileOperations.DiffInput diff when string.Equals(request.CommandId, _registry.Git.OpenDiff.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.OpenDiff, diff, request),
+                GitBlameOperations.Input blame when string.Equals(request.CommandId, _registry.Git.OpenBlame.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.OpenBlame, blame, request),
                 GitFileOperations.FileInput stage when string.Equals(request.CommandId, _registry.Git.Stage.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.Stage, stage, request),
                 GitFileOperations.FileInput unstage when string.Equals(request.CommandId, _registry.Git.Unstage.Id, StringComparison.Ordinal) =>
@@ -434,6 +462,7 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
             {
                 Explorer.RememberGitSelection(new GitWorkspaceLocation(address, selection.Repository));
                 pane.SetScope(selection.Repository);
+                Controller.RefreshExplorerBlameFile();
                 Controller._explorerView?.SetGitBadges(null);
                 _ = StopGitMonitor();
                 if (!_gitMonitoringClosed)
@@ -489,6 +518,10 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         public GitFileOperations.DiffTab? ShowDiff(GitFileOperations.DiffResult diff) => Controller._documents?.ShowDiff(diff);
 
         public bool CloseDiff(Guid viewKey) => Controller._documents?.CloseDiff(viewKey) == true;
+
+        public GitBlameOperations.Tab? ShowBlame(GitBlameOperations.Blame blame) => Controller._documents?.ShowBlame(blame);
+
+        public bool CloseBlame(Guid viewKey) => Controller._documents?.CloseBlame(viewKey) == true;
 
         public GitHistoryOperations.HistoryTab? ShowHistory(GitHistoryOperations.HistoryPage page, GitHistoryOperations.RefState references) =>
             Controller._documents?.ShowHistory(page, references);
