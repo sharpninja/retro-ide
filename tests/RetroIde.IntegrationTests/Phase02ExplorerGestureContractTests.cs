@@ -25,17 +25,18 @@ public sealed partial class Phase02ExplorerGestureContractTests
     private static async Task VerifyGesturesAsync(IGestures explorer, GestureFiles files)
     {
         var folder = await explorer.AddRootAsync(files.Folder, "folder");
-        var project = await explorer.AddRootAsync(files.Project, "project");
         Assert.NotEqual(Guid.Empty, folder);
-        Assert.NotEqual(Guid.Empty, project);
-        Assert.NotEqual(folder, project);
         var folderFile = new SelectedFile(folder, FileName);
-        var projectFile = new SelectedFile(project, FileName);
-
         var keyboard = await explorer.ActivateAsync(folderFile, Activation.Keyboard);
         Assert.NotEqual(Guid.Empty, keyboard.View);
         Assert.Equal(folderFile, keyboard.File);
         Assert.Equal("lda #1", keyboard.Buffer);
+
+        // Open the second root only after a source is active in the folder-only workspace.
+        var project = await explorer.AddRootAsync(files.Project, "project");
+        Assert.NotEqual(Guid.Empty, project);
+        Assert.NotEqual(folder, project);
+        var projectFile = new SelectedFile(project, FileName);
         var pointer = await explorer.ActivateAsync(projectFile, Activation.Pointer);
         Assert.NotEqual(Guid.Empty, pointer.View);
         Assert.Equal(projectFile, pointer.File);
