@@ -59,7 +59,7 @@ Scope: layer-1+
 - [x] The controller a view registers with subscribes once and detaches on removal. Toolkit commands raise CommandRequested on the originating registered view with a request ID, ViewKey, command ID, captured context, and any applicable cancellation token. Its dispatch owner verifies the sender and selects the typed CQRS request. (evidence: 2026-11-26 Phase 01B AGREE 100/100. The reviewer verified SimpleMVC ownership and registration, typed CQRS, one dispatch per request, Toolkit eligibility and cancellation, and Avalonia results delivered to the originating live view. See the accepted 01B findings in docs/receipts/phase-01-reentrant-layout-hv.md.)
 - [x] The dispatch owner schedules correlated success, failure, and cancellation on the Avalonia UI dispatcher. The owner checks that its originating registration is still live in the callback, then updates that view. Shared model state remains observable independently. (evidence: 2026-11-26 Phase 01B AGREE 100/100. The reviewer verified SimpleMVC ownership and registration, typed CQRS, one dispatch per request, Toolkit eligibility and cancellation, and Avalonia results delivered to the originating live view. See the accepted 01B findings in docs/receipts/phase-01-reentrant-layout-hv.md.)
 - [x] Each live IView registers directly with one SimpleMVC controller. That registration determines the dispatch owner and the sole CommandRequested subscription. The owner dispatches the request and delivers the result. Multiple controllers can own distinct views at the same time. (evidence: 2026-11-26 Phase 01B AGREE 100/100. The reviewer verified SimpleMVC ownership and registration, typed CQRS, one dispatch per request, Toolkit eligibility and cancellation, and Avalonia results delivered to the originating live view. See the accepted 01B findings in docs/receipts/phase-01-reentrant-layout-hv.md.)
-- [ ] In the tabbed MDI reference design, each editor tab implements IView and registers directly with DocumentController. The active tab supplies the document command binding. The chosen command captures the document ID and editor registration at invocation.
+- [x] In the tabbed MDI reference design, each editor tab implements IView and registers directly with DocumentController. The active tab supplies the document command binding. The chosen command captures the document ID and editor registration at invocation. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-006. Delivery 61a312e. editor-buffer-state-secondary, diagnostic-navigation, original Save correction and editor ownership. See docs/receipts/phase-02-workbench-explorer-editor.md.)
 - [x] Publish interaction blocks by operation and UI scope. Apply Avalonia StandardCursorType.Wait to the affected surfaces on the UI thread, keep paint and available input responsive, and clear the temporary override once all covering operations release their blocks on completion, failure, or cancellation. (evidence: 2026-11-26 Phase 01D AGREE 100/100. Win32 and Linux RemoteControl verified the Avalonia Wait overlay, rendering, available commands and restoration. Isolated Linux separately sampled effective OS cursor behavior. docs/receipts/phase-01-workbench-mcp.md.)
 
 ## TR-RETRO-CPU-016
@@ -99,23 +99,23 @@ Scope: layer-1+
 
 **AvaloniaEdit editor surface and integration** — Implement the Windows and Linux source surface using AvaloniaEdit.TextEditor from Avalonia.AvaloniaEdit. Integrate it with tabbed MDI and the existing controller and CQRS path.
 **Covered by:** FR: FR-RETRO-011; TEST: TEST-RETRO-011
-**Status:** pending
+**Status:** in_progress
 Scope: layer-1+
 **Acceptance Criteria:**
-- [ ] Host a separate AvaloniaEdit.TextEditor and document buffer per source tab. Provide line numbers, search and replace, supported language highlighting, and a plain-text fallback.
-- [ ] Use the tab's registered IView and DocumentController for document commands. Capture document ID, buffer, and revision for save and apply results through the Avalonia UI dispatcher.
+- [x] Host a separate AvaloniaEdit.TextEditor and document buffer per source tab. Provide line numbers, search and replace, supported language highlighting, and a plain-text fallback. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-006. Delivery 61a312e. editor-buffer-state-secondary, diagnostic-navigation, original Save correction and editor ownership. See docs/receipts/phase-02-workbench-explorer-editor.md.)
+- [x] Use the tab's registered IView and DocumentController for document commands. Capture document ID, buffer, and revision for save and apply results through the Avalonia UI dispatcher. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-006. Delivery 61a312e. editor-buffer-state-secondary, diagnostic-navigation, original Save correction and editor ownership. See docs/receipts/phase-02-workbench-explorer-editor.md.)
 - [ ] Project diagnostics and debugger locations into the source view. Route gutter requests through the view owner, CQRS, and the selected adapter capability.
 
 ## TR-RETRO-EXPLORER-012
 
 **Workspace tree and editor routing** — Implement the dockable project and folder tree using the registered Explorer ViewModel, shared CQRS dispatch, and the existing editor lifecycle.
 **Covered by:** FR: FR-RETRO-012; TEST: TEST-RETRO-012
-**Status:** pending
+**Status:** completed
 Scope: layer-1+
 **Acceptance Criteria:**
-- [ ] Persist project or folder root kind and stable root identity. Address tree items and selected documents by workspace root and path.
-- [ ] Route explorer commands and queries through the main controller registration and CQRS. Return directory and open-document outcomes on the Avalonia UI thread. Open or activate the correct AvaloniaEdit tab.
-- [ ] Load children on expansion and refresh affected branches on external file changes. Apply async results only to their originating workspace and root. Report missing or inaccessible paths locally.
+- [x] Persist project or folder root kind and stable root identity. Address tree items and selected documents by workspace root and path. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-005. Delivery 61a312e. explorer-folder-and-mixed, explorer-persistence, explorer-external-changes. See docs/receipts/phase-02-workbench-explorer-editor.md.)
+- [x] Route explorer commands and queries through the main controller registration and CQRS. Return directory and open-document outcomes on the Avalonia UI thread. Open or activate the correct AvaloniaEdit tab. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-005. Delivery 61a312e. explorer-folder-and-mixed, explorer-persistence, explorer-external-changes. See docs/receipts/phase-02-workbench-explorer-editor.md.)
+- [x] Load children on expansion and refresh affected branches on external file changes. Apply async results only to their originating workspace and root. Report missing or inaccessible paths locally. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-005. Delivery 61a312e. explorer-folder-and-mixed, explorer-persistence, explorer-external-changes. See docs/receipts/phase-02-workbench-explorer-editor.md.)
 
 ## TR-RETRO-GIT-013
 
@@ -134,14 +134,14 @@ Scope: layer-1+
 
 **Command descriptors and typed locale catalogs** — Attach label and icon slugs and a default keyboard gesture to every ICommand registration. Use one localizer for typed text and image lookup, locale-aware formatting, fallback, and live presentation updates.
 **Covered by:** FR: FR-RETRO-008; TEST: TEST-RETRO-008
-**Status:** in_progress
+**Status:** completed
 Scope: layer-1+
 **Acceptance Criteria:**
 - [x] Each shared ICommand has a stable ID, label slug, icon slug, and a default gesture. Any platform override supplies both the displayed shortcut and the binding. Gesture validation detects collisions in overlapping activation scopes. (evidence: 2026-11-26 Phase 01B AGREE 100/100 and Phase 01D AGREE 100/100. Shared Toolkit command, descriptor label and icon, desktop bindings and duplicate-gesture rejection were verified with passing managed and native tests. docs/receipts/phase-01-workbench-mcp.md.)
-- [ ] Versioned BCP 47 locale packs resolve typed text or image slugs. Text entries are UTF-8 strings or message patterns. Image entries resolve to packaged SVG or PNG resources inside the pack. Bundled English covers every required slug.
-- [ ] Lookup tries exact and parent locales, then bundled English, independently for each resource. An unresolved slug produces a placeholder string or fallback icon and a diagnostic identifying the slug and type.
-- [ ] The resolver supports named typed arguments, plural and select forms, and culture-aware number and date formatting. It applies plural rules from the resolved translation's locale.
-- [ ] Validation checks resource kinds, paths, message arguments, command IDs, and required descriptor fields. The MVC controller dispatches a typed language change through the CQRS Unit of Work to persist and publish culture changes, and open views update bindings and layout direction.
+- [x] Versioned BCP 47 locale packs resolve typed text or image slugs. Text entries are UTF-8 strings or message patterns. Image entries resolve to packaged SVG or PNG resources inside the pack. Bundled English covers every required slug. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-007. Delivery 61a312e. pack-validation, live-language, original typed fallback and formatting gates. See docs/receipts/phase-02-workbench-explorer-editor.md.)
+- [x] Lookup tries exact and parent locales, then bundled English, independently for each resource. An unresolved slug produces a placeholder string or fallback icon and a diagnostic identifying the slug and type. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-007. Delivery 61a312e. pack-validation, live-language, original typed fallback and formatting gates. See docs/receipts/phase-02-workbench-explorer-editor.md.)
+- [x] The resolver supports named typed arguments, plural and select forms, and culture-aware number and date formatting. It applies plural rules from the resolved translation's locale. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-007. Delivery 61a312e. pack-validation, live-language, original typed fallback and formatting gates. See docs/receipts/phase-02-workbench-explorer-editor.md.)
+- [x] Validation checks resource kinds, paths, message arguments, command IDs, and required descriptor fields. The MVC controller dispatches a typed language change through the CQRS Unit of Work to persist and publish culture changes, and open views update bindings and layout direction. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-007. Delivery 61a312e. pack-validation, live-language, original typed fallback and formatting gates. See docs/receipts/phase-02-workbench-explorer-editor.md.)
 
 ## TR-RETRO-LSP-014
 

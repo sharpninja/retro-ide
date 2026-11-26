@@ -1,0 +1,66 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    46("<div style='font-weight: bold'>Configured CLI or Desktop Agent</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Uses available scoped MCP<br />resources and commands; its<br />lifetime is independent of<br />the emulator session.</div>")
+    style 46 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#4eb9aa,color:#4eb9aa
+
+        10("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 10 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        11("<div style='font-weight: bold'>IDE ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.ComponentModel and SimpleMVC]</div><div style='font-size: 80%; margin-top:10px'>Implement IView with a stable<br />ViewKey. Raise<br />CommandRequested, receive<br />correlated results on the UI<br />thread, and expose observable<br />properties through<br />ObservableObject.</div>")
+        style 11 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        20("<div style='font-weight: bold'>Avalonia UI Dispatcher</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia Dispatcher.UIThread]</div><div style='font-size: 80%; margin-top:10px'>Schedules callbacks on the UI<br />thread. The dispatch owner<br />checks its originating<br />registration inside the<br />callback before applying the<br />result.</div>")
+        style 20 fill:#235c49,stroke:#184033,color:#ffffff
+        21("<div style='font-weight: bold'>IDE State (Model)</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Provides observable<br />workspace, presentation<br />culture, active document and<br />target, selected session,<br />availability, operation<br />state, interaction blocks by<br />scope, and diagnostics.</div>")
+        style 21 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        31("<div style='font-weight: bold'>Retro IDE MCP Host</div><div style='font-size: 70%; margin-top: 0px'>[Component: Official MCP C# SDK, Microsoft.Extensions.Hosting, ASP.NET Core]</div><div style='font-size: 80%; margin-top:10px'>Exposes tools for every<br />supported IDE feature.<br />Generates context schemas<br />from the declared public<br />ViewModel members, validates<br />scope and live context, and<br />uses shared CQRS dispatch.</div>")
+        style 31 fill:#17665b,stroke:#4eb9aa,color:#ffffff
+        4("<div style='font-weight: bold'>Workbench and Docking (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia and Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Hosts menus, command bars,<br />keyboard bindings, documents,<br />and docked tools. Presents<br />command metadata and<br />localization, and applies the<br />system wait cursor to<br />logically blocked UI.</div>")
+        style 4 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        5("<div style='font-weight: bold'>Predefined Command Catalog</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm and typed .NET requests]</div><div style='font-size: 80%; margin-top:10px'>Registers typed IDE commands<br />and queries with stable IDs<br />and required capabilities.<br />Pairs UI commands with<br />Toolkit bindings and<br />localized metadata. Supplies<br />the MCP tool registry.</div>")
+        style 5 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch and result<br />delivery for views registered<br />directly with it. Provides<br />the shared execution entry<br />point for typed requests from<br />all controllers into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+      end
+
+      41("<div style='font-weight: bold'>MCP Stdio Bridge</div><div style='font-size: 70%; margin-top: 0px'>[Container: .NET, ModelContextProtocol]</div><div style='font-size: 80%; margin-top:10px'>Launched by CLI clients to<br />attach MCP tools to the<br />selected running Retro IDE<br />instance.</div>")
+      style 41 fill:#235c49,stroke:#184033,color:#ffffff
+    end
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+    41("<div style='font-weight: bold'>MCP Stdio Bridge</div><div style='font-size: 70%; margin-top: 0px'>[Container: .NET, ModelContextProtocol]</div><div style='font-size: 80%; margin-top:10px'>Launched by CLI clients to<br />attach MCP tools to the<br />selected running Retro IDE<br />instance.</div>")
+    style 41 fill:#235c49,stroke:#184033,color:#ffffff
+    46("<div style='font-weight: bold'>Configured CLI or Desktop Agent</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Uses available scoped MCP<br />resources and commands; its<br />lifetime is independent of<br />the emulator session.</div>")
+    style 46 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    1-. "<div>1. Invoke Focus tool pane<br />using the menu, command bar,<br />or shortcut</div><div style='font-size: 70%'></div>" .->4
+    4-. "<div>2. Execute the shared<br />workbench.view.focus Toolkit<br />command</div><div style='font-size: 70%'>[ICommand]</div>" .->5
+    5-. "<div>3. Capture tool ID and live<br />public workbench context</div><div style='font-size: 70%'>[RelayCommand or AsyncRelayCommand]</div>" .->11
+    11-. "<div>4. Raise CommandRequested on<br />the registered view</div><div style='font-size: 70%'>[IView events]</div>" .->8
+    8-. "<div>5. Dispatch the typed focus<br />command</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>6. Focus the eligible<br />dockable and publish the new<br />revision</div><div style='font-size: 70%'></div>" .->21
+    8-. "<div>7. Schedule the correlated<br />result</div><div style='font-size: 70%'></div>" .->20
+    20-. "<div>8. Deliver to the originating<br />live registration</div><div style='font-size: 70%'></div>" .->11
+    46-. "<div>9. Attach a CLI client with<br />the selected workbench<br />descriptor</div><div style='font-size: 70%'>[MCP stdio]</div>" .->41
+    41-. "<div>10. Forward discovery and<br />calls over authenticated<br />loopback Streamable HTTP</div><div style='font-size: 70%'></div>" .->31
+    46-. "<div>11. A desktop client may<br />invoke the same tools<br />directly over Streamable HTTP</div><div style='font-size: 70%'>[MCP Streamable HTTP on loopback]</div>" .->31
+    31-. "<div>12. Discover the same focus<br />command and its public<br />context schema</div><div style='font-size: 70%'></div>" .->5
+    31-. "<div>13. Submit<br />workbench_focus_tool with the<br />captured ViewModel context</div><div style='font-size: 70%'></div>" .->8
+    8-. "<div>14. Validate scope, live<br />registration and revision on<br />the UI thread</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>15. Apply the same Dock focus<br />operation and publish the new<br />revision</div><div style='font-size: 70%'></div>" .->21
+    8-. "<div>16. Return the correlated<br />outcome and new public<br />context snapshot</div><div style='font-size: 70%'></div>" .->31
+    31-. "<div>17. Return the structured<br />tool result to the requesting<br />client</div><div style='font-size: 70%'>[MCP]</div>" .->46
+
+  end

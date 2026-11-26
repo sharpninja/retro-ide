@@ -1,0 +1,53 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    50("<div style='font-weight: bold'>Configured Language Servers</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Installed processes such as<br />clangd and rust-analyzer that<br />supply language analysis<br />through negotiated LSP<br />features.</div>")
+    style 50 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#4eb9aa,color:#4eb9aa
+
+        10("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 10 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        12("<div style='font-weight: bold'>Editor Tab ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.ComponentModel and SimpleMVC]</div><div style='font-size: 80%; margin-top:10px'>One observable IView per<br />editor tab. The ViewModel<br />defines the public MCP<br />context for its workspace,<br />document, view key, and<br />revision.</div>")
+        style 12 fill:#17665b,stroke:#10473f,color:#ffffff
+        13("<div style='font-weight: bold'>Language Services</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET, LSP JSON-RPC client]</div><div style='font-size: 80%; margin-top:10px'>Manages configured language<br />server sessions by workspace<br />and language. Synchronizes<br />versioned editor buffers,<br />negotiates capabilities, and<br />correlates completion,<br />navigation, diagnostics, and<br />edits.</div>")
+        style 13 fill:#275c60,stroke:#d9a669,color:#ffffff
+        19("<div style='font-weight: bold'>Source Editor</div><div style='font-size: 70%; margin-top: 0px'>[Component: AvaloniaEdit.TextEditor]</div><div style='font-size: 80%; margin-top:10px'>Keeps independent tab<br />buffers, selection, caret,<br />undo and redo through<br />floating and redocking.<br />Provides find and replace,<br />syntax and plain fallback,<br />and diagnostic fixture<br />navigation. Live build<br />diagnostics and debugger<br />markers are later<br />integrations.</div>")
+        style 19 fill:#17665b,stroke:#10473f,color:#ffffff
+        20("<div style='font-weight: bold'>Avalonia UI Dispatcher</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia Dispatcher.UIThread]</div><div style='font-size: 80%; margin-top:10px'>Schedules callbacks on the UI<br />thread. The dispatch owner<br />checks its originating<br />registration inside the<br />callback before applying the<br />result.</div>")
+        style 20 fill:#235c49,stroke:#184033,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch and result<br />delivery for views registered<br />directly with it. Provides<br />the shared execution entry<br />point for typed requests from<br />all controllers into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        9("<div style='font-weight: bold'>Document Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch for editor<br />views that register directly<br />with it. Receives their<br />events, dispatches typed<br />document requests through the<br />shared CQRS entry point, and<br />delivers results to the<br />originating tab.</div>")
+        style 9 fill:#17665b,stroke:#10473f,color:#ffffff
+      end
+
+    end
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+    50("<div style='font-weight: bold'>Configured Language Servers</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Installed processes such as<br />clangd and rust-analyzer that<br />supply language analysis<br />through negotiated LSP<br />features.</div>")
+    style 50 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    1-. "<div>1. Request completion while<br />editing an unsaved document</div><div style='font-size: 70%'></div>" .->19
+    19-. "<div>2. Capture the document<br />version and caret</div><div style='font-size: 70%'></div>" .->12
+    12-. "<div>3. Dispatch the completion<br />request from the registered<br />editor</div><div style='font-size: 70%'>[IView events]</div>" .->9
+    9-. "<div>4. Submit the typed request<br />through the shared CQRS entry<br />point</div><div style='font-size: 70%'></div>" .->8
+    8-. "<div>5. Invoke the language<br />completion query</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>6. Use the negotiated<br />completion capability for<br />this document</div><div style='font-size: 70%'></div>" .->13
+    13-. "<div>7. Synchronize unsaved<br />changes and request<br />completion</div><div style='font-size: 70%'>[JSON-RPC over stdio]</div>" .->50
+    50-. "<div>8. Return completion items<br />for the correlated request</div><div style='font-size: 70%'>[JSON-RPC over stdio]</div>" .->13
+    9-. "<div>9. Schedule completion for<br />the captured editor and<br />document version</div><div style='font-size: 70%'></div>" .->20
+    20-. "<div>10. Present completions in<br />the originating editor if the<br />version still matches</div><div style='font-size: 70%'></div>" .->12
+
+  end

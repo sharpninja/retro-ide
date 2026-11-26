@@ -1,6 +1,6 @@
 # PLAN-RETROIDE-001 — Retro IDE BDPv4 implementation plan
 
-**Status.** Phase 01 was accepted on 2026-11-26. Phase 02 is in implementation. Phases 03–08 remain planned. [Verification](../receipts/phase-01-workbench-mcp.md)
+**Status.** Phases 01 and 02 were accepted on 2026-11-26. Phase 03 is next. [Phase 01 verification](../receipts/phase-01-workbench-mcp.md) · [Phase 02 verification](../receipts/phase-02-workbench-explorer-editor.md)
 
 **Baseline.** The original Retro IDE QBrain baseline has 15 functional, 15 technical, and 15 testing records across 15 mappings and 176 acceptance criteria. The current requirements also include the debugger CPU and emulator machine description groups in the traceability table below. Published source `e066c7325f3ad3c9a14c1310fbeba0c8b531edda` and wiki `13fc5aa1f0729e0879e9e515824ce2d9d56d4cb7` document local validation. [Published architecture](https://github.com/sharpninja/retro-ide/wiki/Architecture) · [MCP Tools](https://github.com/sharpninja/retro-ide/wiki/MCP-Tools) · [Accepted Phase 01 C4 model](../architecture/structurizr/versions/implementation-01-workbench-mcp/manifest.json)
 
@@ -90,15 +90,15 @@ Use `ProductionAttachmentTests` to verify the Phase 02 tool schemas and outcomes
 
 #### Phase 02 verification status
 
-The fresh delivery at `60457dc` passed 78 managed tests per host, Linux RemoteControl and X11 gestures, and Win32 RemoteControl using binaries built on Linux. The Save regression tests verify that a staged write failure reaches the original tab after a tab switch and leaves the buffer dirty. The independent review returned DISAGREE at 99 accuracy and 98 completeness for the phase and for each slice. All scoped behavior passed. The test-first review identified three complete criteria, three partial criteria, and four without criterion-specific pre-implementation proof. All three Phase 02 tasks remain open.
+The renewed delivery at `61a312e` passed 130 managed tests per host, Linux RemoteControl and native X11 checks, and Win32 RemoteControl using binaries built on Linux. The compiled gate verified 88 links across 24 QBrain criteria and 32 public contracts. The independent review returned AGREE at 99 accuracy and 99 completeness for the phase and all three slices. No Phase 01 task regressed. [Accepted verification](../receipts/phase-02-workbench-explorer-editor.md)
 
-| Slice | Remaining test-first evidence |
+| Slice | Accepted verification |
 | --- | --- |
-| 02A · Project Explorer | Restored expansion and selection, rejection of retired-workspace results, targeted external changes, and unavailable roots still need criterion-specific proof. The independent keyboard, pointer, and Reveal cases passed. Their new live binding did not populate the Explorer tree on the frozen candidate and needs investigation. |
+| 02A · Project Explorer | Five focused cases covered keyboard and pointer opening and Reveal. Six covered workspace restoration and a retired directory listing. Seven covered targeted external changes, collapsed branches and unavailable roots. |
 | 02B · Source tabs | Diagnostic-fixture line and column navigation passed five focused cases. Independent buffer, caret, selection and undo through float and redock, find/replace, and syntax fallback passed 11 focused cases. |
-| 02C · Localization | Pack validation passed seven focused cases. Isolated builds also rejected a missing bundled command icon and a missing pane title. Live labels, icons, accessibility, RTL, stable shortcuts, expanded pseudo-localized labels, and persisted locale still need criterion-specific proof. |
+| 02C · Localization | Pack validation passed seven focused cases. Isolated builds also rejected a missing bundled command icon and a missing pane title. Eleven cases covered live labels, icons, accessibility, RTL, stable shortcuts, expanded pseudo-localized labels, and persisted locale. |
 
-Verify the remaining behaviors with passing independent fixtures and discriminating fault controls, then run the same assertions at the missing real entry points on the accepted baseline. The focused candidate results above are local verification. Rerun the full local and independent gates against the renewed delivery before recording acceptance.
+All seven incomplete test-first entries from `60457dc` now have criterion-specific proof before the renewed delivery. Phase 02 accepts diagnostic-fixture navigation. Live build diagnostics are in Phase 05, and debugger source navigation and gutter breakpoints are in Phase 06. [Phase 02 C4 snapshot](../architecture/structurizr/versions/implementation-02-workspace-editor-localization/manifest.json)
 
 ### 03 — Git, terminal, and language servers
 

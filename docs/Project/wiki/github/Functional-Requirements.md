@@ -64,7 +64,7 @@ Scope: layer-1+
 - [ ] When the active target, instance, or operation state changes, both surfaces show the resulting command availability. An unavailable invocation produces no operation.
 - [ ] Build Project runs only the build. Start Debugging builds and launches only on success. Both surfaces display progress and source diagnostics from the same model.
 - [x] A UI command delivers its result on the Avalonia UI thread to the registered view that raised the request, even when focus or docking has changed. A closed or replaced view receives no callback. (evidence: 2026-11-26 Phase 01B AGREE 100/100. The reviewer verified SimpleMVC ownership and registration, typed CQRS, one dispatch per request, Toolkit eligibility and cancellation, and Avalonia results delivered to the originating live view. See the accepted 01B findings in docs/receipts/phase-01-reentrant-layout-hv.md.)
-- [ ] In the tabbed document editor, document commands use the active editor tab. Switching tabs after invoking Save keeps the captured document and originating editor as the pending request target and result recipient.
+- [x] In the tabbed document editor, document commands use the active editor tab. Switching tabs after invoking Save keeps the captured document and originating editor as the pending request target and result recipient. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-006. Delivery 61a312e. editor-buffer-state-secondary, diagnostic-navigation, original Save correction and editor ownership. See docs/receipts/phase-02-workbench-explorer-editor.md.)
 - [x] While a background operation logically blocks interaction, the affected UI shows the platform wait cursor. Available controls remain responsive and keep their normal cursor. The normal cursor returns when the interaction block clears. (evidence: 2026-11-26 Phase 01D AGREE 100/100. Win32 and Linux RemoteControl verified the Avalonia Wait overlay, rendering, available commands and restoration. Isolated Linux separately sampled effective OS cursor behavior. docs/receipts/phase-01-workbench-mcp.md.)
 
 ## FR-RETRO-008 Command presentation and IDE localization
@@ -73,8 +73,8 @@ Show each registered IDE command with its icon, localized label, and default key
 Scope: layer-1+
 **Acceptance Criteria:**
 - [x] A command's label, icon, and displayed default shortcut come from the same descriptor in the menu and command bar. The keyboard binding invokes the same eligible command in its activation scope. (evidence: 2026-11-26 Phase 01B AGREE 100/100 and Phase 01D AGREE 100/100. Shared Toolkit command, descriptor label and icon, desktop bindings and duplicate-gesture rejection were verified with passing managed and native tests. docs/receipts/phase-01-workbench-mcp.md.)
-- [ ] Selecting the IDE display language refreshes strings, images, accessible names, and layout direction in open windows and persists the selection. Command actions and default bindings remain stable across locales.
-- [ ] A partially translated pack uses the first available text or image per slug from the selected locale, parent locales, and bundled English, in that order.
+- [x] Selecting the IDE display language refreshes strings, images, accessible names, and layout direction in open windows and persists the selection. Command actions and default bindings remain stable across locales. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-007. Delivery 61a312e. pack-validation, live-language, original typed fallback and formatting gates. See docs/receipts/phase-02-workbench-explorer-editor.md.)
+- [x] A partially translated pack uses the first available text or image per slug from the selected locale, parent locales, and bundled English, in that order. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-007. Delivery 61a312e. pack-validation, live-language, original typed fallback and formatting gates. See docs/receipts/phase-02-workbench-explorer-editor.md.)
 
 ## FR-RETRO-009 Manage emulator bundles from Git buckets
 
@@ -99,8 +99,8 @@ Scope: layer-1+
 Edit project source using the Avalonia-based document workspace, with navigation from diagnostics and debugger source locations.
 Scope: layer-1+
 **Acceptance Criteria:**
-- [ ] Open and edit project files in separate tabs with independent buffers, undo history, caret, and selection. Preserve this state when switching and floating tabs.
-- [ ] Save the captured document revision. Later edits remain dirty after an older save completes. Failed saves preserve the buffer and report the error to the originating view.
+- [x] Open and edit project files in separate tabs with independent buffers, undo history, caret, and selection. Preserve this state when switching and floating tabs. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-006. Delivery 61a312e. editor-buffer-state-secondary, diagnostic-navigation, original Save correction and editor ownership. See docs/receipts/phase-02-workbench-explorer-editor.md.)
+- [x] Save the captured document revision. Later edits remain dirty after an older save completes. Failed saves preserve the buffer and report the error to the originating view. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-006. Delivery 61a312e. editor-buffer-state-secondary, diagnostic-navigation, original Save correction and editor ownership. See docs/receipts/phase-02-workbench-explorer-editor.md.)
 - [ ] Go to the project file, line, and column from build diagnostics or debugger source location, and show the reported state of breakpoint requests from the editor gutter.
 
 ## FR-RETRO-012 Explore workspace projects and folders
@@ -108,9 +108,9 @@ Scope: layer-1+
 Use a dockable Project Explorer to browse a workspace containing project and folder roots and navigate between the tree and the editor.
 Scope: layer-1+
 **Acceptance Criteria:**
-- [ ] Open a project or folder and browse project and folder roots together in one expandable tree. A plain folder opens for editing without requiring project metadata.
-- [ ] Open a selected file by keyboard or pointer, activate its existing tab on repeat open, and reveal an open document in the tree. Same-name files under different roots open their correct documents.
-- [ ] Restore workspace roots, expanded paths, and selection when reopening. Refresh externally changed branches and display unavailable roots while other roots remain usable.
+- [x] Open a project or folder and browse project and folder roots together in one expandable tree. A plain folder opens for editing without requiring project metadata. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-005. Delivery 61a312e. explorer-folder-and-mixed, explorer-persistence, explorer-external-changes. See docs/receipts/phase-02-workbench-explorer-editor.md.)
+- [x] Open a selected file by keyboard or pointer, activate its existing tab on repeat open, and reveal an open document in the tree. Same-name files under different roots open their correct documents. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-005. Delivery 61a312e. explorer-folder-and-mixed, explorer-persistence, explorer-external-changes. See docs/receipts/phase-02-workbench-explorer-editor.md.)
+- [x] Restore workspace roots, expanded paths, and selection when reopening. Refresh externally changed branches and display unavailable roots while other roots remain usable. (evidence: 2026-11-26 independent Phase 02 AGREE 99/99, EXEC-TODO-005. Delivery 61a312e. explorer-folder-and-mixed, explorer-persistence, explorer-external-changes. See docs/receipts/phase-02-workbench-explorer-editor.md.)
 
 ## FR-RETRO-013 Complete workspace Git integration
 

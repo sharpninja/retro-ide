@@ -124,6 +124,11 @@ documents:
     source: docs/receipts/phase-01-workbench-mcp.md
     target: Phase-01-Verification.md
     platforms: [github, azure]
+  - id: phase02-verification
+    title: Phase 02 Verification
+    source: docs/receipts/phase-02-workbench-explorer-editor.md
+    target: Phase-02-Verification.md
+    platforms: [github, azure]
 navigation:
   - document: home
   - document: project-overview
@@ -140,6 +145,7 @@ navigation:
       - document: mcp-tools
       - document: implementation-plan
       - document: phase01-verification
+      - document: phase02-verification
   - document: functional
   - document: technical
   - document: testing

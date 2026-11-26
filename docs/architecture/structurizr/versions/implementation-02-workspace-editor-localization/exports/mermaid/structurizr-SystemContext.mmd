@@ -1,0 +1,51 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["System Context View: Retro IDE"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+    2("<div style='font-weight: bold'>Retro IDE</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Shared cross-platform<br />development environment and<br />capability-driven emulator<br />integrations.</div>")
+    style 2 fill:#275c60,stroke:#1b4043,color:#ffffff
+    42("<div style='font-weight: bold'>UAE Developer</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Owns the UAE40 profile,<br />control service, isolated<br />worker and UAE-specific<br />protocol and diagnostics. The<br />desktop-facing interface is<br />pending.</div>")
+    click 42 https://github.com/sharpninja/uae-developer "https://github.com/sharpninja/uae-developer"
+    style 42 fill:#57636b,stroke:#3c454a,color:#ffffff
+    43("<div style='font-weight: bold'>VICE</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External x64sc process and<br />Commodore 64 runtime. Its<br />binary monitor is the<br />documented debugger<br />interface.</div>")
+    click 43 https://vice-emu.sourceforge.io/vice_2.html "https://vice-emu.sourceforge.io/vice_2.html"
+    style 43 fill:#57636b,stroke:#3c454a,color:#ffffff
+    44("<div style='font-weight: bold'>ViceSharp</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External .NET Commodore<br />emulator host with published<br />gRPC contracts.</div>")
+    click 44 https://github.com/sharpninja/vice-sharp "https://github.com/sharpninja/vice-sharp"
+    style 44 fill:#57636b,stroke:#3c454a,color:#ffffff
+    45("<div style='font-weight: bold'>Project Build Toolchain</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Operator-configured compiler,<br />assembler, or build task that<br />produces artifacts and<br />diagnostics for the current<br />project.</div>")
+    style 45 fill:#57636b,stroke:#3c454a,color:#ffffff
+    46("<div style='font-weight: bold'>Configured CLI or Desktop Agent</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Uses available scoped MCP<br />resources and commands; its<br />lifetime is independent of<br />the emulator session.</div>")
+    style 46 fill:#57636b,stroke:#3c454a,color:#ffffff
+    47("<div style='font-weight: bold'>Emulator Bucket Repositories</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Configured Git sources<br />publish per-emulator JSON<br />manifests pointing to<br />versioned release archives.</div>")
+    style 47 fill:#57636b,stroke:#3c454a,color:#ffffff
+    48("<div style='font-weight: bold'>Emulator Release Artifact Hosting</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosts the versioned platform<br />archives referenced by the<br />bucket manifests.</div>")
+    style 48 fill:#57636b,stroke:#3c454a,color:#ffffff
+    49("<div style='font-weight: bold'>Git Remotes</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosts workspace repositories<br />for clone, fetch, pull, and<br />push using the user's<br />configured Git<br />authentication.</div>")
+    style 49 fill:#57636b,stroke:#3c454a,color:#ffffff
+    50("<div style='font-weight: bold'>Configured Language Servers</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Installed processes such as<br />clangd and rust-analyzer that<br />supply language analysis<br />through negotiated LSP<br />features.</div>")
+    style 50 fill:#57636b,stroke:#3c454a,color:#ffffff
+    51("<div style='font-weight: bold'>QBrain Retro IDE Workspace</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Owns FR-RETRO-001 through<br />FR-RETRO-015 and their linked<br />technical requirements and<br />verification records.</div>")
+    style 51 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    2-. "<div>Starts and manages server<br />processes, synchronizes<br />documents, and sends<br />negotiated LSP requests</div><div style='font-size: 70%'>[JSON-RPC over stdio]</div>" .->50
+    50-. "<div>Returns results and sends<br />diagnostics and workspace<br />requests</div><div style='font-size: 70%'>[JSON-RPC over stdio]</div>" .->2
+    2-. "<div>Uses native Git for<br />repository transfer and<br />remote updates</div><div style='font-size: 70%'>[HTTPS or SSH]</div>" .->49
+    2-. "<div>Runs the configured build and<br />collects diagnostics and<br />outputs</div><div style='font-size: 70%'>[Configured process]</div>" .->45
+    2-. "<div>Starts or attaches a<br />configured scoped agent</div><div style='font-size: 70%'>[Configured process and MCP stdio where supported]</div>" .->46
+    46-. "<div>Discovers and invokes IDE<br />tools on the selected<br />workbench</div><div style='font-size: 70%'>[MCP Streamable HTTP on loopback]</div>" .->2
+    46-. "<div>Uses the scoped UAE MCP<br />boundary when available</div><div style='font-size: 70%'>[Planned MCP]</div>" .->42
+    2-. "<div>Fetches configured Git<br />sources and reads versioned<br />manifests</div><div style='font-size: 70%'>[Git and JSON]</div>" .->47
+    2-. "<div>Downloads the archive named<br />for the compatible host<br />target</div><div style='font-size: 70%'>[HTTPS]</div>" .->48
+    2-. "<div>Launches or attaches through<br />UAE control when a<br />desktop-facing bridge is<br />available</div><div style='font-size: 70%'>[Planned UAE control bridge]</div>" .->42
+    2-. "<div>Starts x64sc and exchanges<br />supported debugger commands<br />and events</div><div style='font-size: 70%'>[Local process and loopback binary monitor]</div>" .->43
+    2-. "<div>Attaches to a configured host<br />and uses its published<br />session services</div><div style='font-size: 70%'>[gRPC]</div>" .->44
+    44-. "<div>Returns session data and<br />streams available events and<br />frames</div><div style='font-size: 70%'>[gRPC]</div>" .->2
+    1-. "<div>Works with projects,<br />documents, and docked tools</div><div style='font-size: 70%'></div>" .->2
+    1-. "<div>Reviews IDE requirements and<br />traceability</div><div style='font-size: 70%'>[Project workflow]</div>" .->51
+
+  end
