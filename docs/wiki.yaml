@@ -121,7 +121,7 @@ documents:
     platforms: [github, azure]
   - id: phase01-verification
     title: Phase 01 Verification
-    source: docs/receipts/phase-01-remotecontrol-verification.md
+    source: docs/receipts/phase-01-workbench-mcp.md
     target: Phase-01-Verification.md
     platforms: [github, azure]
 navigation:

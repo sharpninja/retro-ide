@@ -5,7 +5,7 @@
 Operate and debug emulator sessions from a common dockable desktop on Windows and Linux.
 Scope: layer-1+
 **Acceptance Criteria:**
-- [ ] Dock, tab, drag out into a separate window, and redock a supported tool pane on each target host.
+- [x] Dock, tab, drag out into a separate window, and redock a supported tool pane on each target host. (evidence: 2026-11-26 Phase 01A AGREE 100/100. Isolated Linux X11/XTEST tab, native tear-away and redock passed. Approved Win32 SharpNinja.Avalonia.RemoteControl verified tab selection, a distinct HWND and redock to the original group and root. See docs/receipts/phase-01-workbench-mcp.md, 01A and reconciled HV.)
 - [ ] Save and restore a layout across desktop restarts while the emulator session remains independently accessible.
 - [ ] Open supported Emulation, console, logs, debugger, snapshot, test, and agent activity views scoped to the selected instance.
 
@@ -60,19 +60,19 @@ Scope: layer-1+
 Use menus and command bars to invoke the same predefined IDE actions with consistent availability and outcomes.
 Scope: layer-1+
 **Acceptance Criteria:**
-- [ ] Equivalent menu and command-bar entries resolve to the same predefined command and invoke the same operation for the same workspace context.
+- [x] Equivalent menu and command-bar entries resolve to the same predefined command and invoke the same operation for the same workspace context. (evidence: 2026-11-26 Phase 01B AGREE 100/100 and Phase 01D AGREE 100/100. Shared Toolkit command, descriptor label and icon, desktop bindings and duplicate-gesture rejection were verified with passing managed and native tests. docs/receipts/phase-01-workbench-mcp.md.)
 - [ ] When the active target, instance, or operation state changes, both surfaces show the resulting command availability. An unavailable invocation produces no operation.
 - [ ] Build Project runs only the build. Start Debugging builds and launches only on success. Both surfaces display progress and source diagnostics from the same model.
-- [ ] A UI command delivers its result on the Avalonia UI thread to the registered view that raised the request, even when focus or docking has changed. A closed or replaced view receives no callback.
+- [x] A UI command delivers its result on the Avalonia UI thread to the registered view that raised the request, even when focus or docking has changed. A closed or replaced view receives no callback. (evidence: 2026-11-26 Phase 01B AGREE 100/100. The reviewer verified SimpleMVC ownership and registration, typed CQRS, one dispatch per request, Toolkit eligibility and cancellation, and Avalonia results delivered to the originating live view. See the accepted 01B findings in docs/receipts/phase-01-reentrant-layout-hv.md.)
 - [ ] In the tabbed document editor, document commands use the active editor tab. Switching tabs after invoking Save keeps the captured document and originating editor as the pending request target and result recipient.
-- [ ] While a background operation logically blocks interaction, the affected UI shows the platform wait cursor. Available controls remain responsive and keep their normal cursor. The normal cursor returns when the interaction block clears.
+- [x] While a background operation logically blocks interaction, the affected UI shows the platform wait cursor. Available controls remain responsive and keep their normal cursor. The normal cursor returns when the interaction block clears. (evidence: 2026-11-26 Phase 01D AGREE 100/100. Win32 and Linux RemoteControl verified the Avalonia Wait overlay, rendering, available commands and restoration. Isolated Linux separately sampled effective OS cursor behavior. docs/receipts/phase-01-workbench-mcp.md.)
 
 ## FR-RETRO-008 Command presentation and IDE localization
 
 Show each registered IDE command with its icon, localized label, and default keyboard shortcut. Resolve IDE-owned strings and images from stable resource slugs.
 Scope: layer-1+
 **Acceptance Criteria:**
-- [ ] A command's label, icon, and displayed default shortcut come from the same descriptor in the menu and command bar. The keyboard binding invokes the same eligible command in its activation scope.
+- [x] A command's label, icon, and displayed default shortcut come from the same descriptor in the menu and command bar. The keyboard binding invokes the same eligible command in its activation scope. (evidence: 2026-11-26 Phase 01B AGREE 100/100 and Phase 01D AGREE 100/100. Shared Toolkit command, descriptor label and icon, desktop bindings and duplicate-gesture rejection were verified with passing managed and native tests. docs/receipts/phase-01-workbench-mcp.md.)
 - [ ] Selecting the IDE display language refreshes strings, images, accessible names, and layout direction in open windows and persists the selection. Command actions and default bindings remain stable across locales.
 - [ ] A partially translated pack uses the first available text or image per slug from the selected locale, parent locales, and bundled English, in that order.
 
@@ -137,8 +137,27 @@ Use the official .NET MCP SDK and Microsoft hosting extensions to expose every s
 Scope: layer-1+
 **Acceptance Criteria:**
 - [ ] Every supported IDE feature operation has a discoverable MCP tool with stable identity and typed parameters, including the workbench, editor, language servers, Git, terminal, build and test, emulators, provider-dependent debugging, media, and agent operations.
-- [ ] CLI and desktop agent clients attach to the same selected IDE instance using stdio and loopback Streamable HTTP. Calls operate in their granted workspace and capability context.
-- [ ] A supported tool produces the same modeled effect and domain result as its desktop feature. The client gets a structured result and affected workbench state is updated.
+- [x] CLI and desktop agent clients attach to the same selected IDE instance using stdio and loopback Streamable HTTP. Calls operate in their granted workspace and capability context. (evidence: 2026-11-26 Phase 01C AGREE 99/99. UI and both MCP transports exercised the same selected workbench with typed results, public ViewModel context and scoped grants. See the accepted 01C findings in docs/receipts/phase-01-reentrant-layout-hv.md and production regression in docs/receipts/phase-01-workbench-mcp.md.)
+- [x] A supported tool produces the same modeled effect and domain result as its desktop feature. The client gets a structured result and affected workbench state is updated. (evidence: 2026-11-26 Phase 01C AGREE 99/99. UI and both MCP transports exercised the same selected workbench with typed results, public ViewModel context and scoped grants. See the accepted 01C findings in docs/receipts/phase-01-reentrant-layout-hv.md and production regression in docs/receipts/phase-01-workbench-mcp.md.)
 - [ ] Long-running features expose progress, status, result, and cancellation. Large results provide readable chunks or supported MCP media content.
-- [ ] An MCP client can discover and read the public context of a registered IDE ViewModel and reuse it to address the same workspace, document, or view in a tool invocation.
+- [x] An MCP client can discover and read the public context of a registered IDE ViewModel and reuse it to address the same workspace, document, or view in a tool invocation. (evidence: 2026-11-26 Phase 01C AGREE 99/99. UI and both MCP transports exercised the same selected workbench with typed results, public ViewModel context and scoped grants. See the accepted 01C findings in docs/receipts/phase-01-reentrant-layout-hv.md and production regression in docs/receipts/phase-01-workbench-mcp.md.)
+
+## FR-RETRO-016 CPU-aware debugger and platform views
+
+Inspect 6502, 6809, Z80, 8080, 8086, 6800, and 68000 family targets using accurate CPU metadata and platform-appropriate register, disassembly, timing, and memory views. Let the user follow the emulator byte-order default or choose a persistent display preference.
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] For each 6502, 6809, Z80, 8080, 8086, 6800, and 68000 family, select an identified CPU and display the register set, flags, opcode and instruction decoding for the configured model or variant. Unknown instructions or unsupported variants retain raw byte and register inspection where available.
+- [ ] Show applicable instruction timing and clock-phase or bus-cycle operation for the selected CPU. Distinguish documented cycles and conditional timing from live cycle and phase observations. Enable cycle or phase stepping when the selected session advertises it and show its availability otherwise.
+- [ ] Display disassembly and grouped memory in a consistent layout with platform-appropriate address notation, raw instruction bytes, instruction text, symbols when supplied, memory region labels, address width, and bank or segment selection where applicable. Show limits and unmapped ranges on the selected target.
+- [ ] Use the emulator-supplied byte order by default. In the debugger, provide Default, Little-endian and Big-endian display options. Persist the user preference, display the effective byte order, and let Default restore the active target or address-space default. Preserve the underlying memory bytes and target CPU decoding when changing display order.
+
+## FR-RETRO-017 Emulator-supplied debugger machine description
+
+An emulator adapter supplies the live target configuration used by the debugger, including the actual CPU, memory layout, clock information, and machine defaults. The selected instance drives the disassembly and memory presentation.
+Scope: layer-1+
+**Acceptance Criteria:**
+- [ ] On launch, attach or reconnect, a compatible emulator reports the selected machine and CPU instance or instances, specific CPU model and variant, clock information, memory spaces and regions, applicable bank or segment mappings, native byte-order defaults and platform display profile. Distinguish optional telemetry and unsupported values.
+- [ ] Apply active bank, overlay and memory-map changes to the selected instance so registers, disassembly, and memory views address the current target and distinguish ROM, RAM, memory-mapped devices, and unmapped ranges. Preserve instance isolation when switching or reconnecting.
+- [ ] Keep compatible raw machine inspection usable when the emulator advertises it and a detailed description, optional field or supported profile is unavailable. Surface the missing detail and avoid applying another instance or CPU profile.
 

@@ -5,6 +5,7 @@ $ErrorActionPreference = 'Stop'
 $designRoot = Split-Path -Parent $PSCommandPath
 
 . (Join-Path $designRoot 'ide_controls.ps1')
+. (Join-Path $designRoot 'ide_debugger.ps1')
 . (Join-Path $designRoot 'ide_chrome.ps1')
 $ideComponents = Import-IdeSvgComponents (Join-Path $designRoot 'components')
 $profilesRoot = Join-Path (Split-Path -Parent $designRoot) '../profiles'
@@ -112,5 +113,6 @@ $frames = @(
 @{p='STB16/03-vice-sharp-emulation.svg';target='vice-sharp';t='ViceSharp · attached C64 session';i='C64-vice-sharp';s='Running';elapsed=12;h='Emulation';c=@('C64 guest display','Demo program running');r=@('Adapter: ViceSharp gRPC','Connection: configured host','Video source: host stream');b=@('Attached to the selected ViceSharp session.')}
 )
 
+$frames += @(& (Join-Path $designRoot 'debugger_frames.ps1'))
 foreach ($frame in $frames) { New-Frame $frame }
 Write-Output "Generated $($frames.Count) Retro IDE SVG wireframes."

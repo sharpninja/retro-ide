@@ -1,0 +1,60 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#4eb9aa,color:#4eb9aa
+
+        10("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 10 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        11("<div style='font-weight: bold'>IDE ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.ComponentModel and SimpleMVC]</div><div style='font-size: 80%; margin-top:10px'>Implement IView with a stable<br />ViewKey. Raise<br />CommandRequested, receive<br />correlated results on the UI<br />thread, and expose observable<br />properties through<br />ObservableObject.</div>")
+        style 11 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        19("<div style='font-weight: bold'>Avalonia UI Dispatcher</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia Dispatcher.UIThread]</div><div style='font-size: 80%; margin-top:10px'>Schedules callbacks on the UI<br />thread. The dispatch owner<br />checks its originating<br />registration inside the<br />callback before applying the<br />result.</div>")
+        style 19 fill:#235c49,stroke:#184033,color:#ffffff
+        20("<div style='font-weight: bold'>IDE State (Model)</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Provides observable<br />workspace, presentation<br />culture, active document and<br />target, selected session,<br />availability, operation<br />state, interaction blocks by<br />scope, and diagnostics.</div>")
+        style 20 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        4("<div style='font-weight: bold'>Workbench and Docking (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia and Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Hosts menus, command bars,<br />keyboard bindings, documents,<br />and docked tools. Presents<br />command metadata and<br />localization, and applies the<br />system wait cursor to<br />logically blocked UI.</div>")
+        style 4 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        5("<div style='font-weight: bold'>Predefined Command Catalog</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm and typed .NET requests]</div><div style='font-size: 80%; margin-top:10px'>Registers typed IDE commands<br />and queries with stable IDs<br />and required capabilities.<br />Pairs UI commands with<br />Toolkit bindings and<br />localized metadata. Supplies<br />the MCP tool registry.</div>")
+        style 5 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        6("<div style='font-weight: bold'>Localization Service</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET localization]</div><div style='font-size: 80%; margin-top:10px'>Resolves typed text and image<br />slugs through exact locale,<br />parent locales, and bundled<br />English. Formats messages and<br />refreshes workbench<br />presentation when the UI<br />culture changes.</div>")
+        style 6 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        7[("<div style='font-weight: bold'>Locale Catalogs</div><div style='font-size: 70%; margin-top: 0px'>[Component: BCP 47 locale tags]</div><div style='font-size: 80%; margin-top:10px'>Supplies versioned catalogs<br />of strings, message patterns,<br />and local SVG or PNG<br />resources. Includes the<br />bundled default catalog and<br />validated language packs.</div>")]
+        style 7 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch and result<br />delivery for views registered<br />directly with it. Provides<br />the shared execution entry<br />point for typed requests from<br />all controllers into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+      end
+
+      35[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout, workspace<br />roots and explorer state,<br />preferences, language server<br />registrations, bucket<br />configuration, and project<br />settings with target preset,<br />pinned bundle, and artifact<br />references.</div>")]
+      style 35 fill:#275c60,stroke:#d9a669,color:#ffffff
+    end
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+    35[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout, workspace<br />roots and explorer state,<br />preferences, language server<br />registrations, bucket<br />configuration, and project<br />settings with target preset,<br />pinned bundle, and artifact<br />references.</div>")]
+    style 35 fill:#275c60,stroke:#d9a669,color:#ffffff
+
+    1-. "<div>1. Choose French (Canada) as<br />the IDE display language</div><div style='font-size: 70%'></div>" .->4
+    4-. "<div>2. Invoke the registered<br />display-language command</div><div style='font-size: 70%'>[ICommand]</div>" .->5
+    5-. "<div>3. Raise the language-change<br />request on the registered<br />preferences view</div><div style='font-size: 70%'>[RelayCommand or AsyncRelayCommand]</div>" .->11
+    11-. "<div>4. Submit the requested<br />locale and originating<br />registration</div><div style='font-size: 70%'>[IView events]</div>" .->8
+    8-. "<div>5. Dispatch the typed<br />display-language change</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>6. Persist the selected<br />language</div><div style='font-size: 70%'>[Local files]</div>" .->35
+    10-. "<div>7. Publish the selected<br />presentation culture</div><div style='font-size: 70%'></div>" .->20
+    8-. "<div>8. Schedule the<br />language-change outcome for<br />the preferences view</div><div style='font-size: 70%'></div>" .->19
+    19-. "<div>9. Deliver the outcome to the<br />originating preferences view</div><div style='font-size: 70%'></div>" .->11
+    6-. "<div>10. Observe the change to<br />fr-CA</div><div style='font-size: 70%'></div>" .->20
+    6-. "<div>11. Notify open views to<br />refresh localized resources</div><div style='font-size: 70%'></div>" .->4
+    4-. "<div>12. Read the same label slug,<br />icon slug, and default<br />gesture</div><div style='font-size: 70%'>[ICommand]</div>" .->5
+    4-. "<div>13. Resolve the label and<br />icon by their typed slugs</div><div style='font-size: 70%'></div>" .->6
+    6-. "<div>14. Look up each resource in<br />fr-CA, fr, then en</div><div style='font-size: 70%'></div>" .->7
+
+  end

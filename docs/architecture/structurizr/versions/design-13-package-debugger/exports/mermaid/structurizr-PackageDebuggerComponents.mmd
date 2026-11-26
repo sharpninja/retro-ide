@@ -1,0 +1,57 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#4eb9aa,color:#4eb9aa
+
+        11("<div style='font-weight: bold'>IDE ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.ComponentModel and SimpleMVC]</div><div style='font-size: 80%; margin-top:10px'>Implement IView with a stable<br />ViewKey. Raise<br />CommandRequested, receive<br />correlated results on the UI<br />thread, and expose observable<br />properties through<br />ObservableObject.</div>")
+        style 11 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        20("<div style='font-weight: bold'>IDE State (Model)</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Provides observable<br />workspace, presentation<br />culture, active document and<br />target, selected session,<br />availability, operation<br />state, interaction blocks by<br />scope, and diagnostics.</div>")
+        style 20 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        22("<div style='font-weight: bold'>Session Coordinator</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Opens a versioned adapter<br />session, owns its lifetime<br />and bundle lease, routes<br />typed capability requests,<br />and projects state, control<br />events, and bounded media<br />streams.</div>")
+        style 22 fill:#275c60,stroke:#d9a669,color:#ffffff
+        24("<div style='font-weight: bold'>Debugger and Guest Inspectors</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Displays CPU-specific<br />registers, platform<br />disassembly, bounded memory<br />and bank selection, reference<br />timing, and advertised live<br />clock-phase or bus data.<br />Captures the user's<br />byte-order display choice and<br />exposes available raw and<br />guest inspection.</div>")
+        style 24 fill:#275c60,stroke:#d9a669,color:#ffffff
+        25("<div style='font-weight: bold'>Debugger Target Model</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Validates the active<br />session's descriptor, CPU and<br />map revision. Projects<br />supporting views and bounded<br />inspection scope. Applies<br />Emulator default,<br />Little-endian, or Big-endian<br />to multibyte display values.</div>")
+        style 25 fill:#275c60,stroke:#d9a669,color:#ffffff
+        26("<div style='font-weight: bold'>CPU References and Display Profiles</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET, declarative profile data]</div><div style='font-size: 80%; margin-top:10px'>Resolves versioned register<br />and flag definitions, opcode<br />encodings, addressing rules,<br />reference timing and platform<br />display profiles for the<br />6502, 6809, Z80, 8080, 8086,<br />6800, and 68000 families.<br />Resolves package-supplied<br />declarative profiles to the<br />selected version.</div>")
+        style 26 fill:#275c60,stroke:#d9a669,color:#ffffff
+        31("<div style='font-weight: bold'>Emulators Management View</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Browses buckets, compatible<br />releases, and installed<br />versions. Presents refresh,<br />install, update, rollback,<br />and remove actions and their<br />outcomes.</div>")
+        style 31 fill:#275c60,stroke:#d9a669,color:#ffffff
+        32("<div style='font-weight: bold'>Emulator Bundle Manager</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET, Git, JSON, SHA-256]</div><div style='font-size: 80%; margin-top:10px'>Reads Git bucket manifests at<br />a recorded commit, selects a<br />compatible host target,<br />verifies release archives,<br />and installs immutable<br />bundles with receipts and<br />validated optional debugger<br />profile assets.</div>")
+        style 32 fill:#275c60,stroke:#d9a669,color:#ffffff
+        33("<div style='font-weight: bold'>Adapter Catalog and Host Contract</div><div style='font-size: 70%; margin-top: 0px'>[Component: Versioned .NET contracts]</div><div style='font-size: 80%; margin-top:10px'>Loads the pinned emulator<br />binding and its factory.<br />Negotiates session versions,<br />capability ports, optional<br />live debugger machine<br />descriptors, typed results,<br />resumable events, and<br />separate media streams.</div>")
+        style 33 fill:#275c60,stroke:#d9a669,color:#ffffff
+      end
+
+      37[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout, workspace<br />roots and explorer state,<br />preferences, language server<br />registrations, bucket<br />configuration, and project<br />settings with target preset,<br />pinned bundle, and artifact<br />references.</div>")]
+      style 37 fill:#275c60,stroke:#d9a669,color:#ffffff
+      39[("<div style='font-weight: bold'>Local Emulator Bundle Store</div><div style='font-size: 70%; margin-top: 0px'>[Container: Per-user filesystem]</div><div style='font-size: 80%; margin-top:10px'>Holds verified, versioned<br />emulator archives, bindings,<br />optional declarative debugger<br />profiles, installation<br />receipts, and cached bucket<br />metadata.</div>")]
+      style 39 fill:#275c60,stroke:#d9a669,color:#ffffff
+    end
+
+    22-. "<div>Publishes normalized session<br />state and capability changes</div><div style='font-size: 70%'></div>" .->20
+    22-. "<div>Publishes the scoped machine<br />descriptor, negotiated timing<br />capabilities, and ordered<br />memory-map revisions</div><div style='font-size: 70%'></div>" .->25
+    25-. "<div>Resolves the selected CPU<br />variant, reference timing,<br />and platform presentation<br />profile</div><div style='font-size: 70%'></div>" .->26
+    25-. "<div>Reads and persists the user's<br />debugger display byte order</div><div style='font-size: 70%'></div>" .->37
+    25-. "<div>Publishes the resolved<br />selected-target debugger<br />state, effective display<br />order, and safe raw fallback</div><div style='font-size: 70%'></div>" .->20
+    26-. "<div>Reads optional declarative<br />display profiles from the<br />leased, verified package<br />version</div><div style='font-size: 70%'></div>" .->39
+    24-. "<div>Binds registered views for<br />debugger queries and commands</div><div style='font-size: 70%'></div>" .->11
+    22-. "<div>Resolves the selected adapter<br />and invokes normalized<br />operations</div><div style='font-size: 70%'></div>" .->33
+    33-. "<div>Exposes the negotiated<br />session, optional machine<br />descriptor, and capability<br />ports</div><div style='font-size: 70%'></div>" .->22
+    32-. "<div>Installs verified binaries,<br />bindings, optional debugger<br />profile data and receipts<br />atomically</div><div style='font-size: 70%'></div>" .->39
+    33-. "<div>Reads the project's pinned<br />bundle version and manifest<br />revision</div><div style='font-size: 70%'></div>" .->37
+    33-. "<div>Resolves verified local entry<br />points and holds the selected<br />version for the session</div><div style='font-size: 70%'></div>" .->39
+    1-. "<div>Inspects the selected CPU,<br />memory and timing, and sets<br />the display byte order</div><div style='font-size: 70%'></div>" .->24
+    11-. "<div>Observe model state and<br />expose it to the view</div><div style='font-size: 70%'></div>" .->20
+
+  end

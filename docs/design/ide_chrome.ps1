@@ -78,9 +78,10 @@ function New-Frame {
     $preset = $targetPresets[$target]
     if (!$preset) { throw "Unknown wireframe target '$target'." }
     $isUae = $target -eq 'uae'
-    $projectLabel = if ($isUae) { 'A1200 OS' } else { 'C64 Demo' }
+    $projectLabel = if ($Frame.project) { $Frame.project } elseif ($isUae) { 'A1200 OS' } else { 'C64 Demo' }
     $sourceTab = if ($isUae) { 'mmu.rs' } else { 'main.asm' }
-    $isDebug = $story -in @('STB06','STB11') -or $mode -in @('break','step','floating','dock-target','redocked','autohide') -or $Frame.p -match 'layout-restored'
+    $hasDebuggerDesign = $story -eq 'STB17'
+    $isDebug = $story -in @('STB06','STB11') -or ($hasDebuggerDesign -and $Frame.tab -ne 'Emulators') -or $mode -in @('break','step','floating','dock-target','redocked','autohide') -or $Frame.p -match 'layout-restored'
     $tab = switch ($story) {
         STB01 { if ($Frame.p -match 'empty') {'Start Page'} elseif ($Frame.p -match 'selected') {'uae40.dev'} elseif ($Frame.p -match 'restored') {'Emulation'} else {'mmu.rs'} }
         STB02 { if ($Frame.p -match 'starting|running-marker|worker-fault') {'Emulation'} else {$preset.machine.profileFile} }
@@ -98,6 +99,7 @@ function New-Frame {
         STB14 { if ($mode -in @('launch','boot')) {'Emulation'} else {'mmu.rs'} }
         STB15 {'Emulation'}
         STB16 { if ($Frame.p -match 'select-target') {'Launch Configurations'} else {'Emulation'} }
+        STB17 {$Frame.tab}
     }
     $tabNames = if ($tab -eq 'Start Page') { @('Start Page') } else { @($sourceTab,$preset.machine.profileFile,'Emulation','Disassembly','Test Results') }
     if ($tab -notin $tabNames) { $tabNames += $tab }
@@ -107,12 +109,14 @@ function New-Frame {
         STB13 {'MCP Activity'}
         STB14 { switch ($mode) { error {'Problems'} launch {'Serial Console'} boot {'Serial Console'} break {'Breakpoints'} step {'Breakpoints'} default {'Output'} } }
         STB15 {'Serial Console'}
+        STB17 {'Output'}
         default { if ($isDebug) {'Breakpoints'} elseif ($Frame.p -match 'running-marker|reconnected') {'Serial Console'} else {'Output'} }
     }
 
     Add-IdeSvgComponent $svg 'ide-workbench'
     Add-IdeText $svg 208 28 $projectLabel 'ui' '#a8b5bb'
-    Add-IdeText $svg 181 105 "$($preset.label) / $($preset.machine.id)" 'label'
+    $connection = if ($Frame.connection) { $Frame.connection } else { "$($preset.label) / $($preset.machine.id)" }
+    Add-IdeText $svg 181 105 $connection 'label'
     $running = $status -match 'Running|Starting'
     $runVerb = if ($isDebug -and $status -match 'Paused') { 'Continue' } else { 'Debug' }
     Add-IdeText $svg 361 105 $runVerb 'label'
@@ -124,54 +128,60 @@ function New-Frame {
     Add-IdeText $svg 1190 105 $instance 'label' '#e9c396'
     Add-IdeText $svg 1303 105 ($status.Split('·')[0].Trim()) 'label'
     Add-IdeTabs $svg 43 127 971 $tabNames $tab
-    $window = if ($isDebug) { 'Registers' } elseif ($story -eq 'STB10') { 'Test Explorer' } else { 'Project Explorer' }
-    if ($mode -in @('floating','autohide','dock-target')) { $window = 'Project Explorer' }
-    Add-IdeToolHeader $svg 1023 127 407 $window
-    if ($window -eq 'Registers') {
-        Add-IdeText $svg 1040 183 '68040   •   Supervisor   •   Hex' 'label' '#a8b5bb'
-        $regs = if ($mode -eq 'step') {@('PC     00F82004','SR     2700','D0     00000032','A7     07FFFEC0')} elseif ($mode -in @('break','redocked') -or $Frame.p -match 'layout-restored') {@('PC     00F82000','SR     2700','D0     00000031','A7     07FFFEC0')} else {@($Frame.r)}
-        $y = 218
-        foreach ($line in $regs) {
-            Add-IdeRect $svg 1035 ($y-19) 382 27 '#202d32'
-            Add-IdeText $svg 1046 $y $line 'log'
-            $y += 29
-        }
-        Add-IdeTabs $svg 1023 330 407 @('Registers','Call Stack','Watch') 'Registers' -Tools
-        Add-IdeToolHeader $svg 1023 377 407 'Project Explorer'
-    }
-    $start = if ($window -eq 'Registers') { 430 } else { 188 }
-    if ($window -eq 'Test Explorer') {
-        Add-IdeText $svg 1041 184 '▷ Run selected        ↻ Rerun last        Filter ▾' 'label' '#a8b5bb'
-        Add-IdeRect $svg 1034 205 386 29 '#344344'
-        Add-IdeText $svg 1041 225 '▾  kernel-smoke' 'label'
-        Add-IdeText $svg 1060 256 'Serial boot marker' 'label'
-        Add-IdeText $svg 1060 281 'Breakpoint at kernel_main' 'label'
-        Add-IdeText $svg 1060 306 'Memory: boot_status' 'label'
-        Add-IdeText $svg 1060 331 'Screen region hash' 'label'
-    } elseif ($Frame.p -match 'empty-workspace') {
-        Add-IdeText $svg 1041 $start 'Open a project or folder to browse files.' 'label' '#a8b5bb'
+    if ($hasDebuggerDesign) {
+        Add-IdeDebuggerSidebar $svg $Frame
     } else {
-        $tree = if ($isUae) {
-            @('▾  A1200 OS','    ▾  kernel','         ▾  src','              mmu.rs','              main.rs','    ▸  bootrom','    ▸  artifacts','    ▾  profiles','         uae40.dev','    ▸  scenarios')
+        $window = if ($isDebug) { 'Registers' } elseif ($story -eq 'STB10') { 'Test Explorer' } else { 'Project Explorer' }
+        if ($mode -in @('floating','autohide','dock-target')) { $window = 'Project Explorer' }
+        Add-IdeToolHeader $svg 1023 127 407 $window
+        if ($window -eq 'Registers') {
+            Add-IdeText $svg 1040 183 '68040   •   Supervisor   •   Hex' 'label' '#a8b5bb'
+            $regs = if ($mode -eq 'step') {@('PC     00F82004','SR     2700','D0     00000032','A7     07FFFEC0')} elseif ($mode -in @('break','redocked') -or $Frame.p -match 'layout-restored') {@('PC     00F82000','SR     2700','D0     00000031','A7     07FFFEC0')} else {@($Frame.r)}
+            $y = 218
+            foreach ($line in $regs) {
+                Add-IdeRect $svg 1035 ($y-19) 382 27 '#202d32'
+                Add-IdeText $svg 1046 $y $line 'log'
+                $y += 29
+            }
+            Add-IdeTabs $svg 1023 330 407 @('Registers','Call Stack','Watch') 'Registers' -Tools
+            Add-IdeToolHeader $svg 1023 377 407 'Project Explorer'
+        }
+        $start = if ($window -eq 'Registers') { 430 } else { 188 }
+        if ($window -eq 'Test Explorer') {
+            Add-IdeText $svg 1041 184 '▷ Run selected        ↻ Rerun last        Filter ▾' 'label' '#a8b5bb'
+            Add-IdeRect $svg 1034 205 386 29 '#344344'
+            Add-IdeText $svg 1041 225 '▾  kernel-smoke' 'label'
+            Add-IdeText $svg 1060 256 'Serial boot marker' 'label'
+            Add-IdeText $svg 1060 281 'Breakpoint at kernel_main' 'label'
+            Add-IdeText $svg 1060 306 'Memory: boot_status' 'label'
+            Add-IdeText $svg 1060 331 'Screen region hash' 'label'
+        } elseif ($Frame.p -match 'empty-workspace') {
+            Add-IdeText $svg 1041 $start 'Open a project or folder to browse files.' 'label' '#a8b5bb'
         } else {
-            @('▾  C64 Demo','    ▾  src','         main.asm','    ▸  artifacts','    ▾  profiles',("         " + $preset.machine.profileFile))
+            $tree = if ($isUae) {
+                @('▾  A1200 OS','    ▾  kernel','         ▾  src','              mmu.rs','              main.rs','    ▸  bootrom','    ▸  artifacts','    ▾  profiles','         uae40.dev','    ▸  scenarios')
+            } else {
+                @('▾  C64 Demo','    ▾  src','         main.asm','    ▸  artifacts','    ▾  profiles',("         " + $preset.machine.profileFile))
+            }
+            for ($n = 0; $n -lt $tree.Count; $n++) {
+                $y = $start + 19*$n
+                if ($tree[$n].Trim() -eq $tab) { Add-IdeRect $svg 1028 ($y-15) 395 18 '#354344' }
+                Add-IdeText $svg 1041 $y $tree[$n] 'log'
+            }
         }
-        for ($n = 0; $n -lt $tree.Count; $n++) {
-            $y = $start + 19*$n
-            if ($tree[$n].Trim() -eq $tab) { Add-IdeRect $svg 1028 ($y-15) 395 18 '#354344' }
-            Add-IdeText $svg 1041 $y $tree[$n] 'log'
-        }
-    }
-    if ($window -ne 'Registers' -and $Frame.r -and $mode -notin @('floating','dock-target','autohide')) {
-        Add-IdeToolHeader $svg 1023 410 407 'Session Properties'
-        $y = 466
-        foreach ($line in @($Frame.r)) {
-            Add-IdeText $svg 1041 $y $line 'log' '#bccbd0'
-            $y += 24
+        if ($window -ne 'Registers' -and $Frame.r -and $mode -notin @('floating','dock-target','autohide')) {
+            Add-IdeToolHeader $svg 1023 410 407 'Session Properties'
+            $y = 466
+            foreach ($line in @($Frame.r)) {
+                Add-IdeText $svg 1041 $y $line 'log' '#bccbd0'
+                $y += 24
+            }
         }
     }
 
-    if ($mode -in @('draft','error','fixed','build','break','step','floating','dock-target','redocked','autohide')) {
+    if ($hasDebuggerDesign) {
+        Add-IdeDebugger $svg $Frame
+    } elseif ($mode -in @('draft','error','fixed','build','break','step','floating','dock-target','redocked','autohide')) {
         Add-IdeEditor $svg $Frame $mode
     } elseif ($tab -eq 'Emulation' -and $Frame.p -notmatch 'worker-fault') {
         Add-IdeDisplay $svg $Frame $mode $instance $preset
@@ -214,7 +224,8 @@ function New-Frame {
     Add-IdeTabs $svg 43 827 1387 @('Output','Problems','Serial Console','Breakpoints','MCP Activity') $output -Tools
     Add-IdeText $svg 16 891 $status 'label'
     Add-IdeText $svg 530 891 $Frame.t 'label' '#d8e1df'
-    Add-IdeText $svg 1120 891 "$($preset.machine.id)   •   $($preset.machine.cpu) / $($preset.machine.video)" 'label'
+    $machineLine = if ($Frame.machineLine) { $Frame.machineLine } else { "$($preset.machine.id)   •   $($preset.machine.cpu) / $($preset.machine.video)" }
+    Add-IdeText $svg 1120 891 $machineLine 'label'
 
     if ($mode -in @('floating','dock-target','autohide')) {
         if ($mode -eq 'autohide') {

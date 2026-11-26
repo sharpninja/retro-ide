@@ -4,7 +4,38 @@ Every supported Retro IDE feature has a Model Context Protocol (MCP) tool. CLI a
 
 ## Phase 01 tool inventory
 
-The candidate exposes `workbench_get_context` and `workbench_focus_tool`. They share one local IDE instance through Streamable HTTP or its stdio bridge. The four public context members are `viewKey`, `workspaceId`, `activeToolId`, and `workbenchRevision`. A missing selection is an explicit null. Mutations require a live registration, the current context and a write-enabled attachment. The rest of this page describes the broader implementation contract. [Cross-platform verification](receipts/phase-01-remotecontrol-verification.md)
+Phase 01 exposes `workbench_get_context` and `workbench_focus_tool`. They share one local IDE instance through Streamable HTTP or its stdio bridge. The four public context members are `viewKey`, `workspaceId`, `activeToolId`, and `workbenchRevision`. A missing selection is an explicit null. Mutations require a live registration, the current context and a write-enabled attachment. The rest of this page describes the broader implementation contract. [Cross-platform verification](receipts/phase-01-workbench-mcp.md)
+
+## Phase 02 candidate tools
+
+The display language, Project Explorer, and source editor operations below passed local verification on Windows and Linux. Their Phase 02 acceptance is open. [Verification status](plans/PLAN-RETROIDE-001.md#phase-02-verification-status)
+
+### Display language
+
+Use `workbench_get_display_language` to read the active locale, right-to-left direction, and installed locale tags. A write-enabled attachment can call `workbench_set_display_language` with a BCP 47 `locale` and the current workbench `context`. The change updates open windows and persists the selection in the IDE application data directory.
+
+## Project Explorer tools
+
+The Phase 02 implementation currently exposes these Project Explorer operations over the same stdio and Streamable HTTP attachments.
+
+| Tool | Arguments | Result |
+| --- | --- | --- |
+| `workspace_open_root` | Absolute `path`, `kind` (`folder` or `project`), current workbench `context` | The stable root ID, kind, and path in `data`. |
+| `workspace_list_roots` | None | The current workspace's roots in `data`. |
+| `workspace_list_children` | `rootId`, `relativePath` (empty for the root) | The branch's workspace, parent, availability, and immediate children in `data`. |
+| `workspace_set_expanded` | `rootId`, `relativePath`, `isExpanded`, current workbench `context` | The updated workbench context. The IDE saves the expansion with the workspace. |
+| `workspace_select_entry` | `rootId`, `relativePath`, current workbench `context` | The updated workbench context. The IDE saves the root-relative selection with the workspace. |
+| `workspace_open_file` | `rootId`, `relativePath`, optional one-based `position` (line and column), current workbench `context` | The opened or reused tab's `viewKey`, `workspaceId`, `documentId`, `rootId`, `relativePath`, and `revision` in `data`. |
+| `workspace_reveal_entry` | `rootId`, `relativePath`, current workbench `context` | The updated workbench context after ancestors are expanded and the entry is selected. |
+| `editor_save_document` | `document` (the tab context returned by opening), current workbench `context` | The saved tab's current context in `data`. Save checks the captured revision before writing. |
+| `editor_get_document` | Tab `viewKey` | The current public document context in `data`. |
+| `editor_find_text` | `document`, literal `query`, optional `matchCase` and `backward`, workbench `context` | Selects the next or previous match, wrapping at the end. Returns the match offset and length. |
+| `editor_replace_text` | `document`, literal `query`, `replacement`, optional `matchCase` and `all`, workbench `context` | Replaces one or all matches as one undo step and returns the updated document context. |
+| `editor_edit_text` | `document`, zero-based UTF-16 `offset`, range `length`, replacement `text`, workbench `context` | Applies the edit and returns the updated document context. |
+| `editor_undo`, `editor_redo` | `document`, workbench `context` | Applies one edit history entry for the specified tab. |
+| `editor_close_document` | `document`, optional `discardChanges`, workbench `context` | Closes the tab. A dirty tab remains open unless discard is explicit. |
+
+Read-only attachments can list workspace roots and children and read a live document context. Root, expansion, selection, and editor mutations require a write-enabled attachment and the current public workbench context. Each branch read is scoped to an open root. Refresh the context after a successful mutation before sending the next write.
 
 ## One feature registry
 

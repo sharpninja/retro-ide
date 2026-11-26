@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 448">
+  <defs>
+    <symbol id="ide-debug-control" viewBox="0 0 160 30" preserveAspectRatio="none">
+      <rect x="0.5" y="0.5" width="159" height="29" rx="3" fill="#263338" stroke="#52636a" vector-effect="non-scaling-stroke"/>
+    </symbol>
+    <symbol id="ide-debug-control-selected" viewBox="0 0 160 30" preserveAspectRatio="none">
+      <rect x="0.5" y="0.5" width="159" height="29" rx="3" fill="#304b49" stroke="#78b3a9" vector-effect="non-scaling-stroke"/>
+    </symbol>
+    <symbol id="ide-debug-control-disabled" viewBox="0 0 160 30" preserveAspectRatio="none">
+      <rect x="0.5" y="0.5" width="159" height="29" rx="3" fill="#202b30" stroke="#3d4c52" vector-effect="non-scaling-stroke"/>
+    </symbol>
+    <symbol id="ide-debug-table-heading" viewBox="0 0 40 32" preserveAspectRatio="none">
+      <rect width="40" height="32" fill="#29363c"/>
+      <path d="M0 31.5h40" stroke="#52636a" vector-effect="non-scaling-stroke"/>
+    </symbol>
+    <symbol id="ide-debug-table-row" viewBox="0 0 40 32" preserveAspectRatio="none">
+      <rect width="40" height="32" fill="#1c292e"/>
+      <path d="M0 31.5h40" stroke="#2c3a40" vector-effect="non-scaling-stroke"/>
+    </symbol>
+    <symbol id="ide-debug-table-active-row" viewBox="0 0 40 32" preserveAspectRatio="none">
+      <rect width="40" height="32" fill="#354043"/>
+      <path d="M0.4 0v32" stroke="#edb77b" stroke-width="2" vector-effect="non-scaling-stroke"/>
+    </symbol>
+  </defs>
+</svg>

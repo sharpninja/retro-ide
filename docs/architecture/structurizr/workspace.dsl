@@ -6,7 +6,7 @@ workspace "Retro IDE" "Shared emulator IDE with an implemented workbench and a s
 
         retro = softwareSystem "Retro IDE" "Shared cross-platform development environment and capability-driven emulator integrations." {
             properties {
-                "Baseline" "implementation-01-workbench-mcp-candidate"
+                "Baseline" "implementation-01-workbench-mcp"
                 "Implementation status" "Phase 01 delivers the workbench and scoped focus through the UI and both MCP transports. Emulator integration is planned."
                 "QBrain workspace" "/home/sharpninja/github/retro-ide"
             }
@@ -90,9 +90,20 @@ workspace "Retro IDE" "Shared emulator IDE with an implemented workbench and a s
                         "Storyboard" "STB15 Seek and adjust volume in the Emulation player"
                     }
                 }
-                debugger = component "Debugger and Guest Inspectors" "Displays target-aware registers, address spaces, disassembly, source, breakpoints, console, logs, and optional guest tools. Keeps raw views available when symbols or guest features are unavailable." "Avalonia" "Planned" {
+                debugger = component "Debugger and Guest Inspectors" "Displays CPU-specific registers, platform disassembly, bounded memory and bank selection, reference timing, and advertised live clock-phase or bus data. Captures the user's byte-order display choice and exposes available raw and guest inspection." "Avalonia" "Planned" {
                     properties {
-                        "Requirements" "FR-RETRO-004, TR-RETRO-DEBUG-004"
+                        "Requirements" "FR-RETRO-004, TR-RETRO-DEBUG-004, FR-RETRO-016, FR-RETRO-017"
+                        "Storyboards" "STB06 raw 68040 debugging; STB17 package-backed debugger"
+                    }
+                }
+                debugTarget = component "Debugger Target Model" "Validates the active session's descriptor, CPU and map revision. Projects supporting views and bounded inspection scope. Applies Emulator default, Little-endian, or Big-endian to multibyte display values." ".NET" "Planned" {
+                    properties {
+                        "Requirements" "FR-RETRO-017, TR-RETRO-MACHINE-017, TEST-RETRO-017; TR-RETRO-CPU-016#ac-debugger-endian-precedence"
+                    }
+                }
+                debugProfiles = component "CPU References and Display Profiles" "Resolves versioned register and flag definitions, opcode encodings, addressing rules, reference timing and platform display profiles for the 6502, 6809, Z80, 8080, 8086, 6800, and 68000 families. Resolves package-supplied declarative profiles to the selected version." ".NET, declarative profile data" "Planned" {
+                    properties {
+                        "Requirements" "FR-RETRO-016, TR-RETRO-CPU-016, TEST-RETRO-016"
                     }
                 }
                 artifacts = component "Media, Tests, and Diagnostics" "Presents media and snapshot workflows, test results, operation progress, and failure evidence with adapter-provided identity and compatibility." "Avalonia" "Planned" {
@@ -116,20 +127,21 @@ workspace "Retro IDE" "Shared emulator IDE with an implemented workbench and a s
                         "Requirements" "FR-RETRO-009, TR-RETRO-BUNDLE-009"
                     }
                 }
-                bundleManager = component "Emulator Bundle Manager" "Reads Git bucket manifests at a recorded commit, selects a compatible host target, verifies release archives, and installs immutable bundles with receipts." ".NET, Git, JSON, SHA-256" "Planned"
-                catalog = component "Adapter Catalog and Host Contract" "Loads the selected installed binding and its factory. Defines .NET session identity, version negotiation, capability ports, typed results, resumable events, and separate media streams." "Versioned .NET contracts" "Planned" {
+                bundleManager = component "Emulator Bundle Manager" "Reads Git bucket manifests at a recorded commit, selects a compatible host target, verifies release archives, and installs immutable bundles with receipts and validated optional debugger profile assets." ".NET, Git, JSON, SHA-256" "Planned"
+                catalog = component "Adapter Catalog and Host Contract" "Loads the pinned emulator binding and its factory. Negotiates session versions, capability ports, optional live debugger machine descriptors, typed results, resumable events, and separate media streams." "Versioned .NET contracts" "Planned" {
                     properties {
-                        "Requirements" "TR-RETRO-BUNDLE-009, TR-RETRO-ADAPTER-010"
+                        "Requirements" "TR-RETRO-BUNDLE-009, TR-RETRO-ADAPTER-010, TR-RETRO-MACHINE-017"
+                        "Package metadata" "Optional debuggerProfiles entries point to versioned declarative resources in the verified package. The active machine, map revision, and telemetry capabilities come from the session adapter."
                     }
                 }
-                uaeAdapter = component "UAE Adapter" "Translates UAE40 profile and session operations. Exposes UAE-specific debugger data through optional extensions." ".NET; desktop-facing transport pending" "Planned"
-                viceAdapter = component "VICE Adapter" "Launches the configured x64sc executable and maps supported C64 debugger operations from the loopback binary monitor. Video, audio, and input paths need separate integration." "Process and VICE binary monitor" "Planned"
-                viceSharpAdapter = component "ViceSharp Adapter" "Attaches to a configured ViceSharp host and maps supported session, monitor, media, video, input, snapshot, and diagnostics operations." "ViceSharp gRPC contracts" "Planned"
+                uaeAdapter = component "UAE Adapter" "Translates UAE40 profile and session operations, supplies the active 68000-family machine description where supported, and exposes UAE-specific debugger extensions." ".NET; desktop-facing transport pending" "Planned"
+                viceAdapter = component "VICE Adapter" "Launches x64sc, maps debugger operations through its loopback binary monitor, and normalizes available C64 machine, CPU and memory-bank metadata." "Process and VICE binary monitor" "Planned"
+                viceSharpAdapter = component "ViceSharp Adapter" "Attaches to the configured host and maps available session metadata, debugger descriptions, monitor, media, snapshot, and diagnostics services." "ViceSharp gRPC contracts" "Planned"
             }
 
             workspaceFiles = container "Local Workspace Settings" "Stores IDE layout, workspace roots and explorer state, preferences, language server registrations, bucket configuration, and project settings with target preset, pinned bundle, and artifact references." "Local files" "DataStore,Planned"
             workspaceContent = container "Workspace Project and Folder Files" "Contains selected projects, source files, artifacts, and Git worktrees and metadata where present." "Local filesystem" "DataStore"
-            bundleStore = container "Local Emulator Bundle Store" "Holds verified, versioned emulator archives and expanded binaries, bindings, install receipts, and the last valid bucket metadata for offline use." "Per-user filesystem" "DataStore,Planned"
+            bundleStore = container "Local Emulator Bundle Store" "Holds verified, versioned emulator archives, bindings, optional declarative debugger profiles, installation receipts, and cached bucket metadata." "Per-user filesystem" "DataStore,Planned"
             mcpStdio = container "MCP Stdio Bridge" "Launched by CLI clients to attach MCP tools to the selected running Retro IDE instance." ".NET, ModelContextProtocol" "Implemented"
         }
 
@@ -152,6 +164,7 @@ workspace "Retro IDE" "Shared emulator IDE with an implemented workbench and a s
 
         developer -> retro.desktop.shell "Works with projects, documents, and docked tools"
         developer -> retro.desktop.emulation "Views and operates the selected Emulation tab"
+        developer -> retro.desktop.debugger "Inspects the selected CPU, memory and timing, and sets the display byte order"
         developer -> retro.desktop.sourceEditor "Edits source in the selected document tab"
         developer -> qbrain "Reviews IDE requirements and traceability" "Project workflow"
 
@@ -189,6 +202,7 @@ workspace "Retro IDE" "Shared emulator IDE with an implemented workbench and a s
         retro.desktop.unitOfWork -> retro.workspaceContent "Resolves workspace roots, enumerates directories, and opens the selected files" "Local filesystem"
         retro.desktop.unitOfWork -> retro.desktop.launch "Invokes build and debug-launch handlers"
         retro.desktop.unitOfWork -> retro.desktop.sessions "Invokes session, debugger, media, and diagnostics handlers"
+        retro.desktop.unitOfWork -> retro.desktop.debugTarget "Validates captured CPU and memory-map scope, and applies presentation changes"
         retro.desktop.unitOfWork -> retro.desktop.agentGateway "Invokes configured agent launch or attach"
         retro.desktop.unitOfWork -> retro.desktop.bundleManager "Invokes repository refresh and emulator bundle lifecycle handlers"
         retro.desktop.unitOfWork -> retro.desktop.gitIntegration "Dispatches typed Git requests for the captured repository and worktree"
@@ -202,6 +216,11 @@ workspace "Retro IDE" "Shared emulator IDE with an implemented workbench and a s
         retro.desktop.gitIntegration -> gitRemotes "Uses native Git for repository transfer and remote updates" "HTTPS or SSH"
         retro.desktop.terminal -> retro.workspaceContent "Runs the user's shell in the selected worktree"
         retro.desktop.sessions -> retro.desktop.ideState "Publishes normalized session state and capability changes"
+        retro.desktop.sessions -> retro.desktop.debugTarget "Publishes the scoped machine descriptor, negotiated timing capabilities, and ordered memory-map revisions"
+        retro.desktop.debugTarget -> retro.desktop.debugProfiles "Resolves the selected CPU variant, reference timing, and platform presentation profile"
+        retro.desktop.debugTarget -> retro.workspaceFiles "Reads and persists the user's debugger display byte order"
+        retro.desktop.debugTarget -> retro.desktop.ideState "Publishes the resolved selected-target debugger state, effective display order, and safe raw fallback"
+        retro.desktop.debugProfiles -> retro.bundleStore "Reads optional declarative display profiles from the leased, verified package version"
         retro.desktop.sessions -> retro.desktop.emulation "Supplies negotiated media streams independently of control traffic"
         retro.desktop.shell -> retro.desktop.emulation "Opens the Emulation document"
         retro.desktop.shell -> retro.desktop.debugger "Opens debugging and console tools"
@@ -215,6 +234,7 @@ workspace "Retro IDE" "Shared emulator IDE with an implemented workbench and a s
         retro.desktop.launch -> retro.desktop.sessions "Requests launch or attach using resolved artifacts"
         retro.desktop.emulation -> retro.desktop.viewModels "Binds registered views for selected-session media and input requests"
         retro.desktop.debugger -> retro.desktop.viewModels "Binds registered views for debugger queries and commands"
+        retro.desktop.debugger -> retro.desktop.commands "Invokes scoped bank selection and byte-order presentation commands"
         retro.desktop.artifacts -> retro.desktop.viewModels "Binds registered views for media, snapshot, test, and diagnostic requests"
         retro.desktop.agentActivity -> retro.desktop.viewModels "Binds registered views for scoped agent requests"
         retro.desktop.agentGateway -> aiAgent "Starts or attaches a configured scoped agent" "Configured process and MCP stdio where supported"
@@ -230,10 +250,10 @@ workspace "Retro IDE" "Shared emulator IDE with an implemented workbench and a s
         aiAgent -> uae "Uses the scoped UAE MCP boundary when available" "Planned MCP"
 
         retro.desktop.sessions -> retro.desktop.catalog "Resolves the selected adapter and invokes normalized operations"
-        retro.desktop.catalog -> retro.desktop.sessions "Exposes the negotiated session and optional capability ports"
+        retro.desktop.catalog -> retro.desktop.sessions "Exposes the negotiated session, optional machine descriptor, and capability ports"
         retro.desktop.bundleManager -> buckets "Fetches configured Git sources and reads versioned manifests" "Git and JSON"
         retro.desktop.bundleManager -> emulatorReleases "Downloads the archive named for the compatible host target" "HTTPS"
-        retro.desktop.bundleManager -> retro.bundleStore "Installs verified files and receipts atomically and caches valid catalog metadata"
+        retro.desktop.bundleManager -> retro.bundleStore "Installs verified binaries, bindings, optional debugger profile data and receipts atomically"
         retro.desktop.catalog -> retro.workspaceFiles "Reads the project's pinned bundle version and manifest revision"
         retro.desktop.catalog -> retro.bundleStore "Resolves verified local entry points and holds the selected version for the session"
         retro.desktop.catalog -> retro.desktop.uaeAdapter "Resolves UAE presets"
@@ -284,11 +304,15 @@ workspace "Retro IDE" "Shared emulator IDE with an implemented workbench and a s
             autoLayout lr
         }
         component retro.desktop "DesktopComponents" "IDE responsibilities in the desktop container" {
-            include developer retro.desktop.shell retro.desktop.commands retro.desktop.localizer retro.desktop.localeCatalog retro.desktop.controller retro.desktop.documentController retro.desktop.unitOfWork retro.desktop.viewModels retro.desktop.documentViews retro.desktop.sourceEditor retro.desktop.workspaceExplorer retro.desktop.sourceControl retro.desktop.gitIntegration retro.desktop.terminal retro.desktop.languageServices retro.desktop.uiDispatcher retro.desktop.ideState retro.desktop.launch retro.desktop.sessions retro.desktop.emulation retro.desktop.debugger retro.desktop.artifacts retro.desktop.agentActivity retro.desktop.agentGateway retro.desktop.mcpHost retro.desktop.emulators retro.desktop.bundleManager retro.desktop.catalog retro.workspaceFiles retro.workspaceContent retro.bundleStore retro.mcpStdio buildTools aiAgent buckets emulatorReleases gitRemotes languageServers
+            include developer retro.desktop.shell retro.desktop.commands retro.desktop.localizer retro.desktop.localeCatalog retro.desktop.controller retro.desktop.documentController retro.desktop.unitOfWork retro.desktop.viewModels retro.desktop.documentViews retro.desktop.sourceEditor retro.desktop.workspaceExplorer retro.desktop.sourceControl retro.desktop.gitIntegration retro.desktop.terminal retro.desktop.languageServices retro.desktop.uiDispatcher retro.desktop.ideState retro.desktop.launch retro.desktop.sessions retro.desktop.emulation retro.desktop.debugger retro.desktop.debugTarget retro.desktop.debugProfiles retro.desktop.artifacts retro.desktop.agentActivity retro.desktop.agentGateway retro.desktop.mcpHost retro.desktop.emulators retro.desktop.bundleManager retro.desktop.catalog retro.workspaceFiles retro.workspaceContent retro.bundleStore retro.mcpStdio buildTools aiAgent buckets emulatorReleases gitRemotes languageServers
             autoLayout lr
         }
         component retro.desktop "AdapterComponents" "Pinned bundle and session routing for the three adapter designs" {
-            include retro.desktop.launch retro.desktop.sessions retro.desktop.catalog retro.desktop.uaeAdapter retro.desktop.viceAdapter retro.desktop.viceSharpAdapter retro.workspaceFiles retro.bundleStore uae vice viceSharp
+            include retro.desktop.launch retro.desktop.sessions retro.desktop.catalog retro.desktop.uaeAdapter retro.desktop.viceAdapter retro.desktop.viceSharpAdapter retro.desktop.debugTarget retro.workspaceFiles retro.bundleStore uae vice viceSharp
+            autoLayout lr
+        }
+        component retro.desktop "PackageDebuggerComponents" "Installed package metadata, active machine descriptors, and debugger presentation" {
+            include developer retro.desktop.emulators retro.desktop.bundleManager retro.bundleStore retro.desktop.catalog retro.desktop.sessions retro.desktop.debugTarget retro.desktop.debugProfiles retro.workspaceFiles retro.desktop.ideState retro.desktop.viewModels retro.desktop.debugger
             autoLayout lr
         }
         dynamic retro.desktop "CommandDispatch" "A Toolkit command raises an event on its registered view and the controller returns the CQRS result to that view through Avalonia" {
@@ -480,6 +504,38 @@ workspace "Retro IDE" "Shared emulator IDE with an implemented workbench and a s
             retro.desktop.catalog -> retro.desktop.sessions "Return the operation result and event updates"
             retro.desktop.sessions -> retro.desktop.ideState "Reconcile operation and state revisions"
             retro.desktop.sessions -> retro.desktop.emulation "Deliver the selected bounded video stream separately from control events"
+            autoLayout lr
+        }
+        dynamic retro.desktop "DebuggerMachineDescription" "Bind live machine metadata and a verified package profile to the selected debugger target" {
+            retro.desktop.sessions -> retro.desktop.catalog "Resolve the pinned adapter binding and negotiate the descriptor capability"
+            retro.desktop.catalog -> retro.bundleStore "Load the binding from the leased, verified installed version"
+            retro.desktop.catalog -> retro.desktop.viceSharpAdapter "Request the active machine of the authorized attach session"
+            retro.desktop.viceSharpAdapter -> viceSharp "Read the configured CPU, machine mapping and supported observations through the backend interface"
+            viceSharp -> retro.desktop.viceSharpAdapter "Return available live session data and negotiated capabilities"
+            retro.desktop.viceSharpAdapter -> retro.desktop.catalog "Normalize available data into the versioned descriptor and scoped map revision"
+            retro.desktop.catalog -> retro.desktop.sessions "Return the negotiated descriptor or a stable unavailable result"
+            retro.desktop.sessions -> retro.desktop.debugTarget "Bind only the selected instance and apply its current map revision"
+            retro.desktop.debugTarget -> retro.desktop.debugProfiles "Resolve the exact CPU variant and declared platform profile"
+            retro.desktop.debugProfiles -> retro.bundleStore "Read declared profile data from the verified package if required"
+            retro.desktop.debugTarget -> retro.workspaceFiles "Read the user's saved display byte-order preference"
+            retro.desktop.debugTarget -> retro.desktop.ideState "Publish scoped debugger rows or an available raw view"
+            retro.desktop.viewModels -> retro.desktop.ideState "Observe the target context, address limits and available operations"
+            retro.desktop.debugger -> retro.desktop.viewModels "Render target-specific registers, disassembly, memory and timing"
+            autoLayout lr
+        }
+        dynamic retro.desktop "DebuggerMemoryDisplay" "Inspect a selected bank and apply the saved multibyte display interpretation" {
+            developer -> retro.desktop.debugger "Select an address space and bank, then choose Emulator default, Little-endian or Big-endian"
+            retro.desktop.debugger -> retro.desktop.commands "Invoke the registered scoped debugger and presentation commands"
+            retro.desktop.commands -> retro.desktop.viewModels "Capture the selected instance, CPU, map revision and display choice"
+            retro.desktop.viewModels -> retro.desktop.controller "Send the registered view request and captured context"
+            retro.desktop.controller -> retro.desktop.unitOfWork "Dispatch the typed inspection or preference operation"
+            retro.desktop.unitOfWork -> retro.desktop.debugTarget "Recheck the selected scope and resolve the effective display order"
+            retro.desktop.debugTarget -> retro.workspaceFiles "Save the display preference for later debugger views"
+            retro.desktop.unitOfWork -> retro.desktop.sessions "Issue a bounded read using the selected space, bank and map revision"
+            retro.desktop.sessions -> retro.desktop.ideState "Publish the correlated raw bytes with the actual map and instance identity"
+            retro.desktop.debugTarget -> retro.desktop.ideState "Project multibyte display values using the effective display order"
+            retro.desktop.viewModels -> retro.desktop.ideState "Read the current bytes, rendered values and applicable scope"
+            retro.desktop.debugger -> retro.desktop.viewModels "Render the memory map, raw bytes and effective byte order"
             autoLayout lr
         }
         dynamic retro.desktop "CommandLocalization" "Changing the display language refreshes command labels and icons while preserving the registered gesture and action" {

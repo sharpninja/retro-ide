@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="scene">
+<title id="scene">Retro IDE · Memory uses saved Little-endian preference</title>
+<defs>
+<style id="ide-typography" xmlns="http://www.w3.org/2000/svg">
+      .ui { font: 14px "DejaVu Sans", sans-serif; }
+      .label { font: 13px "DejaVu Sans", sans-serif; }
+      .strong { font: bold 16px "DejaVu Sans", sans-serif; }
+      .mono { font: 15px "DejaVu Sans Mono", monospace; white-space: pre; }
+      .log { font: 13px "DejaVu Sans Mono", monospace; white-space: pre; }
+    </style>
+<g id="ide-workbench" xmlns="http://www.w3.org/2000/svg"><rect width="1440" height="900" fill="#202a2f" /><rect width="1440" height="44" fill="#192327" /><rect x="16" y="11" width="23" height="23" rx="4" fill="#edb77b" /><text x="22" y="28" class="strong" fill="#25201c">R</text><text x="51" y="28" class="strong" fill="#e6eaed">Retro IDE</text><rect x="580" y="9" width="280" height="27" rx="4" fill="#263338" stroke="#3a484d" /><text x="617" y="27" class="label" fill="#a8b5bb">Search commands and files</text><text x="795" y="27" class="label" fill="#b3bfc3">Ctrl+Q</text><rect y="44" width="1440" height="36" fill="#242f34" /><g class="ui" fill="#e6eaed"><text x="19" y="67">File</text><text x="73" y="67">Edit</text><text x="127" y="67">View</text><text x="181" y="67">Project</text><text x="259" y="67">Build</text><text x="321" y="67">Debug</text><text x="383" y="67">Test</text><text x="437" y="67">Window</text><text x="507" y="67">Help</text></g><rect y="80" width="1440" height="42" fill="#28353a" /><rect x="52" y="87" width="106" height="27" rx="3" fill="#182429" stroke="#43545a" /><rect x="171" y="87" width="153" height="27" rx="3" fill="#182429" stroke="#43545a" /><rect x="335" y="87" width="78" height="27" rx="3" fill="#263f3d" stroke="#47746a" /><g class="label" fill="#e6eaed"><text x="63" y="105">Debug</text><text x="640" y="105">Build Project</text><text x="751" y="105">Run Tests</text></g><rect y="122" width="38" height="748" fill="#1a2429" /><text class="label" fill="#a6b5bc" transform="translate(24 393) rotate(-90)">Guest Explorer</text><g fill="none" stroke="#a8b5bb" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><use href="#ide-icon-search" x="592" y="14" /><use href="#ide-icon-minus" x="1337" y="14" /><use href="#ide-icon-window" x="1371" y="14" /><use href="#ide-icon-close" x="1405" y="14" /><use href="#ide-icon-save" x="21" y="92" /><use href="#ide-icon-down" x="136" y="92" /><use href="#ide-icon-down" x="302" y="92" /><use href="#ide-icon-play" x="341" y="92" stroke="#a7dad0" /><use href="#ide-icon-tree" x="10" y="137" /><use href="#ide-icon-screen" x="10" y="174" /><use href="#ide-icon-search" x="10" y="211" /></g><rect x="43" y="127" width="971" height="531" fill="#141e23" stroke="#46555b" /><rect x="1023" y="127" width="407" height="531" fill="#182327" stroke="#46555b" /><rect x="43" y="667" width="1387" height="196" fill="#172226" stroke="#46555b" /><rect y="873" width="1440" height="27" fill="#293f42" /><text x="1329" y="891" class="label" fill="#e6eaed">Local</text></g>
+<g id="ide-icon-pause" xmlns="http://www.w3.org/2000/svg"><path d="M6 3v10m4-10v10" /></g>
+<g id="ide-icon-stop" xmlns="http://www.w3.org/2000/svg"><path d="M4 4h8v8H4z" /></g>
+<g id="ide-icon-step" xmlns="http://www.w3.org/2000/svg"><path d="M3 4h8m-4 5 3 3 3-3m-3-6v9" /></g>
+<symbol id="ide-tab-strip" viewBox="0 0 1 36" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><rect width="1" height="36" fill="#202b30" /></symbol>
+<g id="ide-icon-file" xmlns="http://www.w3.org/2000/svg"><path d="M4 2h5l3 3v9H4zM9 2v4h3" /></g>
+<g id="ide-icon-screen" xmlns="http://www.w3.org/2000/svg"><path d="M2 3h12v8H2zM5 14h6m-3-3v3" /></g>
+<symbol id="ide-tab-active" viewBox="0 0 1 36" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><rect width="1" height="36" fill="#303b40" /><rect y="34" width="1" height="2" fill="#edb77b" /></symbol>
+<g id="ide-icon-close" xmlns="http://www.w3.org/2000/svg"><path d="M4 4l8 8M12 4l-8 8" /></g>
+<g id="ide-icon-down" xmlns="http://www.w3.org/2000/svg"><path d="m4 6 4 4 4-4" /></g>
+<symbol id="ide-tool-header-fill" viewBox="0 0 1 32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><rect width="1" height="32" fill="#28343a" /></symbol>
+<g id="ide-tool-header-accent" xmlns="http://www.w3.org/2000/svg"><rect width="3" height="32" fill="#edb77b" /></g>
+<g id="ide-tool-header-actions" fill="none" stroke="#a8b5bb" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><use href="#ide-icon-down" /><use href="#ide-icon-close" x="50" /></g>
+<g id="ide-icon-pin" xmlns="http://www.w3.org/2000/svg"><path d="M6 3h5l-1 5 2 2H4l2-2zM8 10v4" /></g>
+<symbol id="ide-debug-control" viewBox="0 0 160 30" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><rect x="0.5" y="0.5" width="159" height="29" rx="3" fill="#263338" stroke="#52636a" vector-effect="non-scaling-stroke" /></symbol>
+<symbol id="ide-debug-control-selected" viewBox="0 0 160 30" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><rect x="0.5" y="0.5" width="159" height="29" rx="3" fill="#304b49" stroke="#78b3a9" vector-effect="non-scaling-stroke" /></symbol>
+<symbol id="ide-debug-table-heading" viewBox="0 0 40 32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="32" fill="#29363c" /><path d="M0 31.5h40" stroke="#52636a" vector-effect="non-scaling-stroke" /></symbol>
+<symbol id="ide-debug-table-row" viewBox="0 0 40 32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="32" fill="#1c292e" /><path d="M0 31.5h40" stroke="#2c3a40" vector-effect="non-scaling-stroke" /></symbol>
+<g id="ide-icon-search" xmlns="http://www.w3.org/2000/svg"><path d="M10 10l4 4M11 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0" /></g>
+<g id="ide-icon-minus" xmlns="http://www.w3.org/2000/svg"><path d="M3 8h10" /></g>
+<g id="ide-icon-window" xmlns="http://www.w3.org/2000/svg"><path d="M3 3h10v10H3z" /></g>
+<g id="ide-icon-save" xmlns="http://www.w3.org/2000/svg"><path d="M3 2h8l2 2v10H3zM5 2v4h5V2M5 14V9h6v5" /></g>
+<g id="ide-icon-play" xmlns="http://www.w3.org/2000/svg"><path d="M5 3l8 5-8 5z" /></g>
+<g id="ide-icon-tree" xmlns="http://www.w3.org/2000/svg"><path d="M3 3v10m0-8h5m-5 6h5m0-8h5v4H8zm0 6h5v4H8z" /></g>
+</defs>
+<use href="#ide-workbench" x="0" y="0"/>
+<text x="208" y="28" class="ui" fill="#a8b5bb" xml:space="preserve">C64 Demo</text>
+<text x="181" y="105" class="label" fill="#e6eaed" xml:space="preserve">VICE / C64</text>
+<text x="361" y="105" class="label" fill="#e6eaed" xml:space="preserve">Continue</text>
+<use href="#ide-icon-pause" x="428" y="92" fill="none" stroke="#e3e9e9" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<use href="#ide-icon-stop" x="458" y="92" fill="none" stroke="#e3e9e9" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<use href="#ide-icon-step" x="488" y="92" fill="none" stroke="#e3e9e9" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="513" y="105" class="label" fill="#e3e9e9" xml:space="preserve">Step into</text>
+<text x="1190" y="105" class="label" fill="#e9c396" xml:space="preserve">C64-vice</text>
+<text x="1303" y="105" class="label" fill="#e6eaed" xml:space="preserve">Paused</text>
+<use href="#ide-tab-strip" x="43" y="127" width="971" height="36"/>
+<use href="#ide-icon-file" x="53" y="137" fill="none" stroke="#a6b5bc" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="75" y="150" class="label" fill="#a6b5bc" xml:space="preserve">main.asm</text>
+<use href="#ide-icon-file" x="175" y="137" fill="none" stroke="#a6b5bc" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="197" y="150" class="label" fill="#a6b5bc" xml:space="preserve">vice.dev</text>
+<use href="#ide-icon-screen" x="297" y="137" fill="none" stroke="#a6b5bc" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="319" y="150" class="label" fill="#a6b5bc" xml:space="preserve">Emulation</text>
+<use href="#ide-icon-file" x="427" y="137" fill="none" stroke="#a6b5bc" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="449" y="150" class="label" fill="#a6b5bc" xml:space="preserve">Disassembly</text>
+<use href="#ide-icon-file" x="573" y="137" fill="none" stroke="#a6b5bc" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="595" y="150" class="label" fill="#a6b5bc" xml:space="preserve">Test Results</text>
+<use href="#ide-tab-active" x="718" y="127" width="105" height="36"/>
+<use href="#ide-icon-file" x="727" y="137" fill="none" stroke="#fff0df" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="749" y="150" class="label" fill="#fff0df" xml:space="preserve">Memory</text>
+<use href="#ide-icon-close" x="801" y="137" fill="none" stroke="#fff0df" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<use href="#ide-icon-down" x="989" y="137" fill="none" stroke="#a8b5bb" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<use href="#ide-tool-header-fill" x="1023" y="127" width="407" height="32"/>
+<use href="#ide-tool-header-accent" x="1023" y="127"/>
+<text x="1036" y="148" class="label" fill="#e6eaed" xml:space="preserve">Machine</text>
+<use href="#ide-tool-header-actions" x="1355" y="135"/>
+<use href="#ide-icon-pin" x="1380" y="135" fill="none" stroke="#a8b5bb" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1040" y="185" class="log" fill="#ccdadf" xml:space="preserve">Target      C64-vice</text>
+<text x="1040" y="213" class="log" fill="#ccdadf" xml:space="preserve">CPU         MOS 6510 (6502 family)</text>
+<text x="1040" y="241" class="log" fill="#ccdadf" xml:space="preserve">Descriptor  v1 / map r17</text>
+<text x="1040" y="269" class="log" fill="#ccdadf" xml:space="preserve">Space       CPU, 16-bit</text>
+<text x="1040" y="297" class="log" fill="#ccdadf" xml:space="preserve">Native      little-endian</text>
+<use href="#ide-tool-header-fill" x="1023" y="368" width="407" height="32"/>
+<use href="#ide-tool-header-accent" x="1023" y="368"/>
+<text x="1036" y="389" class="label" fill="#e6eaed" xml:space="preserve">Memory map</text>
+<use href="#ide-tool-header-actions" x="1355" y="376"/>
+<use href="#ide-icon-pin" x="1380" y="376" fill="none" stroke="#a8b5bb" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1040" y="426" class="log" fill="#ccdadf" xml:space="preserve">$C000-$CFFF  RAM, read/write</text>
+<text x="1040" y="454" class="log" fill="#ccdadf" xml:space="preserve">$D000-$DFFF  I/O in CPU view</text>
+<text x="1040" y="482" class="log" fill="#ccdadf" xml:space="preserve">$D000-$DFFF  RAM in physical bank</text>
+<text x="1040" y="510" class="log" fill="#ccdadf" xml:space="preserve">I/O requires explicit device access</text>
+<text x="66" y="195" class="strong" fill="#e6eaed" xml:space="preserve">Memory</text>
+<text x="66" y="221" class="label" fill="#b4c2c7" xml:space="preserve">MOS 6510 | CPU view | RAM region $C000-$CFFF | map r17</text>
+<use href="#ide-debug-control" x="65" y="238" width="152" height="30"/>
+<text x="75" y="258" class="label" fill="#e6eaed" xml:space="preserve">Address  $C000</text>
+<use href="#ide-debug-control" x="226" y="238" width="165" height="30"/>
+<text x="236" y="258" class="label" fill="#e6eaed" xml:space="preserve">Bank: CPU view</text>
+<use href="#ide-debug-control" x="400" y="238" width="145" height="30"/>
+<text x="410" y="258" class="label" fill="#e6eaed" xml:space="preserve">Group: 16-bit</text>
+<text x="66" y="301" class="label" fill="#b4c2c7" xml:space="preserve">Display byte order</text>
+<use href="#ide-debug-control" x="203" y="281" width="145" height="30"/>
+<text x="214" y="301" class="label" fill="#e6eaed" xml:space="preserve">Emulator default</text>
+<use href="#ide-debug-control-selected" x="354" y="281" width="145" height="30"/>
+<text x="365" y="301" class="label" fill="#e6eaed" xml:space="preserve">Little-endian</text>
+<use href="#ide-debug-control" x="505" y="281" width="145" height="30"/>
+<text x="516" y="301" class="label" fill="#e6eaed" xml:space="preserve">Big-endian</text>
+<text x="675" y="301" class="label" fill="#a7dad0" xml:space="preserve">Effective: Little-endian</text>
+<use href="#ide-debug-table-heading" x="65" y="326" width="923" height="32"/>
+<text x="78" y="347" class="label" fill="#bfced3" xml:space="preserve">Address</text>
+<text x="231" y="347" class="label" fill="#bfced3" xml:space="preserve">Raw bytes</text>
+<text x="536" y="347" class="label" fill="#bfced3" xml:space="preserve">16-bit values</text>
+<text x="823" y="347" class="label" fill="#bfced3" xml:space="preserve">Text</text>
+<use href="#ide-debug-table-row" x="65" y="358" width="923" height="32"/>
+<text x="78" y="379" class="log" fill="#e6eaed" xml:space="preserve">$C000</text>
+<text x="231" y="379" class="log" fill="#e6eaed" xml:space="preserve">12 34 41 42 43 44 00 FF</text>
+<text x="536" y="379" class="log" fill="#e6eaed" xml:space="preserve">3412 4241 4443 FF00</text>
+<text x="823" y="379" class="log" fill="#e6eaed" xml:space="preserve">.4ABCD..</text>
+<use href="#ide-debug-table-row" x="65" y="390" width="923" height="32"/>
+<text x="78" y="411" class="log" fill="#e6eaed" xml:space="preserve">$C008</text>
+<text x="231" y="411" class="log" fill="#e6eaed" xml:space="preserve">41 42 55 AA 68 65 6C 6C</text>
+<text x="536" y="411" class="log" fill="#e6eaed" xml:space="preserve">4241 AA55 6568 6C6C</text>
+<text x="823" y="411" class="log" fill="#e6eaed" xml:space="preserve">ABU.hell</text>
+<use href="#ide-debug-table-row" x="65" y="422" width="923" height="32"/>
+<text x="78" y="443" class="log" fill="#e6eaed" xml:space="preserve">$C010</text>
+<text x="231" y="443" class="log" fill="#e6eaed" xml:space="preserve">6F 00 12 34 0D 0A 02 01</text>
+<text x="536" y="443" class="log" fill="#e6eaed" xml:space="preserve">006F 3412 0A0D 0102</text>
+<text x="823" y="443" class="log" fill="#e6eaed" xml:space="preserve">o..4....</text>
+<text x="66" y="611" class="label" fill="#b4c2c7" xml:space="preserve">Little-endian saved as your debugger display preference.</text>
+<use href="#ide-tool-header-fill" x="43" y="667" width="1387" height="32"/>
+<use href="#ide-tool-header-accent" x="43" y="667"/>
+<text x="56" y="688" class="label" fill="#e6eaed" xml:space="preserve">Output</text>
+<use href="#ide-tool-header-actions" x="1355" y="675"/>
+<use href="#ide-icon-pin" x="1380" y="675" fill="none" stroke="#a8b5bb" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="61" y="722" class="label" fill="#a8b5bb" xml:space="preserve">Show output from: Build / Debug    ▾</text>
+<text x="61" y="752" class="log" fill="#c4d0d4" xml:space="preserve">Paused inspection. RAM data is available in the selected address space.</text>
+<use href="#ide-tab-strip" x="43" y="827" width="1387" height="36"/>
+<use href="#ide-tab-active" x="44" y="827" width="78" height="36"/>
+<text x="56" y="850" class="label" fill="#fff0df" xml:space="preserve">Output</text>
+<text x="135" y="850" class="label" fill="#a6b5bc" xml:space="preserve">Problems</text>
+<text x="230" y="850" class="label" fill="#a6b5bc" xml:space="preserve">Serial Console</text>
+<text x="373" y="850" class="label" fill="#a6b5bc" xml:space="preserve">Breakpoints</text>
+<text x="492" y="850" class="label" fill="#a6b5bc" xml:space="preserve">MCP Activity</text>
+<text x="16" y="891" class="label" fill="#e6eaed" xml:space="preserve">Paused</text>
+<text x="530" y="891" class="label" fill="#d8e1df" xml:space="preserve">Memory uses saved Little-endian preference</text>
+<text x="1120" y="891" class="label" fill="#e6eaed" xml:space="preserve">C64   •   6510 / VIC-II</text>
+</svg>

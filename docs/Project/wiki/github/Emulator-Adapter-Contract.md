@@ -53,7 +53,7 @@ A capability descriptor identifies a namespaced feature and version, its subject
 
 | Optional port | Requests and data |
 | --- | --- |
-| Execution and timing | Run, pause, step, reset, power off, query state and timing, and configure an advertised speed or throttle mode. Step in, over, out, or backward are separate capabilities. |
+| Execution and timing | Run, pause, step, reset, power off, query state and timing, and configure an advertised speed or throttle mode. Instruction, cycle, and phase stepping, along with live bus observations, have separate capability declarations. |
 | CPU and memory inspection | Enumerate CPUs, registers, address spaces and banks. Read or write registers and bounded address ranges. Addresses identify a space, optional bank, and offset. Machine metadata includes width, byte order, and relevant alignment rules. Reads distinguish supported side-effect-free inspection from reads that can affect guest devices. |
 | Debugger and trace | List, set, enable, and remove breakpoints and watchpoints. Observe stopped events, continue from a stop, and read disassembly or instruction traces when supported. IDE-owned symbols and source mapping can use raw inspection data. |
 | Video | Enumerate display outputs, capture a frame, or subscribe to a live stream. Declare dimensions, pixel format, stride, presentation timing, and format changes. Frame capture and live streaming are distinct capabilities. |
@@ -75,6 +75,18 @@ public interface IMemoryPort : IEmulatorPort
         MutationRequest<MemoryWriteRequest> request, CancellationToken cancellationToken);
 }
 ```
+
+## Debugger machine description
+
+The installed package may name versioned, declarative debugger presentation profiles in its `debuggerProfiles` manifest entries. Install validates the profile paths and schema inside the hash-verified archive. A project pin retains the same binding and profile data for the lifetime of the session.
+
+At launch, attach, or reconnect the adapter supplies the active machine description through the negotiated session contract. The descriptor identifies the instance, CPU or CPUs, exact CPU model and variant, clock domains, default byte order, display profile, and the address width and units of each memory space. Regions carry bounds, access policy, and applicable bank, segment, mirror, or overlay identity. Map updates carry a revision. The session reloads the descriptor and current map after an event gap. Bounded memory operations use the selected instance, CPU, space, mapping, and revision.
+
+Retro IDE resolves versioned register, flag, opcode, addressing, and timing metadata for the 6502, 6809, Z80, 8080, 8086, 6800, and 68000 families. Disassembly uses the active CPU model and platform address format. Timing views label reference values separately from observed cycles, phases, and bus events. The debugger shows capability availability at the selected CPU.
+
+The memory view displays raw bytes and typed values in separate columns. **Emulator default** uses the active address-space order or the machine or CPU default when supplied. **Little-endian** and **Big-endian** persist as user display choices. The selected order applies to typed values. Instruction decoding follows the selected CPU configuration. If the descriptor or platform profile is unavailable, the workbench identifies the limitation and exposes advertised bounded raw inspection.
+
+The [package-backed debugger storyboard](design/_manifest.md#stb17-package-debugger) shows the package pin, the live description, target changes, bank selection, clock capability availability, and all three byte-order settings. QBrain tracks the CPU and view contract under `FR-RETRO-016`, `TR-RETRO-CPU-016`, and `TEST-RETRO-016`, and the descriptor contract under `FR-RETRO-017`, `TR-RETRO-MACHINE-017`, and `TEST-RETRO-017`.
 
 ## Commands, events, and streams
 
