@@ -39,6 +39,8 @@ internal static class GitHistorySurface
             Button(WorkbenchCommands.ShowGitRefHistory, view.ShowReferenceCommand),
             Button(WorkbenchCommands.CreateGitBranch, view.CreateBranchCommand),
             Button(WorkbenchCommands.SwitchGitBranch, view.SwitchBranchCommand),
+            Button(WorkbenchCommands.RenameGitBranch, view.RenameBranchCommand),
+            Button(WorkbenchCommands.DeleteGitBranch, view.DeleteBranchCommand),
         } };
         var refPane = CreateRefPane(view, refActions);
         Place(refPane, 1, 0);
@@ -84,7 +86,7 @@ internal static class GitHistorySurface
 
     private static void ConnectBranchDialog(GitHistoryViewModel view, Control surface)
     {
-        Func<string, CancellationToken, Task<GitBranchDialog.Choice?>> chooser = PromptAsync;
+        Func<GitBranchDialog.Prompt, CancellationToken, Task<GitBranchDialog.Choice?>> chooser = PromptAsync;
         surface.AttachedToVisualTree += (_, _) => view.PromptBranchAsync = chooser;
         surface.DetachedFromVisualTree += (_, _) =>
         {
@@ -92,11 +94,11 @@ internal static class GitHistorySurface
                 view.PromptBranchAsync = null;
         };
 
-        async Task<GitBranchDialog.Choice?> PromptAsync(string start, CancellationToken token)
+        async Task<GitBranchDialog.Choice?> PromptAsync(GitBranchDialog.Prompt prompt, CancellationToken token)
         {
             if (token.IsCancellationRequested || TopLevel.GetTopLevel(surface) is not Window window)
                 return null;
-            var dialog = new GitBranchDialog(view.Localization, start) { FlowDirection = window.FlowDirection };
+            var dialog = new GitBranchDialog(view.Localization, prompt) { FlowDirection = window.FlowDirection };
             using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
             {
                 if (dialog.IsVisible)

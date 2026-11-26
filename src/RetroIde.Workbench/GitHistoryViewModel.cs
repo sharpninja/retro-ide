@@ -35,7 +35,7 @@ internal sealed partial class GitHistoryViewModel : ObservableObject, IView
     [ObservableProperty]
     public partial GitHistoryGraph.Row[] Rows { get; private set; }
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(ShowReferenceCommand), nameof(SwitchBranchCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ShowReferenceCommand), nameof(SwitchBranchCommand), nameof(RenameBranchCommand), nameof(DeleteBranchCommand))]
     public partial GitHistoryOperations.Reference? SelectedReference { get; set; }
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(InspectCommand))]

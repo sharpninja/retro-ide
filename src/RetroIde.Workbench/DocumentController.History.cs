@@ -71,6 +71,10 @@ internal sealed partial class DocumentController
                 CompleteAsync(view, _features.Git.CreateBranch, create, request),
             GitBranchOperations.SwitchInput branch when string.Equals(request.CommandId, _features.Git.SwitchBranch.Id, StringComparison.Ordinal) =>
                 CompleteAsync(view, _features.Git.SwitchBranch, branch, request),
+            GitBranchOperations.RenameInput rename when string.Equals(request.CommandId, _features.Git.RenameBranch.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.RenameBranch, rename, request),
+            GitBranchOperations.DeleteInput delete when string.Equals(request.CommandId, _features.Git.DeleteBranch.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.DeleteBranch, delete, request),
             _ => null,
         };
     }

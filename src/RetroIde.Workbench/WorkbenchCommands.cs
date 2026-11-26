@@ -43,6 +43,8 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor InspectGitCommit = Create("git.history.commit-details", "Ctrl+Alt+Enter");
     public static readonly CommandDescriptor CreateGitBranch = Create("git.branch.create", "Ctrl+Alt+B");
     public static readonly CommandDescriptor SwitchGitBranch = Create("git.branch.switch", "Ctrl+Alt+Shift+V");
+    public static readonly CommandDescriptor RenameGitBranch = Create("git.branch.rename", "Ctrl+Alt+Shift+N");
+    public static readonly CommandDescriptor DeleteGitBranch = Create("git.branch.delete", "Ctrl+Alt+Delete");
 
     // A document key binding can be active inside a main or floating workbench window.
     // All commands in this catalog can share that input route, so check them together.
@@ -50,7 +52,8 @@ internal static class WorkbenchCommands
         [FocusTool, OpenFolder, OpenProject, Save, Reveal, Search, Next, Previous, Replace, ReplaceAll, Undo, Redo, Close, Discard,
             OpenSourceControl, SelectRepository, RefreshGitStatus, InitializeRepository, CloneRepository, OpenGitDiff, StageGitFile, UnstageGitFile,
             RefreshGitDiff, StageGitHunks, UnstageGitHunks, CreateCommit, AmendCommit, OpenGitHistory, CurrentGitHistory,
-            ShowGitRefHistory, PreviousGitHistoryPage, NextGitHistoryPage, InspectGitCommit, CreateGitBranch, SwitchGitBranch];
+            ShowGitRefHistory, PreviousGitHistoryPage, NextGitHistoryPage, InspectGitCommit, CreateGitBranch, SwitchGitBranch,
+            RenameGitBranch, DeleteGitBranch];
 
     internal static void ValidateBundledResources()
     {

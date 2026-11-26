@@ -26,6 +26,8 @@ Open **Git History** from the Git menu or Source Control. The tab starts at the 
 
 Choose **New Branch** to create a local branch from the selected commit in Git History. With no commit selected, the dialog uses the current history anchor. Select **Switch to the new branch** to check it out as part of creation. Choose a local branch and **Switch Branch** to check it out. Git rejects a switch that would overwrite local files or take a branch checked out elsewhere. Save affected unsaved editor buffers before switching. Retro IDE reloads affected clean tabs after a successful switch. [Git branch](https://git-scm.com/docs/git-branch) · [Git switch](https://git-scm.com/docs/git-switch)
 
+Choose **Rename Branch** to move the local branch and keep its tracking configuration and reflog. A branch checked out in another worktree must be renamed from that checkout. **Delete Merged Branch** confirms the exact branch name and asks Git to delete it only when it is fully merged into its upstream or, without an upstream, the current HEAD. A checked-out branch cannot be deleted. [Git branch](https://git-scm.com/docs/git-branch)
+
 ## Workflows
 
 | Area | IDE commands and views |

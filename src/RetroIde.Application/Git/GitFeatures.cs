@@ -117,6 +117,14 @@ internal sealed class GitFeatures
         "Switch to an existing local branch with its expected head.",
         GitBranchOperations.SwitchAsync, typeof(GitBranchOperations.BranchResult), mutation: true);
 
+    public Feature<GitBranchOperations.RenameInput> RenameBranch { get; } = new("git.branch.rename", "git_rename_branch",
+        "Rename a reviewed local branch, preserving its Git configuration and reflog.",
+        GitBranchOperations.RenameAsync, typeof(GitBranchOperations.MaintenanceResult), mutation: true);
+
+    public Feature<GitBranchOperations.DeleteInput> DeleteBranch { get; } = new("git.branch.delete", "git_delete_branch",
+        "Delete a reviewed local branch that is merged and not checked out.",
+        GitBranchOperations.DeleteAsync, typeof(GitBranchOperations.MaintenanceResult), mutation: true);
+
     internal GitFeatures(Func<GitSelection, CancellationToken, Task<GitStatus?>>? readStatus = null)
     {
         Status = new("git.status.read", "git_get_status", "Read the selected worktree's staged and working status.",

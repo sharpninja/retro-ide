@@ -4,7 +4,7 @@ using System.Text;
 namespace RetroIde.Application.Git;
 
 /// <summary>Creates and switches local branches using the selected native checkout.</summary>
-internal static class GitBranchOperations
+internal static partial class GitBranchOperations
 {
     private const string LocalRefs = "refs/heads/";
     internal sealed record CreateInput(string WorktreePath, string BranchName, string? StartCommit = null, bool Switch = false);
@@ -27,7 +27,7 @@ internal static class GitBranchOperations
             return new("git_worktree_mismatch", "The requested worktree differs from the current selection.");
         if (!SamePath(selection.ScopeRoot, repo.WorktreePath))
             return new("git_branch_scope_required", "Open the worktree root before changing local branches.");
-        if (string.IsNullOrWhiteSpace(name) || name.StartsWith('-') || name.StartsWith(LocalRefs, StringComparison.Ordinal) || name.Contains('\0'))
+        if (!IsPotentialLocalName(name))
             return InvalidName();
         if ((!create && expected is null) || (expected is not null && !GitHistoryOperations.IsObjectId(expected)))
             return new("git_branch_object_invalid", "Supply a full commit object ID.");
@@ -37,8 +37,7 @@ internal static class GitBranchOperations
             var found = await NativeGit.DiscoverAsync(selection.ScopeRoot, "", token).ConfigureAwait(false);
             if (found is null || !NativeGit.IsSameWorktree(found.Repository, repo))
                 return new("git_repository_unavailable", "The selected worktree is unavailable.");
-            if (await RunAsync(repo, token, "check-ref-format", LocalRefs + name).ConfigureAwait(false) is null ||
-                await RunAsync(repo, token, "check-ref-format", "--branch", name).ConfigureAwait(false) is null)
+            if (!await IsLocalNameAsync(repo, name, token).ConfigureAwait(false))
                 return InvalidName();
 
             var refs = await GitHistoryOperations.ReadRefsAsync(repo, token).ConfigureAwait(false);
@@ -121,7 +120,7 @@ internal static class GitBranchOperations
                 head = checkout?.Head ?? plan.Target;
             }
             if (native.ExitCode != 0 && !changedCheckout)
-                return NativeFailure(native, plan.SwitchBranch);
+                return NativeFailure(native, plan.SwitchBranch ? "git_branch_switch_failed" : "git_branch_create_failed");
             changedCheckout = plan.SwitchBranch;
             var summary = native.ExitCode != 0 ? "Git switched branches, but the post-checkout hook reported an error." :
                 plan.SwitchBranch ? "Git branch switched." : "Git branch created.";
@@ -142,7 +141,7 @@ internal static class GitBranchOperations
     private static FeatureOutcome? ValidateRef(GitHistoryOperations.RefState refs, GitWorktree repo, string name, string? expected, bool create)
     {
         var fullName = LocalRefs + name;
-        var local = Array.Find(refs.Refs, reference => string.Equals(reference.Name, fullName, StringComparison.Ordinal));
+        var local = FindLocalRef(refs, name);
         if (create)
             return local is null ? null : new("git_branch_exists", "A local branch already has that name.");
         if (local is null)
@@ -167,13 +166,23 @@ internal static class GitBranchOperations
         return output?.Split('\0', StringSplitOptions.RemoveEmptyEntries);
     }
 
-    private static FeatureOutcome NativeFailure(NativeGit.CommandResult result, bool switchBranch)
+    private static FeatureOutcome NativeFailure(NativeGit.CommandResult result, string code)
     {
         var message = string.IsNullOrWhiteSpace(result.Error) ? Encoding.UTF8.GetString(result.Output) : result.Error;
         var diagnostic = string.Concat(message.Take(600).Where(character => !char.IsControl(character) || character is '\n' or '\t')).Trim();
-        return new(switchBranch ? "git_branch_switch_failed" : "git_branch_create_failed",
-            diagnostic.Length > 0 ? diagnostic : "Git declined the branch operation.");
+        return new(code, diagnostic.Length > 0 ? diagnostic : "Git declined the branch operation.");
     }
+
+    private static GitHistoryOperations.Reference? FindLocalRef(GitHistoryOperations.RefState refs, string name) =>
+        Array.Find(refs.Refs, reference => string.Equals(reference.Name, LocalRefs + name, StringComparison.Ordinal));
+
+    private static bool IsPotentialLocalName(string? name) => !string.IsNullOrWhiteSpace(name) &&
+        !name.StartsWith('-') && !name.StartsWith(LocalRefs, StringComparison.Ordinal) && !name.Contains('\0');
+
+    private static async Task<bool> IsLocalNameAsync(GitWorktree repo, string? name, CancellationToken token) =>
+        IsPotentialLocalName(name) &&
+        await RunAsync(repo, token, "check-ref-format", LocalRefs + name).ConfigureAwait(false) is not null &&
+        await RunAsync(repo, token, "check-ref-format", "--branch", name!).ConfigureAwait(false) is not null;
 
     private static bool SamePath(string left, string right) => string.Equals(left, right,
         OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);

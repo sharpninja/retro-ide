@@ -65,6 +65,8 @@ The Phase 03 candidate exposes native Git discovery, selection, status, file dif
 | `git_close_history` | The history tab’s `viewKey`, current workbench `context` | Closes the tab in the attached workbench. Requires a write-enabled attachment. |
 | `git_create_branch` | Selected `worktreePath`, local `branchName`, optional full `startCommit`, optional `switch`, current workbench `context` | Creates the branch at the reviewed commit or current HEAD. Switches only when requested. Requires a write-enabled attachment. |
 | `git_switch_branch` | Selected `worktreePath`, local `branchName`, target `expectedHead`, current workbench `context` | Switches to the existing local branch. Use the branch object ID from `git_list_refs` as `expectedHead`. Requires a write-enabled attachment. |
+| `git_rename_branch` | Selected `worktreePath`, local `branchName`, `expectedHead`, `newName`, current workbench `context` | Renames the reviewed local branch with its tracking configuration and reflog. Requires a write-enabled attachment. |
+| `git_delete_branch` | Selected `worktreePath`, local `branchName`, `expectedHead`, current workbench `context` | Deletes a reviewed, fully merged local branch. Requires a write-enabled attachment. |
 
 Selection is scoped to the attached workbench. Desktop commands and attached clients share the selection and status shown in Source Control and Project Explorer. On desktop restart, the workspace revalidates the saved checkout before issuing a new attachment. Select a worktree before reading status. If its selection changes while status is being prepared, refresh the context and read again. [Git integration](git-integration.md)
 
@@ -77,6 +79,8 @@ Commit and amend check the reviewed HEAD and index again before starting native 
 History and ref queries require the full worktree root to be open. A nonzero history offset requires an anchor. The history page limit defaults to 80 and supports 1 through 500 commits per call.
 
 Branch commands operate on the entire open worktree. A stale tip returns `git_branch_changed`. A branch checked out in another worktree returns `git_branch_in_use`. Save affected editor buffers if the operation returns `git_branch_editors_busy`.
+
+Rename protects branches checked out in another worktree. Delete returns `git_branch_in_use` for every checked-out branch and `git_branch_unmerged` when its commits are not fully merged. Refresh references after either operation.
 
 ## One feature registry
 

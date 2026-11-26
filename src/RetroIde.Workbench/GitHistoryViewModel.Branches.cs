@@ -7,7 +7,7 @@ namespace RetroIde.Workbench;
 internal sealed partial class GitHistoryViewModel
 {
     private bool _changingBranch;
-    internal Func<string, CancellationToken, Task<GitBranchDialog.Choice?>>? PromptBranchAsync { get; set; }
+    internal Func<GitBranchDialog.Prompt, CancellationToken, Task<GitBranchDialog.Choice?>>? PromptBranchAsync { get; set; }
 
     private bool CanCreateBranch() => !_changingBranch && Page?.Anchor is not null;
     private bool CanSwitchBranch() => !_changingBranch && SelectedReference?.Name.StartsWith("refs/heads/", StringComparison.Ordinal) == true;
@@ -20,7 +20,7 @@ internal sealed partial class GitHistoryViewModel
             return;
 
         var checkout = Page.Repository.WorktreePath;
-        if (await prompt(start, token).ConfigureAwait(true) is not { } choice || token.IsCancellationRequested)
+        if (await prompt(new GitBranchDialog.Prompt(start), token).ConfigureAwait(true) is not { } choice || token.IsCancellationRequested)
             return;
 
         await ChangeBranchAsync(_git.CreateBranch, new GitBranchOperations.CreateInput(checkout, choice.Name, start, choice.Switch), token)
@@ -32,6 +32,30 @@ internal sealed partial class GitHistoryViewModel
         ? ChangeBranchAsync(_git.SwitchBranch, new GitBranchOperations.SwitchInput(Page.Repository.WorktreePath,
             reference.Name["refs/heads/".Length..], reference.ObjectId), token)
         : Task.CompletedTask;
+
+    [RelayCommand(CanExecute = nameof(CanSwitchBranch))]
+    private Task RenameBranchAsync(CancellationToken token) => MaintainBranchAsync(delete: false, token);
+
+    [RelayCommand(CanExecute = nameof(CanSwitchBranch))]
+    private Task DeleteBranchAsync(CancellationToken token) => MaintainBranchAsync(delete: true, token);
+
+    private async Task MaintainBranchAsync(bool delete, CancellationToken token)
+    {
+        if (SelectedReference is not { } reference || !CanSwitchBranch() || PromptBranchAsync is not { } prompt)
+            return;
+
+        var worktree = Page.Repository.WorktreePath;
+        var name = reference.Name["refs/heads/".Length..];
+        var choice = await prompt(new GitBranchDialog.Prompt(name, name, delete), token).ConfigureAwait(true);
+        if (choice is null || token.IsCancellationRequested)
+            return;
+
+        if (delete)
+            await ChangeBranchAsync(_git.DeleteBranch, new GitBranchOperations.DeleteInput(worktree, name, reference.ObjectId), token).ConfigureAwait(true);
+        else
+            await ChangeBranchAsync(_git.RenameBranch, new GitBranchOperations.RenameInput(worktree, name, reference.ObjectId, choice.Name), token)
+                .ConfigureAwait(true);
+    }
 
     private async Task ChangeBranchAsync<T>(Feature<T> feature, T input, CancellationToken token) where T : class
     {
@@ -59,5 +83,7 @@ internal sealed partial class GitHistoryViewModel
     {
         CreateBranchCommand.NotifyCanExecuteChanged();
         SwitchBranchCommand.NotifyCanExecuteChanged();
+        RenameBranchCommand.NotifyCanExecuteChanged();
+        DeleteBranchCommand.NotifyCanExecuteChanged();
     }
 }

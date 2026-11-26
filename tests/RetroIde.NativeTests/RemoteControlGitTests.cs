@@ -77,6 +77,7 @@ internal static class RemoteControlGitTests
             await VerifyCommitAsync(window, session, sample, token).ConfigureAwait(true);
             await VerifyHistoryAsync(window, session, token).ConfigureAwait(true);
             await VerifyBranchAsync(window, sample, token).ConfigureAwait(true);
+            await VerifyBranchMaintenanceAsync(window, sample, token).ConfigureAwait(true);
 
             async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments)
             {
@@ -171,6 +172,51 @@ internal static class RemoteControlGitTests
         if (!string.Equals(branch, "topic/native-workbench", StringComparison.Ordinal))
             throw new InvalidOperationException("The native Git branch dialog did not create and switch to the requested branch.");
         Console.WriteLine("RemoteControl created and checked out a local branch through the native Git History dialog.");
+    }
+
+    private static async Task VerifyBranchMaintenanceAsync(Window window, GitWorktreeFixture sample, CancellationToken token)
+    {
+        const string Original = "topic/native-maintenance";
+        const string Renamed = "topic/native-renamed";
+        await sample.GitAsync(sample.Primary, token, "branch", "--no-track", Original).ConfigureAwait(true);
+        await (await ClickCommandAsync("git.history.current.toolbar").ConfigureAwait(true)).WaitAsync(token).ConfigureAwait(true);
+        await SelectAsync(Original).ConfigureAwait(true);
+        var rename = await ClickCommandAsync("git.branch.rename.toolbar").ConfigureAwait(true);
+        var dialog = await WaitForDialogAsync().ConfigureAwait(true);
+        var name = await FindAsync<TextBox>(dialog, "git.branch.name", token).ConfigureAwait(true);
+        name.Text = Renamed;
+        await WorkbenchRemoteControl.ClickAsync(dialog, "git.branch.submit").ConfigureAwait(true);
+        await rename.WaitAsync(token).ConfigureAwait(true);
+        await SelectAsync(Renamed).ConfigureAwait(true);
+        var delete = await ClickCommandAsync("git.branch.delete.toolbar").ConfigureAwait(true);
+        dialog = await WaitForDialogAsync().ConfigureAwait(true);
+        await WorkbenchRemoteControl.ClickAsync(dialog, "git.branch.submit").ConfigureAwait(true);
+        await delete.WaitAsync(token).ConfigureAwait(true);
+        var refs = await sample.GitAsync(sample.Primary, token, "branch", "--list", Original, Renamed).ConfigureAwait(true);
+        if (refs.Length != 0)
+            throw new InvalidOperationException("The native Git controls did not rename and safely delete the requested branch.");
+        Console.WriteLine("RemoteControl renamed and safely deleted a merged local branch in native Git History.");
+
+        async Task<Task> ClickCommandAsync(string id)
+        {
+            var button = await FindAsync<Button>(window, id, token).ConfigureAwait(true);
+            await WorkbenchRemoteControl.ClickAsync(window, id).ConfigureAwait(true);
+            return ((IAsyncRelayCommand)button.Command!).ExecutionTask!;
+        }
+
+        async Task SelectAsync(string branch)
+        {
+            var list = await FindAsync<ListBox>(window, "git.history.refs", token).ConfigureAwait(true);
+            list.SelectedItem = ((IEnumerable<GitHistoryOperations.Reference>)list.ItemsSource!).Single(reference =>
+                string.Equals(reference.Name, "refs/heads/" + branch, StringComparison.Ordinal));
+        }
+
+        async Task<Window> WaitForDialogAsync()
+        {
+            while (window.OwnedWindows.Count == 0)
+                await Task.Delay(20, token).ConfigureAwait(true);
+            return window.OwnedWindows.Single();
+        }
     }
 
     private static async Task<T> FindAsync<T>(Window window, string id, CancellationToken token) where T : Control
