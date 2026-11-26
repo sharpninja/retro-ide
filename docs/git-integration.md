@@ -4,6 +4,10 @@ The Phase 03 workbench has a Git menu and a dockable Source Control pane. A work
 
 New layouts dock Source Control beside Project Explorer. Older saved layouts get an auto-hidden Source Control tab on the left edge while keeping their existing tabs, pins, and floating windows. The rest of this page defines the Phase 03 workflows.
 
+Use **Git → Initialize Repository** to open an existing checkout or initialize a new or existing folder. Use **Git → Clone Repository** with a Git URL or local repository path and a new or empty destination. The destination uses an absolute path with an existing parent. Both commands add and select the resulting folder in Project Explorer and Source Control after Git succeeds. [Git Init](https://git-scm.com/docs/git-init) · [Git Clone](https://git-scm.com/docs/git-clone)
+
+Setup leaves the current root and checkout selection in place when Git fails. Cloning into an existing empty folder retains its Unix mode or Windows access control. The desktop shows Source Control’s Wait overlay while setup blocks its commands.
+
 ## Workspace and worktree context
 
 Discover repositories for project and folder roots. Opening a nested repository or a submodule gives it its own context. A linked worktree has its own working files, index, and checked-out state and shares repository data with its sibling worktrees. Persist the selected context with the workspace. Clone and Init can add their resulting folders as workspace roots. A folder without a repository remains browsable in Project Explorer. [Git worktrees](https://git-scm.com/docs/git-worktree)
