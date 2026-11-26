@@ -42,6 +42,16 @@ test ! -e /tmp/.X11-unix/X177 && test ! -e /tmp/.X177-lock &&
 
 Run acceptance on the designated local development hosts. Build `win-x64` on LAB-OMARCHY, transfer a verified runtime bundle, and execute the managed and RemoteControl suites on LEGION2. The signed-in Windows pointer smoke is supplemental. [Local verification policy](docs/plans/PLAN-RETROIDE-001.md#local-verification-for-every-phase) · [Phase 02 verification status](docs/plans/PLAN-RETROIDE-001.md#phase-02-verification-status)
 
+### Install on Omarchy
+
+Run the standalone NUKE target from the repository root on a Linux x64 host with the .NET 10 SDK and ASP.NET Core runtime.
+
+```sh
+dotnet run --project eng/Nuke/RetroIde.Build.csproj --configuration Release -- DeployOmarchy
+```
+
+The target publishes the workbench and MCP stdio bridge, validates the bundled command resources, and places a release under the user’s XDG data directory. It registers **Retro IDE** in the application launcher and installs `retro-ide` and `retro-ide-mcp` in `~/.local/bin`. Previous releases stay available under `retro-ide/releases`.
+
 ## Review the design
 
 Regenerate the screen SVGs and review them locally from the repository root with PowerShell and AssetReview installed.
