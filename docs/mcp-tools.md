@@ -58,6 +58,11 @@ The Phase 03 candidate exposes native Git discovery, selection, status, file dif
 | `git_get_commit_state` | Selected `worktreePath` | The branch, HEAD, current commit message, staged change availability, and commit `preimage`. Open the entire worktree root before committing its index. |
 | `git_commit` | Selected `worktreePath`, commit `preimage`, `message`, current workbench `context` | Commits the reviewed index and returns the previous and new HEAD. Requires a write-enabled attachment. |
 | `git_amend` | Selected `worktreePath`, commit `preimage`, `message`, current workbench `context` | Replaces the reviewed HEAD and returns the previous and new HEAD. Requires a write-enabled attachment. |
+| `git_list_refs` | Selected `worktreePath` | Full ref names, object IDs, upstreams, peeled annotated tags, and linked worktrees. |
+| `git_get_history` | Selected `worktreePath`, optional full `refName`, `anchor`, `offset`, and `limit` | Topologically sorted commits with parent IDs and refs. Reuse the returned `anchor` with the next offset to keep pages on the same history. |
+| `git_get_commit_details` | Selected `worktreePath`, full `commitId` | Commit metadata, message, and file statuses compared with the first parent. An initial commit compares with the empty tree. |
+| `git_open_history` | History arguments and current workbench `context` | Opens or reuses a Git History tab and returns its view key, page, and reference data. Requires a write-enabled attachment. |
+| `git_close_history` | The history tab’s `viewKey`, current workbench `context` | Closes the tab in the attached workbench. Requires a write-enabled attachment. |
 
 Selection is scoped to the attached workbench. Desktop commands and attached clients share the selection and status shown in Source Control and Project Explorer. On desktop restart, the workspace revalidates the saved checkout before issuing a new attachment. Select a worktree before reading status. If its selection changes while status is being prepared, refresh the context and read again. [Git integration](git-integration.md)
 
@@ -66,6 +71,8 @@ Pass the exact checkout-relative `path` returned by status, including spaces, Un
 Hunk IDs are local to one diff preimage. When a hunk action returns `git_diff_changed`, read or reopen the diff and choose IDs from the new result before retrying.
 
 Commit and amend check the reviewed HEAD and index again before starting native Git. Restart the review when `git_commit_state_changed` is returned. The result reports whether publication of the prepared index succeeded as `indexPublished`.
+
+History and ref queries require the full worktree root to be open. A nonzero history offset requires an anchor. The history page limit defaults to 80 and supports 1 through 500 commits per call.
 
 ## One feature registry
 

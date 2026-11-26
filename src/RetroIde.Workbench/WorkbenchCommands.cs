@@ -35,13 +35,20 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor UnstageGitHunks = Create("git.hunks.unstage", "Ctrl+Alt+Shift+K");
     public static readonly CommandDescriptor CreateCommit = Create("git.commit.create", "Ctrl+Alt+C");
     public static readonly CommandDescriptor AmendCommit = Create("git.commit.amend", "Ctrl+Alt+M");
+    public static readonly CommandDescriptor OpenGitHistory = Create("git.history.open", "Ctrl+Alt+L");
+    public static readonly CommandDescriptor CurrentGitHistory = Create("git.history.current", "Ctrl+Alt+Shift+L");
+    public static readonly CommandDescriptor ShowGitRefHistory = Create("git.history.ref", "Ctrl+Alt+Shift+B");
+    public static readonly CommandDescriptor PreviousGitHistoryPage = Create("git.history.previous-page", "Alt+PageUp");
+    public static readonly CommandDescriptor NextGitHistoryPage = Create("git.history.next-page", "Alt+PageDown");
+    public static readonly CommandDescriptor InspectGitCommit = Create("git.history.commit-details", "Ctrl+Alt+Enter");
 
     // A document key binding can be active inside a main or floating workbench window.
     // All commands in this catalog can share that input route, so check them together.
     private static readonly CommandDescriptor[] Commands =
         [FocusTool, OpenFolder, OpenProject, Save, Reveal, Search, Next, Previous, Replace, ReplaceAll, Undo, Redo, Close, Discard,
             OpenSourceControl, SelectRepository, RefreshGitStatus, InitializeRepository, CloneRepository, OpenGitDiff, StageGitFile, UnstageGitFile,
-            RefreshGitDiff, StageGitHunks, UnstageGitHunks, CreateCommit, AmendCommit];
+            RefreshGitDiff, StageGitHunks, UnstageGitHunks, CreateCommit, AmendCommit, OpenGitHistory, CurrentGitHistory,
+            ShowGitRefHistory, PreviousGitHistoryPage, NextGitHistoryPage, InspectGitCommit];
 
     internal static void ValidateBundledResources()
     {

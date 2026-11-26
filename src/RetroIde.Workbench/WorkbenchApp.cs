@@ -48,6 +48,7 @@ public sealed class WorkbenchApp : Avalonia.Application
             {
                 { Source: { } source } => DocumentSurface.Create(source),
                 { GitDiff: { } diff } => GitDiffSurface.Create(diff),
+                { GitHistory: { } history } => GitHistorySurface.Create(history),
                 _ => PaneContent(document!.Localization, document.Id, document: true),
             })));
     }

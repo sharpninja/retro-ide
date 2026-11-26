@@ -42,7 +42,8 @@ public sealed partial class GitWorktreeIntegrationTests
             var bridgeTools = await bridge.ListToolsAsync(cancellationToken: token);
             foreach (var name in new[] { "git_discover_repository", "git_select_repository", "git_get_status",
                 "git_get_diff", "git_open_diff", "git_close_diff", "git_stage_file", "git_unstage_file", "git_stage_hunks", "git_unstage_hunks",
-                "git_get_commit_state", "git_commit", "git_amend" })
+                "git_get_commit_state", "git_commit", "git_amend", "git_list_refs", "git_get_history", "git_get_commit_details",
+                "git_open_history", "git_close_history" })
             {
                 Assert.True(directTools.Any(tool => string.Equals(tool.Name, name, StringComparison.Ordinal)),
                     $"The live workbench did not advertise {name}.");

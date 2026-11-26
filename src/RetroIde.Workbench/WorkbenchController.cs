@@ -288,6 +288,8 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                     DispatchToViewAsync(git, registration, _registry.Git.Commit, commit, request),
                 GitCommitOperations.CommitInput amend when string.Equals(request.CommandId, _registry.Git.Amend.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.Amend, amend, request),
+                GitHistoryOperations.HistoryInput history when string.Equals(request.CommandId, _registry.Git.OpenHistory.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.OpenHistory, history, request),
                 _ => null,
             };
         }
@@ -422,6 +424,11 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         public GitFileOperations.DiffTab? ShowDiff(GitFileOperations.DiffResult diff) => Controller._documents?.ShowDiff(diff);
 
         public bool CloseDiff(Guid viewKey) => Controller._documents?.CloseDiff(viewKey) == true;
+
+        public GitHistoryOperations.HistoryTab? ShowHistory(GitHistoryOperations.HistoryPage page, GitHistoryOperations.RefState references) =>
+            Controller._documents?.ShowHistory(page, references);
+
+        public bool CloseHistory(Guid viewKey) => Controller._documents?.CloseHistory(viewKey) == true;
 
         public bool HasExplorer => Controller._explorerView?.ParentViewKey == View.ViewKey;
         public bool CanChangeExplorer => Controller.CanChangeExplorer();

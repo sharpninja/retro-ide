@@ -22,6 +22,8 @@ The working-tree diff compares files against the index and the staged diff compa
 
 Open the worktree root and choose **Commit Staged Changes** or **Amend Last Commit** from the Git menu or Source Control. The dialog shows the checkout and branch. Amend preloads the last message. Git writes the reviewed index, leaves unstaged edits in the working tree, and runs the configured hooks and signing program. If HEAD or the index changed while the dialog was open, review the new staged state before retrying. [Git commit](https://git-scm.com/docs/git-commit) · [Git hooks](https://git-scm.com/docs/githooks)
 
+Open **Git History** from the Git menu or Source Control. The tab starts at the selected worktree’s HEAD and lists local branches, remote refs, tags, and linked worktrees. Choose a ref to follow its history. **Newer** and **Older** move through pages pinned to the starting commit. Select a commit to see its author, message, and changed files. The graph shows each merge parent. The changed-file list compares the merge to its first parent. [Git log](https://git-scm.com/docs/git-log) · [Git refs](https://git-scm.com/docs/git-for-each-ref) · [Git worktrees](https://git-scm.com/docs/git-worktree)
+
 ## Workflows
 
 | Area | IDE commands and views |

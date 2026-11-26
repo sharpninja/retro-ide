@@ -31,6 +31,12 @@ internal interface IGitRegistration
     /// <summary>Closes an existing Git diff tab by its registration key.</summary>
     bool CloseDiff(Guid viewKey);
 
+    /// <summary>Opens or updates the selected worktree's history tab.</summary>
+    GitHistoryOperations.HistoryTab? ShowHistory(GitHistoryOperations.HistoryPage page, GitHistoryOperations.RefState references);
+
+    /// <summary>Closes a registered Git history tab.</summary>
+    bool CloseHistory(Guid viewKey);
+
     /// <summary>Registers the installed checkout as a workspace root and makes it the selected Git worktree.</summary>
     /// <param name="repository">The installed native checkout.</param>
     /// <returns>The registered root and worktree identity.</returns>

@@ -229,7 +229,8 @@ public sealed class FeatureRegistry
             Explorer.SaveDocument, Documents.GetContext, Documents.Find, Documents.Replace, Documents.Close,
             Documents.Edit, Documents.Undo, Documents.Redo, Localization.GetLanguage, Localization.SetLanguage,
             Git.Discover, Git.Select, Git.Status, Git.Initialize, Git.Clone, Git.Diff, Git.OpenDiff, Git.CloseDiff,
-            Git.Stage, Git.Unstage, Git.StageHunks, Git.UnstageHunks, Git.CommitState, Git.Commit, Git.Amend);
+            Git.Stage, Git.Unstage, Git.StageHunks, Git.UnstageHunks, Git.CommitState, Git.Commit, Git.Amend,
+            Git.Refs, Git.History, Git.CommitDetails, Git.OpenHistory, Git.CloseHistory);
     }
 
     internal ExplorerFeatures Explorer { get; }

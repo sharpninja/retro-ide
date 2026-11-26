@@ -10,7 +10,8 @@ internal static class GitCommitOperations
 {
     internal sealed record StateInput(string WorktreePath);
     internal sealed record CommitInput(string WorktreePath, string Preimage, string Message);
-    internal sealed record CommitState(GitWorktree Repository, string Branch, string? Head, bool HasStagedChanges, string Preimage, string? Message);
+    internal sealed record CommitState(GitWorktree Repository, string Branch, bool HasStagedChanges, string Preimage,
+        string? Head = null, string? Message = null);
     internal sealed record CommitResult(GitWorktree Repository, string? PreviousHead, string? Head, bool Amended, bool IndexPublished);
 
     internal static Task<FeatureOutcome> ReadAsync(StateInput input, IWorkbenchRegistration view, CancellationToken token) =>
@@ -91,9 +92,9 @@ internal static class GitCommitOperations
             query.AddRange(["show", "--no-notes", "--no-patch", "--format=%B", head, "--"]);
             message = (await NativeGit.RunAsync(repository.WorktreePath, query, token).ConfigureAwait(false))?.TrimEnd('\r', '\n');
         }
-        var state = new CommitState(repository, status.Branch, status.Head,
+        var state = new CommitState(repository, status.Branch,
             status.Entries.Any(entry => !entry.IsUnmerged && entry.Index is not ("." or "?" or "!")),
-            Convert.ToHexString(hash.GetHashAndReset()), message);
+            Convert.ToHexString(hash.GetHashAndReset()), status.Head, message);
         return new(state, index);
     }
 

@@ -9,7 +9,7 @@ using RetroIde.Application.Workspaces;
 
 namespace RetroIde.Workbench;
 
-internal sealed class DocumentController : SimpleControllerBase
+internal sealed partial class DocumentController : SimpleControllerBase
 {
     private readonly WorkbenchViewModel _workbench;
     private readonly DockLayout _layout;
@@ -30,7 +30,7 @@ internal sealed class DocumentController : SimpleControllerBase
         _dispatch = dispatch;
         _layout.Factory.DockableClosed += OnTabClosed;
         _layout.Factory.DockableClosing += OnTabClosing;
-        (_workbench.Localization ?? WorkbenchLocalization.English).Changed += OnDiffLanguageChanged;
+        (_workbench.Localization ?? WorkbenchLocalization.English).Changed += OnDocumentLanguageChanged;
         Initialize();
     }
 
@@ -39,7 +39,7 @@ internal sealed class DocumentController : SimpleControllerBase
     internal bool HasDocument(WorkspaceExplorer.Address address) => _open.ContainsKey(address);
 
     internal bool Owns(Guid viewKey, Guid parentKey) =>
-        parentKey == _workbench.ViewKey && GetView<IView>(viewKey) is DocumentViewModel or GitDiffViewModel;
+        parentKey == _workbench.ViewKey && GetView<IView>(viewKey) is DocumentViewModel or GitDiffViewModel or GitHistoryViewModel;
 
     internal DocumentContext? OpenOrActivate(WorkspaceExplorer.Address address, WorkspaceExplorer.SourceFile? source, SourcePosition? position)
     {
@@ -232,6 +232,8 @@ internal sealed class DocumentController : SimpleControllerBase
             RemoveDocument(document);
         foreach (var document in _diffs.Values.ToArray())
             RemoveDiff(document);
+        foreach (var document in _histories.Values.ToArray())
+            RemoveHistory(document);
     }
 
     protected override void Dispose(bool disposing)
@@ -240,7 +242,7 @@ internal sealed class DocumentController : SimpleControllerBase
         {
             _layout.Factory.DockableClosed -= OnTabClosed;
             _layout.Factory.DockableClosing -= OnTabClosing;
-            (_workbench.Localization ?? WorkbenchLocalization.English).Changed -= OnDiffLanguageChanged;
+            (_workbench.Localization ?? WorkbenchLocalization.English).Changed -= OnDocumentLanguageChanged;
             DetachViews();
         }
         base.Dispose(disposing);
@@ -250,8 +252,8 @@ internal sealed class DocumentController : SimpleControllerBase
     {
         if (args.Dockable is not ShellDocument document)
             return;
-        IView? view = (IView?)document.Source ?? document.GitDiff;
-        IAsyncRelayCommand? close = document.Source?.CloseCommand ?? document.GitDiff?.CloseCommand;
+        IView? view = (IView?)document.Source ?? (IView?)document.GitDiff ?? document.GitHistory;
+        IAsyncRelayCommand? close = document.Source?.CloseCommand ?? document.GitDiff?.CloseCommand ?? document.GitHistory?.CloseCommand;
         if (view is not null && close is not null && _closingView != view.ViewKey &&
             ReferenceEquals(GetView<IView>(view.ViewKey), view))
         {
@@ -275,7 +277,9 @@ internal sealed class DocumentController : SimpleControllerBase
     {
         if (args.Dockable is ShellDocument { IsTransient: true } document)
         {
-            if (document.GitDiff is not null)
+            if (document.GitHistory is not null)
+                RemoveHistory(document);
+            else if (document.GitDiff is not null)
                 RemoveDiff(document);
             else
                 RemoveDocument(document);
@@ -283,10 +287,12 @@ internal sealed class DocumentController : SimpleControllerBase
         }
     }
 
-    private void OnDiffLanguageChanged(object? sender, EventArgs args)
+    private void OnDocumentLanguageChanged(object? sender, EventArgs args)
     {
         foreach (var document in _diffs.Values)
             document.Title = document.GitDiff!.Title;
+        foreach (var document in _histories.Values)
+            document.Title = document.GitHistory!.Title;
     }
 
     private void RemoveDiff(ShellDocument document)

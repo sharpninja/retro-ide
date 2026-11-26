@@ -75,6 +75,7 @@ internal static class RemoteControlGitTests
                 ["path"] = GitWorktreeFixture.ChangedPath,
             }).ConfigureAwait(true);
             await VerifyCommitAsync(window, session, sample, token).ConfigureAwait(true);
+            await VerifyHistoryAsync(window, session, token).ConfigureAwait(true);
 
             async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments)
             {
@@ -130,6 +131,25 @@ internal static class RemoteControlGitTests
         if (!string.Equals(Message, actual.Trim(), StringComparison.Ordinal))
             throw new InvalidOperationException("The native Git dialog did not commit the staged state.");
         Console.WriteLine("RemoteControl committed the reviewed native Git index through the workbench dialog.");
+    }
+
+    private static async Task VerifyHistoryAsync(Window window, WorkbenchSession session, CancellationToken token)
+    {
+        await WorkbenchRemoteControl.ClickAsync(window, "git.history.open.pane").ConfigureAwait(true);
+        await session.SourceControl.OpenHistoryCommand.ExecutionTask!.WaitAsync(token).ConfigureAwait(true);
+        var graph = await FindAsync<ListBox>(window, "git.history.graph", token).ConfigureAwait(true);
+        var row = ((IEnumerable<GitHistoryGraph.Row>)graph.ItemsSource!).First();
+        if (!string.Equals(row.Commit.Subject, "Native workbench commit", StringComparison.Ordinal))
+            throw new InvalidOperationException("The native Git graph did not show the selected checkout's new HEAD.");
+        graph.SelectedItem = row;
+        const string Inspect = "git.history.commit-details.toolbar";
+        var button = await FindAsync<Button>(window, Inspect, token).ConfigureAwait(true);
+        await WorkbenchRemoteControl.ClickAsync(window, Inspect).ConfigureAwait(true);
+        await ((IAsyncRelayCommand)button.Command!).ExecutionTask!.WaitAsync(token).ConfigureAwait(true);
+        var message = await FindAsync<TextBlock>(window, "git.history.commit-message", token).ConfigureAwait(true);
+        if (!string.Equals(message.Text, row.Commit.Subject, StringComparison.Ordinal))
+            throw new InvalidOperationException("The native Git inspector did not show the selected commit.");
+        Console.WriteLine("RemoteControl opened the native Git history graph and inspected the selected commit.");
     }
 
     private static async Task<T> FindAsync<T>(Window window, string id, CancellationToken token) where T : Control

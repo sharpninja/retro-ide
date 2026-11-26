@@ -86,6 +86,29 @@ internal sealed class GitFeatures
         static (input, view, token) => GitCommitOperations.CommitAsync(input, view, amend: true, token),
         typeof(GitCommitOperations.CommitResult), mutation: true);
 
+    public Feature<GitHistoryOperations.RefsInput> Refs { get; } = new("git.refs.read", "git_list_refs",
+        "List branches, remote refs, tags, and checkouts for the selected Git worktree.",
+        GitHistoryOperations.RefsAsync, typeof(GitHistoryOperations.RefState));
+
+    public Feature<GitHistoryOperations.HistoryInput> History { get; } = new("git.history.read", "git_get_history",
+        "Read a page of commit history pinned to HEAD, a full ref name, or the previous page's anchor.",
+        static (input, view, token) => GitHistoryOperations.HistoryAsync(input, view, openTab: false, token),
+        typeof(GitHistoryOperations.HistoryPage));
+
+    public Feature<GitHistoryOperations.DetailsInput> CommitDetails { get; } = new("git.history.commit-details", "git_get_commit_details",
+        "Read a commit, its parents, and the changed files relative to its first parent.",
+        GitHistoryOperations.DetailsAsync, typeof(GitHistoryOperations.CommitDetails));
+
+    public Feature<GitHistoryOperations.HistoryInput> OpenHistory { get; } = new("git.history.open", "git_open_history",
+        "Open or update the selected worktree's Git history tab.",
+        static (input, view, token) => GitHistoryOperations.HistoryAsync(input, view, openTab: true, token),
+        typeof(GitHistoryOperations.HistoryTab), mutation: true);
+
+    public Feature<GitHistoryOperations.CloseHistoryInput> CloseHistory { get; } = new("git.history.close", "git_close_history",
+        "Close a registered Git history tab in the attached workbench.", mutation: true,
+        static (input, view) => view is IGitRegistration git && git.CloseHistory(input.ViewKey)
+            ? new("ok", "Git history tab closed.") : new("view_closed", "The history tab is not open in this workbench."));
+
     internal GitFeatures(Func<GitSelection, CancellationToken, Task<GitStatus?>>? readStatus = null)
     {
         Status = new("git.status.read", "git_get_status", "Read the selected worktree's staged and working status.",

@@ -34,6 +34,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RefreshStatusCommand))]
     [NotifyCanExecuteChangedFor(nameof(CommitCommand), nameof(AmendCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenHistoryCommand))]
     [NotifyPropertyChangedFor(nameof(HasRepository))]
     public partial GitWorktree? Repository { get; private set; }
 
@@ -101,6 +102,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         CloneRepositoryCommand.NotifyCanExecuteChanged();
         CommitCommand.NotifyCanExecuteChanged();
         AmendCommand.NotifyCanExecuteChanged();
+        OpenHistoryCommand.NotifyCanExecuteChanged();
         NotifyFileCommands();
     }
 
@@ -174,6 +176,11 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
 
     [RelayCommand(CanExecute = nameof(CanRefreshStatus))]
     private Task AmendAsync(CancellationToken cancellationToken) => CommitOrAmendAsync(amend: true, cancellationToken);
+
+    [RelayCommand(CanExecute = nameof(CanRefreshStatus))]
+    private Task OpenHistoryAsync(CancellationToken token) => Repository is { } repository
+        ? RequestAsync(registry.Git.OpenHistory, new GitHistoryOperations.HistoryInput(repository.WorktreePath), token)
+        : Task.CompletedTask;
 
     private async Task CommitOrAmendAsync(bool amend, CancellationToken token)
     {
