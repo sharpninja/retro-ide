@@ -12,7 +12,10 @@ internal sealed class GitFeatures
     internal sealed record LocateInput(Guid RootId, string RelativePath);
 
     /// <summary>Requests status for the workbench's selected worktree.</summary>
-    internal sealed record StatusInput;
+    internal sealed record StatusInput
+    {
+        internal bool DisplayOnly { get; init; }
+    }
 
     /// <summary>Identifies the destination selected for Git Init.</summary>
     internal sealed record InitializeInput(string Destination);
@@ -31,8 +34,13 @@ internal sealed class GitFeatures
         static (input, registration, token) => LocateAsync(input, registration, select: true, token), typeof(GitWorktree), mutation: true);
 
     /// <summary>Returns current machine-readable status for the selected worktree.</summary>
-    public Feature<StatusInput> Status { get; } = new("git.status.read", "git_get_status", "Read the selected worktree's staged and working status.",
-        static (_, view, token) => StatusAsync(view, token), typeof(GitStatus));
+    public Feature<StatusInput> Status { get; }
+
+    internal GitFeatures(Func<GitSelection, CancellationToken, Task<GitStatus?>>? readStatus = null)
+    {
+        Status = new("git.status.read", "git_get_status", "Read the selected worktree's staged and working status.",
+            (input, view, token) => StatusAsync(input, view, readStatus ?? NativeGit.ReadStatusAsync, token), typeof(GitStatus));
+    }
 
     public Feature<InitializeInput> Initialize { get; } = new("git.repository.initialize", "git_initialize_repository",
         "Initialize an absolute directory and select it as a worktree in the current workspace.",
@@ -143,12 +151,13 @@ internal sealed class GitFeatures
     }
 
     /// <summary>Reads the captured status and rejects it if the worktree selection changed before completion.</summary>
-    private static async Task<FeatureOutcome> StatusAsync(IWorkbenchRegistration view, CancellationToken token)
+    private static async Task<FeatureOutcome> StatusAsync(StatusInput input, IWorkbenchRegistration view,
+        Func<GitSelection, CancellationToken, Task<GitStatus?>> readStatus, CancellationToken token)
     {
         if (view is not IGitRegistration { SelectedGit: { } selection })
             return new("git_selection_required", "Select a Git worktree first.");
         GitStatus? status;
-        try { status = await NativeGit.ReadStatusAsync(selection, token).ConfigureAwait(false); }
+        try { status = await readStatus(selection, token).ConfigureAwait(false); }
         catch (Win32Exception) { return new("git_unavailable", "Git could not be started."); }
         catch (Exception error) when (error is InvalidDataException or DecoderFallbackException)
         {
@@ -169,7 +178,7 @@ internal sealed class GitFeatures
                     return new("git_selection_changed", "The selected Git worktree changed while status was read.");
 
                 git.DisplayGitStatus(status);
-                return FeatureOutcome.Success("Git status read.", status);
+                return input.DisplayOnly ? new("ok", "Git status displayed.") : FeatureOutcome.Success("Git status read.", status);
             },
         };
     }

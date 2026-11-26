@@ -78,6 +78,7 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
             return;
 
         registration.Grant.Revoke();
+        registration.StopGitMonitor();
         if (_explorerView is { } explorer && explorer.ParentViewKey == view.ViewKey)
         {
             _explorerView = null;
@@ -155,11 +156,7 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
             var restored = await GitFeatures.RestoreSelectionAsync(_workspaceExplorer, saved, token).ConfigureAwait(true);
             if (restored is not null && !token.IsCancellationRequested &&
                 ReferenceEquals(Resolve(view.ViewKey), origin) && origin.SelectedGit is null)
-            {
                 origin.SelectGit(restored, saved.Address);
-                _ = await DispatchAsync(_registry.Git.Status, new GitFeatures.StatusInput(), null, origin.Grant, Guid.NewGuid(), token)
-                    .ConfigureAwait(true);
-            }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
     }
@@ -328,6 +325,8 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
     private sealed record Registration(WorkbenchViewModel View, ActorGrant Grant, WorkbenchController Controller) : IWorkbenchRegistration,
         IExplorerRegistration, ILocalizationRegistration, IGitRegistration
     {
+        private GitStatusMonitor? _gitMonitor;
+
         public WorkbenchAddress Address => View.Address;
         public object ContextSource => View;
         public bool TryFocus(string toolId) => Controller.CanFocus(toolId) && Controller._layout.Focus(toolId);
@@ -346,7 +345,17 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                 Explorer.RememberGitSelection(new GitWorkspaceLocation(address, selection.Repository));
                 pane.SetScope(selection.Repository);
                 Controller._explorerView?.SetGitBadges(null);
+                StopGitMonitor();
+                _gitMonitor = new GitStatusMonitor(selection, token =>
+                    Controller.DispatchAsync(Controller._registry.Git.Status, new GitFeatures.StatusInput { DisplayOnly = true },
+                        null, Grant, Guid.NewGuid(), token));
             }
+        }
+
+        internal void StopGitMonitor()
+        {
+            _gitMonitor?.Dispose();
+            _gitMonitor = null;
         }
 
         /// <inheritdoc />

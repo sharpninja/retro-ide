@@ -66,7 +66,6 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     {
         Dispatcher.UIThread.VerifyAccess();
         Status = status;
-        LastResult = null;
     }
 
     internal void SetAvailability(WorkspaceExplorer.Address? selection, bool available)
