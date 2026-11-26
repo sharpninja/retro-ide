@@ -12,12 +12,14 @@ internal sealed partial class GitHistoryViewModel : ObservableObject, IView
 {
     private readonly WorkbenchViewModel _workbench;
     private readonly GitFeatures _git;
+    private readonly InteractionBlocks _interaction;
 
-    internal GitHistoryViewModel(WorkbenchViewModel workbench, GitFeatures git, GitHistoryOperations.HistoryPage page,
+    internal GitHistoryViewModel(WorkbenchViewModel workbench, GitFeatures git, InteractionBlocks interaction, GitHistoryOperations.HistoryPage page,
         GitHistoryOperations.RefState references)
     {
         _workbench = workbench;
         _git = git;
+        _interaction = interaction;
         Display(page, references);
     }
 
@@ -26,14 +28,14 @@ internal sealed partial class GitHistoryViewModel : ObservableObject, IView
     public event EventHandler<ViewCommandRequested>? CommandRequested;
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(NextPageCommand), nameof(PreviousPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand), nameof(PreviousPageCommand), nameof(CreateBranchCommand))]
     public partial GitHistoryOperations.HistoryPage Page { get; private set; }
     [ObservableProperty]
     public partial GitHistoryOperations.RefState References { get; private set; }
     [ObservableProperty]
     public partial GitHistoryGraph.Row[] Rows { get; private set; }
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(ShowReferenceCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ShowReferenceCommand), nameof(SwitchBranchCommand))]
     public partial GitHistoryOperations.Reference? SelectedReference { get; set; }
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(InspectCommand))]

@@ -430,6 +430,9 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
 
         public bool CloseHistory(Guid viewKey) => Controller._documents?.CloseHistory(viewKey) == true;
 
+        public IGitBranchSwitch? BeginBranchSwitch(GitWorktree repository, string[] paths) =>
+            Controller._documents?.BeginBranchSwitch(repository, paths);
+
         public bool HasExplorer => Controller._explorerView?.ParentViewKey == View.ViewKey;
         public bool CanChangeExplorer => Controller.CanChangeExplorer();
         public bool HasOpenDocument(WorkspaceExplorer.Address address) => Controller._documents?.HasDocument(address) == true;

@@ -14,7 +14,7 @@ internal sealed partial class DocumentController
         var path = page.Repository.WorktreePath;
         if (!_histories.TryGetValue(path, out var document))
         {
-            var view = new GitHistoryViewModel(_workbench, _features.Git, page, references);
+            var view = new GitHistoryViewModel(_workbench, _features.Git, _interaction, page, references);
             if (!AddOrUpdateView(view))
                 return null;
             view.CommandRequested += OnHistoryCommandRequested;
@@ -67,6 +67,10 @@ internal sealed partial class DocumentController
                 CompleteAsync(view, _features.Git.OpenHistory, page, request),
             GitHistoryOperations.DetailsInput details when string.Equals(request.CommandId, _features.Git.CommitDetails.Id, StringComparison.Ordinal) =>
                 CompleteAsync(view, _features.Git.CommitDetails, details, request),
+            GitBranchOperations.CreateInput create when string.Equals(request.CommandId, _features.Git.CreateBranch.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.CreateBranch, create, request),
+            GitBranchOperations.SwitchInput branch when string.Equals(request.CommandId, _features.Git.SwitchBranch.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.SwitchBranch, branch, request),
             _ => null,
         };
     }

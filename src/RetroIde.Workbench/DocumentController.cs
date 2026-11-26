@@ -44,6 +44,8 @@ internal sealed partial class DocumentController : SimpleControllerBase
     internal DocumentContext? OpenOrActivate(WorkspaceExplorer.Address address, WorkspaceExplorer.SourceFile? source, SourcePosition? position)
     {
         Dispatcher.UIThread.VerifyAccess();
+        if (source is not null && _switchingPaths.Contains(Path.GetFullPath(address.RelativePath, source.Address.RootPath)))
+            return null;
         if (!_open.TryGetValue(address, out var document))
         {
             if (source is null)
@@ -65,6 +67,8 @@ internal sealed partial class DocumentController : SimpleControllerBase
         }
 
         var active = document.Source!;
+        if (_switchingPaths.Contains(active.FullPath))
+            return null;
         if (position is not null)
             active.GoTo(position);
         _layout.ActivateDocument(document);
@@ -214,7 +218,8 @@ internal sealed partial class DocumentController : SimpleControllerBase
 
     internal DocumentContext? CommitSave(DocumentSaveSnapshot snapshot, PreparedDocumentSave staged)
     {
-        if (GetView<IView>(snapshot.Context.ViewKey) is not DocumentViewModel view || view.DocumentId != snapshot.Context.DocumentId)
+        if (GetView<IView>(snapshot.Context.ViewKey) is not DocumentViewModel view || view.DocumentId != snapshot.Context.DocumentId ||
+            _interaction.IsBlocked(view.Scope))
             return null;
         if (snapshot.Context.Revision < view.SavedRevision)
             throw new IOException("A newer document revision was already saved.");

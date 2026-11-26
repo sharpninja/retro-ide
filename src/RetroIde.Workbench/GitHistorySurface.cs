@@ -8,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using RetroIde.Application.Git;
 
 namespace RetroIde.Workbench;
@@ -33,7 +34,13 @@ internal static class GitHistorySurface
         Grid.SetColumnSpan(header, 2);
         layout.Children.Add(header);
 
-        var refPane = CreateRefPane(view, Button(WorkbenchCommands.ShowGitRefHistory, view.ShowReferenceCommand));
+        var refActions = new WrapPanel { Children =
+        {
+            Button(WorkbenchCommands.ShowGitRefHistory, view.ShowReferenceCommand),
+            Button(WorkbenchCommands.CreateGitBranch, view.CreateBranchCommand),
+            Button(WorkbenchCommands.SwitchGitBranch, view.SwitchBranchCommand),
+        } };
+        var refPane = CreateRefPane(view, refActions);
         Place(refPane, 1, 0);
         var worktrees = CreateList<GitHistoryOperations.Worktree>(view, "git.history.worktrees", "References.Worktrees", worktree =>
             new StackPanel
@@ -58,6 +65,7 @@ internal static class GitHistorySurface
         Place(Section(view, WorkbenchText.GitHistoryGraph, graph), 1, 1);
         Place(CreateDetails(view, Button(WorkbenchCommands.InspectGitCommit, view.InspectCommand)), 2, 1);
         layout.KeyBindings.Add(new KeyBinding { Command = view.CloseCommand, Gesture = KeyGesture.Parse(WorkbenchCommands.Close.EffectiveGesture) });
+        ConnectBranchDialog(view, layout);
         return layout;
 
         Button Button(CommandDescriptor descriptor, ICommand command)
@@ -74,7 +82,31 @@ internal static class GitHistorySurface
         }
     }
 
-    private static Control CreateRefPane(GitHistoryViewModel view, Button open)
+    private static void ConnectBranchDialog(GitHistoryViewModel view, Control surface)
+    {
+        Func<string, CancellationToken, Task<GitBranchDialog.Choice?>> chooser = PromptAsync;
+        surface.AttachedToVisualTree += (_, _) => view.PromptBranchAsync = chooser;
+        surface.DetachedFromVisualTree += (_, _) =>
+        {
+            if (view.PromptBranchAsync == chooser)
+                view.PromptBranchAsync = null;
+        };
+
+        async Task<GitBranchDialog.Choice?> PromptAsync(string start, CancellationToken token)
+        {
+            if (token.IsCancellationRequested || TopLevel.GetTopLevel(surface) is not Window window)
+                return null;
+            var dialog = new GitBranchDialog(view.Localization, start) { FlowDirection = window.FlowDirection };
+            using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
+            {
+                if (dialog.IsVisible)
+                    dialog.Close();
+            }));
+            return await dialog.ShowDialog<GitBranchDialog.Choice?>(window).ConfigureAwait(true);
+        }
+    }
+
+    private static Control CreateRefPane(GitHistoryViewModel view, Control open)
     {
         var refs = CreateList<GitHistoryOperations.Reference>(view, "git.history.refs", "References.Refs", reference =>
             new StackPanel

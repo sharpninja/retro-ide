@@ -109,6 +109,14 @@ internal sealed class GitFeatures
         static (input, view) => view is IGitRegistration git && git.CloseHistory(input.ViewKey)
             ? new("ok", "Git history tab closed.") : new("view_closed", "The history tab is not open in this workbench."));
 
+    public Feature<GitBranchOperations.CreateInput> CreateBranch { get; } = new("git.branch.create", "git_create_branch",
+        "Create a local branch from a reviewed commit and optionally switch to it.",
+        GitBranchOperations.CreateAsync, typeof(GitBranchOperations.BranchResult), mutation: true);
+
+    public Feature<GitBranchOperations.SwitchInput> SwitchBranch { get; } = new("git.branch.switch", "git_switch_branch",
+        "Switch to an existing local branch with its expected head.",
+        GitBranchOperations.SwitchAsync, typeof(GitBranchOperations.BranchResult), mutation: true);
+
     internal GitFeatures(Func<GitSelection, CancellationToken, Task<GitStatus?>>? readStatus = null)
     {
         Status = new("git.status.read", "git_get_status", "Read the selected worktree's staged and working status.",

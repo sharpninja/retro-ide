@@ -24,6 +24,8 @@ Open the worktree root and choose **Commit Staged Changes** or **Amend Last Comm
 
 Open **Git History** from the Git menu or Source Control. The tab starts at the selected worktree’s HEAD and lists local branches, remote refs, tags, and linked worktrees. Choose a ref to follow its history. **Newer** and **Older** move through pages pinned to the starting commit. Select a commit to see its author, message, and changed files. The graph shows each merge parent. The changed-file list compares the merge to its first parent. [Git log](https://git-scm.com/docs/git-log) · [Git refs](https://git-scm.com/docs/git-for-each-ref) · [Git worktrees](https://git-scm.com/docs/git-worktree)
 
+Choose **New Branch** to create a local branch from the selected commit in Git History. With no commit selected, the dialog uses the current history anchor. Select **Switch to the new branch** to check it out as part of creation. Choose a local branch and **Switch Branch** to check it out. Git rejects a switch that would overwrite local files or take a branch checked out elsewhere. Save affected unsaved editor buffers before switching. Retro IDE reloads affected clean tabs after a successful switch. [Git branch](https://git-scm.com/docs/git-branch) · [Git switch](https://git-scm.com/docs/git-switch)
+
 ## Workflows
 
 | Area | IDE commands and views |

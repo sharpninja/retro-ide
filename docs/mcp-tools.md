@@ -63,6 +63,8 @@ The Phase 03 candidate exposes native Git discovery, selection, status, file dif
 | `git_get_commit_details` | Selected `worktreePath`, full `commitId` | Commit metadata, message, and file statuses compared with the first parent. An initial commit compares with the empty tree. |
 | `git_open_history` | History arguments and current workbench `context` | Opens or reuses a Git History tab and returns its view key, page, and reference data. Requires a write-enabled attachment. |
 | `git_close_history` | The history tab’s `viewKey`, current workbench `context` | Closes the tab in the attached workbench. Requires a write-enabled attachment. |
+| `git_create_branch` | Selected `worktreePath`, local `branchName`, optional full `startCommit`, optional `switch`, current workbench `context` | Creates the branch at the reviewed commit or current HEAD. Switches only when requested. Requires a write-enabled attachment. |
+| `git_switch_branch` | Selected `worktreePath`, local `branchName`, target `expectedHead`, current workbench `context` | Switches to the existing local branch. Use the branch object ID from `git_list_refs` as `expectedHead`. Requires a write-enabled attachment. |
 
 Selection is scoped to the attached workbench. Desktop commands and attached clients share the selection and status shown in Source Control and Project Explorer. On desktop restart, the workspace revalidates the saved checkout before issuing a new attachment. Select a worktree before reading status. If its selection changes while status is being prepared, refresh the context and read again. [Git integration](git-integration.md)
 
@@ -73,6 +75,8 @@ Hunk IDs are local to one diff preimage. When a hunk action returns `git_diff_ch
 Commit and amend check the reviewed HEAD and index again before starting native Git. Restart the review when `git_commit_state_changed` is returned. The result reports whether publication of the prepared index succeeded as `indexPublished`.
 
 History and ref queries require the full worktree root to be open. A nonzero history offset requires an anchor. The history page limit defaults to 80 and supports 1 through 500 commits per call.
+
+Branch commands operate on the entire open worktree. A stale tip returns `git_branch_changed`. A branch checked out in another worktree returns `git_branch_in_use`. Save affected editor buffers if the operation returns `git_branch_editors_busy`.
 
 ## One feature registry
 

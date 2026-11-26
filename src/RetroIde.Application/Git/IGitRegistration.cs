@@ -37,8 +37,16 @@ internal interface IGitRegistration
     /// <summary>Closes a registered Git history tab.</summary>
     bool CloseHistory(Guid viewKey);
 
+    /// <summary>Protects open source buffers affected by a native branch switch.</summary>
+    IGitBranchSwitch? BeginBranchSwitch(GitWorktree repository, string[] paths);
+
     /// <summary>Registers the installed checkout as a workspace root and makes it the selected Git worktree.</summary>
     /// <param name="repository">The installed native checkout.</param>
     /// <returns>The registered root and worktree identity.</returns>
     GitProvisionedWorkspace OpenGitWorkspace(GitWorktree repository);
+}
+
+internal interface IGitBranchSwitch
+{
+    Task CompleteAsync(bool switched);
 }

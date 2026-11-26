@@ -76,6 +76,7 @@ internal static class RemoteControlGitTests
             }).ConfigureAwait(true);
             await VerifyCommitAsync(window, session, sample, token).ConfigureAwait(true);
             await VerifyHistoryAsync(window, session, token).ConfigureAwait(true);
+            await VerifyBranchAsync(window, sample, token).ConfigureAwait(true);
 
             async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments)
             {
@@ -150,6 +151,26 @@ internal static class RemoteControlGitTests
         if (!string.Equals(message.Text, row.Commit.Subject, StringComparison.Ordinal))
             throw new InvalidOperationException("The native Git inspector did not show the selected commit.");
         Console.WriteLine("RemoteControl opened the native Git history graph and inspected the selected commit.");
+    }
+
+    private static async Task VerifyBranchAsync(Window window, GitWorktreeFixture sample, CancellationToken token)
+    {
+        const string Create = "git.branch.create.toolbar";
+        var create = await FindAsync<Button>(window, Create, token).ConfigureAwait(true);
+        await WorkbenchRemoteControl.ClickAsync(window, Create).ConfigureAwait(true);
+        while (window.OwnedWindows.Count == 0)
+            await Task.Delay(20, token).ConfigureAwait(true);
+        var dialog = window.OwnedWindows.Single();
+        var name = await FindAsync<TextBox>(dialog, "git.branch.name", token).ConfigureAwait(true);
+        name.Text = "topic/native-workbench";
+        var checkout = await FindAsync<CheckBox>(dialog, "git.branch.checkout", token).ConfigureAwait(true);
+        checkout.IsChecked = true;
+        await WorkbenchRemoteControl.ClickAsync(dialog, "git.branch.submit").ConfigureAwait(true);
+        await ((IAsyncRelayCommand)create.Command!).ExecutionTask!.WaitAsync(token).ConfigureAwait(true);
+        var branch = (await sample.GitAsync(sample.Primary, token, "branch", "--show-current").ConfigureAwait(true)).Trim();
+        if (!string.Equals(branch, "topic/native-workbench", StringComparison.Ordinal))
+            throw new InvalidOperationException("The native Git branch dialog did not create and switch to the requested branch.");
+        Console.WriteLine("RemoteControl created and checked out a local branch through the native Git History dialog.");
     }
 
     private static async Task<T> FindAsync<T>(Window window, string id, CancellationToken token) where T : Control

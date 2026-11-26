@@ -36,6 +36,8 @@ internal static class WorkbenchText
     internal const string GitHistoryRefs = "git.history.refs";
     internal const string GitHistoryGraph = "git.history.graph";
     internal const string GitHistoryWorktrees = "git.history.worktrees";
+    internal const string GitBranchName = "git.branch.name";
+    internal const string GitBranchCheckout = "git.branch.checkout";
     internal const string SearchQuery = "editor.search.query";
     internal const string SearchReplacement = "editor.search.replacement";
     internal const string SearchMatchCase = "editor.search.match-case";
@@ -54,6 +56,7 @@ internal static class WorkbenchText
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel,
             GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,
             GitHistoryTitle, GitHistoryRefs, GitHistoryGraph, GitHistoryWorktrees,
+            GitBranchName, GitBranchCheckout,
             GitBadgeTracked, GitBadgeUntracked, GitBadgeIgnored, GitBadgeModified, GitBadgeStaged, GitBadgeStagedModified, GitBadgeConflicted];
 
     internal static string ExplorerRoot(WorkbenchLocalization localization, WorkspaceExplorer.RootKind kind, string path, bool unavailable)

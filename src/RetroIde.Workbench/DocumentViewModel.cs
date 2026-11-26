@@ -11,7 +11,7 @@ namespace RetroIde.Workbench;
 internal sealed partial class DocumentViewModel : ObservableObject, IView
 {
     private readonly WorkbenchViewModel _workbench;
-    private readonly WorkspaceExplorer.SourceFile _source;
+    private WorkspaceExplorer.SourceFile _source;
     internal WorkbenchLocalization Localization => _workbench.Localization ?? WorkbenchLocalization.English;
 
     internal static ViewContextContract ContextContract { get; } = new(typeof(DocumentViewModel), typeof(DocumentContext));
@@ -42,6 +42,8 @@ internal sealed partial class DocumentViewModel : ObservableObject, IView
     [McpContext]
     public Guid WorkspaceId => _workbench.WorkspaceId;
     public WorkspaceExplorer.Address Address => _source.Address.Entry;
+    internal WorkspaceExplorer.SourceAddress SourceAddress => _source.Address;
+    internal string FullPath => Path.GetFullPath(Address.RelativePath, _source.Address.RootPath);
     [McpContext]
     public Guid RootId => Address.RootId;
     [McpContext]
@@ -97,6 +99,17 @@ internal sealed partial class DocumentViewModel : ObservableObject, IView
         SavedRevision = snapshot.Context.Revision;
         _savedText = snapshot.Text;
         IsDirty = !string.Equals(Buffer.Text, _savedText, StringComparison.Ordinal);
+    }
+
+    internal void ReloadSource(WorkspaceExplorer.SourceFile source)
+    {
+        _source = source;
+        _savedText = source.Text;
+        if (!string.Equals(Buffer.Text, source.Text, StringComparison.Ordinal))
+            Buffer.Text = source.Text;
+        Buffer.UndoStack.ClearAll();
+        SavedRevision = Revision;
+        IsDirty = false;
     }
 
     partial void OnIsDirtyChanged(bool value)

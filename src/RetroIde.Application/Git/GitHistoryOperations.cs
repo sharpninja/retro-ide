@@ -88,7 +88,7 @@ internal static class GitHistoryOperations
         }, token);
     }
 
-    private static async Task<RefState> ReadRefsAsync(GitWorktree repository, CancellationToken token)
+    internal static async Task<RefState> ReadRefsAsync(GitWorktree repository, CancellationToken token)
     {
         var refs = await RunAsync(repository, token, "for-each-ref", "--sort=refname", $"--format={RefFields}",
             "refs/heads", "refs/remotes", "refs/tags").ConfigureAwait(false);
@@ -206,7 +206,7 @@ internal static class GitHistoryOperations
                 ? result(git) : new("git_selection_changed", "The selected Git worktree changed."),
         };
 
-    private static bool IsObjectId(string? id) => id is { Length: 40 or 64 } && id.All(Uri.IsHexDigit);
+    internal static bool IsObjectId(string? id) => id is { Length: 40 or 64 } && id.All(Uri.IsHexDigit);
     private static string? Optional(string field) => field.Length == 0 ? null : field;
 
     private static Task<string?> RunAsync(GitWorktree repo, CancellationToken token, params string[] commands)
