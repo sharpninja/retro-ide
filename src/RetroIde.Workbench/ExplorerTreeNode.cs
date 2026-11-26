@@ -11,6 +11,7 @@ internal sealed class ExplorerTreeNode : ObservableObject
     private WorkspaceExplorer.RootKind? _rootKind;
     private bool _isExpanded;
     private bool? _rootAvailable;
+    private string? _gitBadgeSlug;
 
     public ExplorerTreeNode(WorkspaceExplorer.Address? address, string name, bool isDirectory, WorkbenchLocalization localization,
         WorkspaceExplorer.RootKind? rootKind = null)
@@ -31,7 +32,20 @@ internal sealed class ExplorerTreeNode : ObservableObject
         ? WorkbenchText.ExplorerRoot(_localization, kind, _name, unavailable: _rootAvailable == false)
         : Address is null ? _localization.Text(_name) : _name;
 
-    internal void RefreshLabel() => OnPropertyChanged(nameof(Label));
+    public string GitBadge => _gitBadgeSlug is { } slug ? _localization.Text(slug) : string.Empty;
+    public bool HasGitBadge => _gitBadgeSlug is not null;
+
+    internal void RefreshLabel()
+    {
+        OnPropertyChanged(nameof(Label));
+        OnPropertyChanged(nameof(GitBadge));
+    }
+
+    internal void SetGitBadge(string? slug)
+    {
+        if (SetProperty(ref _gitBadgeSlug, slug, nameof(GitBadge)))
+            OnPropertyChanged(nameof(HasGitBadge));
+    }
 
     internal void UpdateCaption(string name, WorkspaceExplorer.RootKind? rootKind = null)
     {

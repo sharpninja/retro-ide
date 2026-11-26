@@ -25,7 +25,7 @@ public sealed partial class GitWorkspaceStateTests
     [Fact]
     public void Reference_detects_decorations_leaking_to_a_linked_worktree()
     {
-        var expected = new Badges("Tracked", "Staged, Modified", "Modified", "Untracked", "Ignored", "");
+        var expected = new Badges("Tracked", "Staged, Modified", "Modified", "Untracked", "Ignored", "Conflicted", "");
         VerifyBadges(expected);
         Assert.ThrowsAny<XunitException>(() => VerifyBadges(expected with { Linked = "Staged, Modified" }));
     }
@@ -44,9 +44,10 @@ public sealed partial class GitWorkspaceStateTests
         Assert.Equal("Modified", actual.Modified);
         Assert.Equal("Untracked", actual.Untracked);
         Assert.Equal("Ignored", actual.Ignored);
+        Assert.Equal("Conflicted", actual.Conflicted);
         Assert.Empty(actual.Linked);
     }
 
     private sealed record Selection(Guid Workspace, Guid ExplorerRoot, string? Worktree);
-    private sealed record Badges(string Clean, string StagedAndModified, string Modified, string Untracked, string Ignored, string Linked);
+    private sealed record Badges(string Clean, string StagedAndModified, string Modified, string Untracked, string Ignored, string Conflicted, string Linked);
 }

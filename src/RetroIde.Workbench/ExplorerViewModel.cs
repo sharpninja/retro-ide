@@ -17,6 +17,7 @@ internal sealed partial class ExplorerViewModel(WorkbenchViewModel workbench, Ex
     private bool _rootCommandsEnabled;
     private WorkspaceExplorer.Address? _selection;
     private ExplorerTreeNode? _selectedNode;
+    private GitExplorerBadges? _gitBadges;
     private HashSet<WorkspaceExplorer.Address> _expanded = new(WorkspaceExplorer.AddressEquality);
 
     public Guid ViewKey { get; } = Guid.NewGuid();
@@ -59,6 +60,7 @@ internal sealed partial class ExplorerViewModel(WorkbenchViewModel workbench, Ex
             {
                 node.UpdateCaption(root.Path, root.Kind);
             }
+            UpdateGitBadge(node, root.Path);
             RestoreExpansion(node);
         }
         foreach (var removed in visibleRoots.Values)
@@ -68,6 +70,29 @@ internal sealed partial class ExplorerViewModel(WorkbenchViewModel workbench, Ex
         }
         RefreshSelectedNode();
     }
+
+    internal void SetGitBadges(GitExplorerBadges? badges)
+    {
+        Dispatcher.UIThread.VerifyAccess();
+        _gitBadges = badges;
+        foreach (var node in TreeRoots)
+        {
+            var rootPath = _roots.FirstOrDefault(root => root.Id == node.Address?.RootId)?.Path;
+            UpdateGitBadges(node, rootPath);
+        }
+    }
+
+    private void UpdateGitBadges(ExplorerTreeNode node, string? rootPath)
+    {
+        UpdateGitBadge(node, rootPath);
+        foreach (var child in node.Children)
+            UpdateGitBadges(child, rootPath);
+    }
+
+    private void UpdateGitBadge(ExplorerTreeNode node, string? rootPath) =>
+        node.SetGitBadge(rootPath is not null && node.Address is { } address
+            ? _gitBadges?.Read(Path.Combine(rootPath, address.RelativePath))
+            : null);
 
     internal void RefreshBranches(IReadOnlyList<WorkspaceWatchSet.Change> changes)
     {
@@ -227,8 +252,12 @@ internal sealed partial class ExplorerViewModel(WorkbenchViewModel workbench, Ex
         foreach (var removed in previouslyVisible.Values)
             InvalidateSubtree(removed);
         UpdateChildren(parent.Children, visible);
+        var rootPath = _roots.FirstOrDefault(root => root.Id == branch.Parent.RootId)?.Path;
         foreach (var child in visible)
+        {
+            UpdateGitBadge(child, rootPath);
             RestoreExpansion(child);
+        }
     }
 
     private static void UpdateChildren(ObservableCollection<ExplorerTreeNode> current, List<ExplorerTreeNode> desired)

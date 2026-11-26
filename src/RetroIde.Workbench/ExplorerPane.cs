@@ -28,8 +28,13 @@ internal static class ExplorerPane
             {
                 var label = new TextBlock { TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis };
                 label.Bind(TextBlock.TextProperty, new Binding(nameof(ExplorerTreeNode.Label)) { Source = node });
+                var badge = new TextBlock { Opacity = 0.72, Margin = new Thickness(6, 0, 0, 0) };
+                AutomationProperties.SetAutomationId(badge, "workspace.git-status");
+                badge.Bind(TextBlock.TextProperty, new Binding(nameof(ExplorerTreeNode.GitBadge)) { Source = node });
+                badge.Bind(Visual.IsVisibleProperty, new Binding(nameof(ExplorerTreeNode.HasGitBadge)) { Source = node });
+                DockPanel.SetDock(badge, Avalonia.Controls.Dock.Right);
                 view.Localization.Observe(label, node.RefreshLabel);
-                return label;
+                return new DockPanel { Children = { badge, label } };
             }, node => node.Children),
         };
         roots.Styles.Add(new Style(selector => selector.OfType<TreeViewItem>())

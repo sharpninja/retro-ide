@@ -11,6 +11,13 @@ internal static class WorkbenchText
     internal const string GitStaged = "git.status.group.staged";
     internal const string GitWorking = "git.status.group.working";
     internal const string GitConflicts = "git.status.group.conflicts";
+    internal const string GitBadgeTracked = "explorer.git.tracked";
+    internal const string GitBadgeUntracked = "explorer.git.untracked";
+    internal const string GitBadgeIgnored = "explorer.git.ignored";
+    internal const string GitBadgeModified = "explorer.git.modified";
+    internal const string GitBadgeStaged = "explorer.git.staged";
+    internal const string GitBadgeStagedModified = "explorer.git.staged-modified";
+    internal const string GitBadgeConflicted = "explorer.git.conflicted";
     internal const string GitInitAction = "git.setup.initialize";
     internal const string GitCloneAction = "git.setup.clone";
     internal const string GitSetupSource = "git.setup.source";
@@ -32,7 +39,8 @@ internal static class WorkbenchText
     internal static IReadOnlyList<string> Required { get; } =
         [FileMenu, ViewMenu, LanguageMenu, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
             ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts,
-            GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel];
+            GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel,
+            GitBadgeTracked, GitBadgeUntracked, GitBadgeIgnored, GitBadgeModified, GitBadgeStaged, GitBadgeStagedModified, GitBadgeConflicted];
 
     internal static string ExplorerRoot(WorkbenchLocalization localization, WorkspaceExplorer.RootKind kind, string path, bool unavailable)
     {

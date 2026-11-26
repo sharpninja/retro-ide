@@ -155,7 +155,11 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
             var restored = await GitFeatures.RestoreSelectionAsync(_workspaceExplorer, saved, token).ConfigureAwait(true);
             if (restored is not null && !token.IsCancellationRequested &&
                 ReferenceEquals(Resolve(view.ViewKey), origin) && origin.SelectedGit is null)
+            {
                 origin.SelectGit(restored, saved.Address);
+                _ = await DispatchAsync(_registry.Git.Status, new GitFeatures.StatusInput(), null, origin.Grant, Guid.NewGuid(), token)
+                    .ConfigureAwait(true);
+            }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
     }
@@ -341,14 +345,18 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
             {
                 Explorer.RememberGitSelection(new GitWorkspaceLocation(address, selection.Repository));
                 pane.SetScope(selection.Repository);
+                Controller._explorerView?.SetGitBadges(null);
             }
         }
 
         /// <inheritdoc />
         public void DisplayGitStatus(GitStatus status)
         {
-            if (Controller._sourceControlView is { } pane && pane.ParentViewKey == View.ViewKey)
+            if (Controller._sourceControlView is { } pane && pane.ParentViewKey == View.ViewKey && SelectedGit is { } scope)
+            {
                 pane.DisplayStatus(status);
+                Controller._explorerView?.SetGitBadges(new GitExplorerBadges(scope, status));
+            }
         }
 
         /// <inheritdoc />

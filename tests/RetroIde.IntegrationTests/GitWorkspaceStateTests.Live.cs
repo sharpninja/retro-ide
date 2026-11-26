@@ -83,6 +83,7 @@ public sealed partial class GitWorkspaceStateTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(40));
         var token = timeout.Token;
         using var sample = await GitWorktreeFixture.CreateAsync("git", token);
+        await CreateConflictAsync(sample, token);
         GitWorktreeFixture.Write(sample.Primary, GitWorktreeFixture.ChangedPath, "staged\n");
         await sample.GitAsync(sample.Primary, token, "add", "--", GitWorktreeFixture.ChangedPath);
         GitWorktreeFixture.Write(sample.Primary, GitWorktreeFixture.ChangedPath, "staged and changed again\n");
@@ -109,14 +110,37 @@ public sealed partial class GitWorkspaceStateTests
                 await ReadBadgeAsync(window, primary, GitWorktreeFixture.HunkPath, token),
                 await ReadBadgeAsync(window, primary, "untracked.asm", token),
                 await ReadBadgeAsync(window, primary, "ignored.data", token),
+                await ReadBadgeAsync(window, primary, "conflict.asm", token),
                 await ReadBadgeAsync(window, linked, GitWorktreeFixture.ChangedPath, token)));
 
             await connection.ChangeAsync("git_select_repository", Address(linked, ""));
             Assert.Empty(await ReadBadgeAsync(window, primary, GitWorktreeFixture.ChangedPath, token));
             Assert.Equal("ok", (await connection.CallAsync("git_get_status")).GetProperty("code").GetString());
             Assert.Equal("Tracked", await ReadBadgeAsync(window, linked, GitWorktreeFixture.ChangedPath, token));
+
+            var limited = await connection.AddRootAsync(Path.Combine(sample.Primary, "src"));
+            await connection.ChangeAsync("git_select_repository", Address(limited, ""));
+            var status = (await connection.CallAsync("git_get_status")).GetProperty("data");
+            Assert.Equal(2, status.GetProperty("trackedPaths").GetArrayLength());
+            Assert.All(status.GetProperty("trackedPaths").EnumerateArray(), path =>
+                Assert.StartsWith("src/", path.GetString(), StringComparison.Ordinal));
+            Assert.Empty(await ReadBadgeAsync(window, primary, "conflict.asm", token));
         }
         finally { window.Close(); }
+    }
+
+    private static async Task CreateConflictAsync(GitWorktreeFixture sample, CancellationToken token)
+    {
+        const string Conflict = "conflict.asm";
+        GitWorktreeFixture.Write(sample.Peer, Conflict, "peer version\n");
+        await sample.GitAsync(sample.Peer, token, "add", "--", Conflict).ConfigureAwait(false);
+        await sample.GitAsync(sample.Peer, token, "commit", "-m", "Add peer source").ConfigureAwait(false);
+        GitWorktreeFixture.Write(sample.Primary, Conflict, "primary version\n");
+        await sample.GitAsync(sample.Primary, token, "add", "--", Conflict).ConfigureAwait(false);
+        await sample.GitAsync(sample.Primary, token, "commit", "-m", "Add primary source").ConfigureAwait(false);
+        await sample.GitAsync(sample.Primary, token, "fetch", "--no-tags", sample.Peer, "HEAD").ConfigureAwait(false);
+        var conflict = await sample.RunAsync(sample.Primary, token, "merge", "--no-edit", "FETCH_HEAD").ConfigureAwait(false);
+        Assert.Equal(1, conflict.ExitCode);
     }
 
     private static async Task ObserveRestoreAsync(WorkbenchSession session, CancellationToken token)

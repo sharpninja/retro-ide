@@ -36,13 +36,13 @@ internal static class NativeGit
 
         // Ask for each path separately because a native path may contain newlines.
         var top = await ResolveAsync(directory, "--show-toplevel", token).ConfigureAwait(false);
-        if (top is null || !Contains(top, directory))
+        if (top is null || !ContainsPath(top, directory))
             return null;
         var own = await ResolveAsync(directory, "--absolute-git-dir", token).ConfigureAwait(false);
         var common = await ResolveAsync(directory, "--git-common-dir", token).ConfigureAwait(false);
         if (own is null || common is null)
             return null;
-        var scope = Contains(root, top) ? top : root;
+        var scope = ContainsPath(root, top) ? top : root;
         return new GitSelection(new GitWorktree(top, own, common), scope);
     }
 
@@ -58,16 +58,29 @@ internal static class NativeGit
         if (found is null || !IsSameWorktree(found.Repository, repo))
             return null;
 
-        var args = new List<string> { "--no-optional-locks", "--literal-pathspecs", "--git-dir", repo.GitDirectory,
-            "--work-tree", repo.WorktreePath, "-c", "core.fsmonitor=false", "status",
-            "--porcelain=v2", "-z", "--branch", "--renames", "--untracked-files=all", "--ignored=matching" };
-        if (!PathComparer.Equals(repo.WorktreePath, selection.ScopeRoot))
+        var tracked = await ReadAsync(["ls-files", "--cached", "--deduplicate", "--full-name", "-z"]).ConfigureAwait(false);
+        if (tracked is null)
+            return null;
+        if (tracked.Length > 0 && !tracked.EndsWith('\0'))
+            throw new InvalidDataException("Git index output is missing its final path terminator.");
+        var output = await ReadAsync(["status", "--porcelain=v2", "-z", "--branch", "--renames", "--untracked-files=all", "--ignored=matching"]).ConfigureAwait(false);
+        return output is null ? null : GitStatus.Parse(repo, output) with
         {
-            args.Add("--");
-            args.Add(Path.GetRelativePath(repo.WorktreePath, selection.ScopeRoot));
+            TrackedPaths = tracked.Split('\0', StringSplitOptions.RemoveEmptyEntries),
+        };
+
+        Task<string?> ReadAsync(string[] command)
+        {
+            var arguments = new List<string> { "--no-optional-locks", "--literal-pathspecs", "--git-dir", repo.GitDirectory,
+                "--work-tree", repo.WorktreePath, "-c", "core.fsmonitor=false" };
+            arguments.AddRange(command);
+            if (!PathComparer.Equals(repo.WorktreePath, selection.ScopeRoot))
+            {
+                arguments.Add("--");
+                arguments.Add(Path.GetRelativePath(repo.WorktreePath, selection.ScopeRoot));
+            }
+            return RunAsync(repo.WorktreePath, arguments, token);
         }
-        var output = await RunAsync(repo.WorktreePath, args, token).ConfigureAwait(false);
-        return output is null ? null : GitStatus.Parse(repo, output);
     }
 
     /// <summary>Compares a worktree and both administrative directories using native path rules.</summary>
@@ -77,7 +90,7 @@ internal static class NativeGit
         PathComparer.Equals(left.CommonDirectory, right.CommonDirectory);
 
     /// <summary>Checks path containment using native separators and volume rules.</summary>
-    private static bool Contains(string root, string path)
+    internal static bool ContainsPath(string root, string path)
     {
         var relative = Path.GetRelativePath(root, path);
         return !Path.IsPathRooted(relative) && !string.Equals(relative, "..", StringComparison.Ordinal) &&
