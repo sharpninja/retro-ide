@@ -14,8 +14,11 @@ internal sealed class GitStatusMonitor : IDisposable
     internal GitStatusMonitor(GitSelection selection, Func<CancellationToken, Task> refresh)
     {
         var token = _lifetime.Token;
-        _ = Task.Run(() => MonitorAsync(selection, refresh, token));
+        Completion = Task.Run(() => MonitorAsync(selection, refresh, token));
     }
+
+    /// <summary>Completes after cancellation and release of the watcher and native read resources.</summary>
+    internal Task Completion { get; }
 
     private async Task MonitorAsync(GitSelection selection, Func<CancellationToken, Task> refresh, CancellationToken token)
     {

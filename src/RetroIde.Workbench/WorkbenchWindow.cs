@@ -257,6 +257,7 @@ public sealed class WorkbenchWindow : Window
         try
         {
             var token = closeSave.Token;
+            await _session.Controller.DrainGitRefreshAsync(_session.View).ConfigureAwait(true);
             if (_layouts is { } layouts)
             {
                 var snapshot = _session.Layout.Capture();
