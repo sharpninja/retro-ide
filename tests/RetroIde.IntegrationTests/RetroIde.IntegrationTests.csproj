@@ -6,6 +6,7 @@
   <ItemGroup>
     <Compile Include="../Support/WorkbenchRemoteControl.cs" Link="WorkbenchRemoteControl.cs" />
     <Compile Include="../Support/AdapterFixtureSnapshot.cs" Link="AdapterFixtureSnapshot.cs" />
+    <Compile Include="../Support/GitWorktreeFixture.cs" Link="GitWorktreeFixture.cs" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
