@@ -48,6 +48,10 @@ Select a commit in **Git History** and choose **Reset to Commit**. **Soft** move
 
 Open **Stashes** from Source Control. Enter a message and choose whether to include untracked files. Select a stash to inspect its patch and optionally restore staged changes when applying it. **Apply** keeps the entry. **Pop** applies it and removes the reviewed entry after success. A conflict keeps the entry and reports the paths to resolve. **Drop** removes the selected entry from the shared stash stack. Refresh the list if another checkout changed the stack. [Git stash](https://git-scm.com/docs/git-stash)
 
+## Export or apply a patch
+
+Open **Patches** from Source Control and choose **Index** for staged changes or **Worktree** for tracked working changes. **Export Patch** saves native Git patch bytes, including binary changes. **Open and Review** checks an existing patch against the selected layer and lists the affected paths. **Apply Patch** updates that layer. A worktree apply refreshes affected clean editors and stops if they contain unsaved changes. Review again after changing the destination or if the checkout has changed. [Git diff](https://git-scm.com/docs/git-diff) · [Git apply](https://git-scm.com/docs/git-apply)
+
 ## Workflows
 
 | Area | IDE commands and views |

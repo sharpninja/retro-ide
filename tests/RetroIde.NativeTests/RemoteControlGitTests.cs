@@ -82,6 +82,7 @@ internal static class RemoteControlGitTests
             _ = await MutateAsync("workbench_focus_tool", new(StringComparer.Ordinal) { ["toolId"] = "source-control" }).ConfigureAwait(true);
             await VerifyRecoveryAsync(window, session, sample, token).ConfigureAwait(true);
             await VerifyStashAsync(window, sample, token).ConfigureAwait(true);
+            await VerifyPatchAsync(window, session.SourceControl, sample, token).ConfigureAwait(true);
 
             async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments)
             {
@@ -464,6 +465,54 @@ internal static class RemoteControlGitTests
             await WorkbenchRemoteControl.ClickAsync(dialog, id).ConfigureAwait(true);
             await (((IAsyncRelayCommand)button.Command!).ExecutionTask ??
                 throw new InvalidOperationException($"The stash control did not dispatch {id}.")).WaitAsync(token).ConfigureAwait(true);
+        }
+    }
+
+    private static async Task VerifyPatchAsync(Window window, SourceControlViewModel view, GitWorktreeFixture sample, CancellationToken token)
+    {
+        var checkout = sample.Primary;
+        var file = GitWorktreeFixture.HunkPath;
+        var path = Path.Combine(checkout, file);
+        var working = await File.ReadAllTextAsync(path, token).ConfigureAwait(true);
+        byte[]? patch = null;
+        view.SavePatchAsync = (bytes, _) =>
+        {
+            patch = bytes;
+            return Task.FromResult(true);
+        };
+        view.PickPatchAsync = _ => Task.FromResult(patch is null ? null : new SourceControlViewModel.PatchFile("changes.patch", patch));
+        const string Open = "git.patch.open.pane";
+        var open = await FindAsync<Button>(window, Open, token).ConfigureAwait(true);
+        open.BringIntoView();
+        await WorkbenchRemoteControl.ClickAsync(window, Open).ConfigureAwait(true);
+        while (window.OwnedWindows.Count == 0)
+            await Task.Delay(20, token).ConfigureAwait(true);
+        var dialog = window.OwnedWindows.Single();
+        var layers = await FindAsync<ComboBox>(dialog, "git.patch.layer", token).ConfigureAwait(true);
+        if (layers.SelectedItem is not ComboBoxItem { Tag: "index" })
+            throw new InvalidOperationException("Git patches did not default to the index.");
+        layers.SelectedItem = ((IEnumerable<ComboBoxItem>)layers.ItemsSource!).Single(item => item.Tag is "worktree");
+        await InvokeAsync("git.patch.export.toolbar").ConfigureAwait(true);
+        if (patch is not { Length: > 0 })
+            throw new InvalidOperationException("The worktree patch was not exported.");
+        await sample.GitAsync(checkout, token, "restore", "--worktree", "--", file).ConfigureAwait(true);
+        await InvokeAsync("git.patch.review.toolbar").ConfigureAwait(true);
+        var paths = await FindAsync<ListBox>(dialog, "git.patch.paths", token).ConfigureAwait(true);
+        if (((IEnumerable<string>?)paths.ItemsSource)?.Contains(file, StringComparer.Ordinal) != true)
+            throw new InvalidOperationException("The patch review did not show the affected worktree path.");
+        await InvokeAsync("git.patch.apply.toolbar").ConfigureAwait(true);
+        if (!string.Equals(working, await File.ReadAllTextAsync(path, token).ConfigureAwait(true), StringComparison.Ordinal))
+            throw new InvalidOperationException("The reviewed patch did not restore the native working file.");
+        await WorkbenchRemoteControl.ClickAsync(dialog, "git.patch.close").ConfigureAwait(true);
+        await ((IAsyncRelayCommand)open.Command!).ExecutionTask!.WaitAsync(token).ConfigureAwait(true);
+        Console.WriteLine("RemoteControl exported, reviewed and applied a native Git worktree patch.");
+
+        async Task InvokeAsync(string id)
+        {
+            var button = await FindAsync<Button>(dialog, id, token).ConfigureAwait(true);
+            await WorkbenchRemoteControl.ClickAsync(dialog, id).ConfigureAwait(true);
+            await (((IAsyncRelayCommand)button.Command!).ExecutionTask ??
+                throw new InvalidOperationException($"The patch control did not dispatch {id}.")).WaitAsync(token).ConfigureAwait(true);
         }
     }
 

@@ -292,6 +292,12 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                     DispatchToViewAsync(git, registration, _registry.Git.PopStash, pop, request),
                 GitStash.EntryInput drop when string.Equals(request.CommandId, _registry.Git.DropStash.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.DropStash, drop, request),
+                GitPatchOperations.ExportInput exportPatch when string.Equals(request.CommandId, _registry.Git.ExportPatch.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.ExportPatch, exportPatch, request),
+                GitPatchOperations.ReviewInput reviewPatch when string.Equals(request.CommandId, _registry.Git.ReviewPatch.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.ReviewPatch, reviewPatch, request),
+                GitPatchOperations.ApplyInput applyPatch when string.Equals(request.CommandId, _registry.Git.ApplyPatch.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.ApplyPatch, applyPatch, request),
                 GitFeatures.InitializeInput initialize when string.Equals(request.CommandId, _registry.Git.Initialize.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.Initialize, initialize, request, refreshOrigin: registration),
                 GitFeatures.CloneInput clone when string.Equals(request.CommandId, _registry.Git.Clone.Id, StringComparison.Ordinal) =>

@@ -38,6 +38,13 @@ internal static class WorkbenchText
     internal const string GitStashMessage = "git.stash.message";
     internal const string GitStashUntracked = "git.stash.untracked";
     internal const string GitStashIndex = "git.stash.index";
+    internal const string GitPatchTitle = "git.patch.title";
+    internal const string GitPatchIndex = "git.patch.index";
+    internal const string GitPatchWorktree = "git.patch.worktree";
+    internal const string GitPatchLayer = "git.patch.layer";
+    internal const string GitPatchPaths = "git.patch.paths";
+    internal const string GitPatchEmpty = "git.patch.empty";
+    internal const string GitPatchFileError = "git.patch.file-error";
     private const string GitMergeOperation = "git.operation.merge";
     private const string GitRebaseOperation = "git.operation.rebase";
     private const string GitCherryPickOperation = "git.operation.cherry-pick";
@@ -106,6 +113,7 @@ internal static class WorkbenchText
             GitResetMode, GitResetSoft, GitResetMixed, GitResetHard, GitResetSoftEffect, GitResetMixedEffect, GitResetHardEffect,
             GitResetIndexPaths, GitResetTrackedPaths, GitResetBlockedPaths, GitResetApply,
             GitStashTitle, GitStashMessage, GitStashUntracked, GitStashIndex,
+            GitPatchTitle, GitPatchIndex, GitPatchWorktree, GitPatchLayer, GitPatchPaths, GitPatchEmpty, GitPatchFileError,
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel,
             GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,
             GitHistoryTitle, GitHistoryRefs, GitHistoryGraph, GitHistoryWorktrees,

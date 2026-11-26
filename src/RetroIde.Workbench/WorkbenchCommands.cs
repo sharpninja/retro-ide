@@ -47,6 +47,10 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor ApplyGitStash = Create("git.stash.apply", "Alt+Shift+A");
     public static readonly CommandDescriptor PopGitStash = Create("git.stash.pop", "Alt+Shift+P");
     public static readonly CommandDescriptor DropGitStash = Create("git.stash.drop", "Alt+Shift+D");
+    public static readonly CommandDescriptor OpenGitPatches = Create("git.patch.open", "Ctrl+Alt+Shift+Y");
+    public static readonly CommandDescriptor ExportGitPatch = Create("git.patch.export", "Alt+Shift+E");
+    public static readonly CommandDescriptor ReviewGitPatch = Create("git.patch.review", "Alt+Shift+O");
+    public static readonly CommandDescriptor ApplyGitPatch = Create("git.patch.apply", "Alt+Shift+Y");
     public static readonly CommandDescriptor OpenGitHistory = Create("git.history.open", "Ctrl+Alt+L");
     public static readonly CommandDescriptor CurrentGitHistory = Create("git.history.current", "Ctrl+Alt+Shift+L");
     public static readonly CommandDescriptor ShowGitRefHistory = Create("git.history.ref", "Ctrl+Alt+Shift+B");
@@ -75,7 +79,7 @@ internal static class WorkbenchCommands
             OpenSourceControl, SelectRepository, RefreshGitStatus, InitializeRepository, CloneRepository, OpenGitDiff, StageGitFile, UnstageGitFile,
             RefreshGitDiff, StageGitHunks, UnstageGitHunks, CreateCommit, AmendCommit, ContinueGitOperation, AbortGitOperation, SkipGitOperation,
             StartGitOperation, ResetToGitCommit, OpenGitStashes, RefreshGitStashes, InspectGitStash, CreateGitStash, ApplyGitStash,
-            PopGitStash, DropGitStash,
+            PopGitStash, DropGitStash, OpenGitPatches, ExportGitPatch, ReviewGitPatch, ApplyGitPatch,
             OpenGitHistory, CurrentGitHistory,
             ShowGitRefHistory, PreviousGitHistoryPage, NextGitHistoryPage, InspectGitCommit, CreateGitBranch, SwitchGitBranch,
             RenameGitBranch, DeleteGitBranch, ShowGitRemotes, RefreshGitRemotes, AddGitRemote, EditGitRemote,

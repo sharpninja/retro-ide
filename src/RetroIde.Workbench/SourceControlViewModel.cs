@@ -39,6 +39,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     [NotifyCanExecuteChangedFor(nameof(CommitCommand), nameof(AmendCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenHistoryCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenStashesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenPatchesCommand))]
     [NotifyPropertyChangedFor(nameof(HasRepository))]
     public partial GitWorktree? Repository { get; private set; }
 
@@ -112,6 +113,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         AmendCommand.NotifyCanExecuteChanged();
         OpenHistoryCommand.NotifyCanExecuteChanged();
         OpenStashesCommand.NotifyCanExecuteChanged();
+        OpenPatchesCommand.NotifyCanExecuteChanged();
         ContinueOperationCommand.NotifyCanExecuteChanged();
         AbortOperationCommand.NotifyCanExecuteChanged();
         SkipOperationCommand.NotifyCanExecuteChanged();

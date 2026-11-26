@@ -102,6 +102,7 @@ public sealed class WorkbenchWindow : Window
         session.SourceControl.PromptCommitAsync = PromptGitCommitAsync;
         session.SourceControl.PromptRecoveryAsync = PromptGitRecoveryAsync;
         session.SourceControl.PromptStashesAsync = ShowGitStashesAsync;
+        session.SourceControl.PromptPatchesAsync = ShowGitPatchesAsync;
         session.Layout.Factory.DefaultHostWindowLocator = () =>
         {
             var floating = new HostWindow();
@@ -126,6 +127,7 @@ public sealed class WorkbenchWindow : Window
             session.SourceControl.PromptCommitAsync = null;
             session.SourceControl.PromptRecoveryAsync = null;
             session.SourceControl.PromptStashesAsync = null;
+            session.SourceControl.PromptPatchesAsync = null;
             session.Controller.Unregister(session.View);
         };
 
@@ -226,6 +228,29 @@ public sealed class WorkbenchWindow : Window
                 dialog.Close();
         }));
         await dialog.ShowDialog(this).ConfigureAwait(true);
+    }
+
+    private async Task ShowGitPatchesAsync(CancellationToken token)
+    {
+        if (token.IsCancellationRequested || _closed)
+            return;
+        var view = _session.SourceControl;
+        var dialog = new GitPatchDialog(view) { FlowDirection = FlowDirection };
+        var pick = view.PickPatchAsync;
+        var save = view.SavePatchAsync;
+        view.PickPatchAsync ??= dialog.PickAsync;
+        view.SavePatchAsync ??= dialog.SaveAsync;
+        using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
+        {
+            if (dialog.IsVisible)
+                dialog.Close();
+        }));
+        try { await dialog.ShowDialog(this).ConfigureAwait(true); }
+        finally
+        {
+            view.PickPatchAsync = pick;
+            view.SavePatchAsync = save;
+        }
     }
 
     private void TrackFloatingInteraction(HostWindow floating)
