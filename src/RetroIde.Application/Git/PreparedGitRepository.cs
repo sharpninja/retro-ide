@@ -61,7 +61,7 @@ internal sealed class PreparedGitRepository : IDisposable
             var worktree = prepared.StagedWorktree;
             var result = source is null
                 ? await NativeGit.RunAsync(staging, ["init", "--", worktree], token).ConfigureAwait(false)
-                : await NativeGit.RunAsync(parent, ["-c", "protocol.ext.allow=never", "clone", "--", source, worktree], token).ConfigureAwait(false);
+                : await NativeGit.RunAsync(parent, ["-c", "protocol.ext.allow=never", "clone", "--no-hardlinks", "--", source, worktree], token).ConfigureAwait(false);
             if (result is null || !Directory.Exists(Path.Combine(worktree, ".git")))
                 throw source is null
                     ? new Failure("git_init_failed", "Git could not initialize the repository.")
@@ -175,7 +175,21 @@ internal sealed class PreparedGitRepository : IDisposable
 
     private static void RemoveDirectory(string path, bool recursive)
     {
-        try { if (Directory.Exists(path)) Directory.Delete(path, recursive); }
+        try
+        {
+            if (!Directory.Exists(path))
+                return;
+
+            if (recursive && OperatingSystem.IsWindows())
+            {
+                // The staging clone owns its copied Git objects. Leave filesystem links alone.
+                var enumeration = new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint };
+                foreach (var file in new DirectoryInfo(path).EnumerateFiles("*", enumeration))
+                    if (file.IsReadOnly)
+                        file.IsReadOnly = false;
+            }
+            Directory.Delete(path, recursive);
+        }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
     }
 
