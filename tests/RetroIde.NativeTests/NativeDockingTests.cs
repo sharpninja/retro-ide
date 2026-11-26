@@ -19,17 +19,20 @@ internal static class NativeDockingTests
         {
             if (args is ["--remote-control-desktop"])
                 return RemoteControlDesktop.Run();
-            if (args is not ([] or ["--remote-control"]))
+            var brandingOnly = args is ["--remote-control-branding"];
+            if (args is not ([] or ["--remote-control"]) && !brandingOnly)
                 throw new ArgumentException("Use --remote-control to run without desktop keyboard or mouse input.");
 
             var remoteControl = args.Length != 0;
             var app = remoteControl ? RemoteControlDesktop.BuildApp() : AppBuilder.Configure<WorkbenchApp>().UsePlatformDetect();
             app.SetupWithoutStarting();
             using var finished = new CancellationTokenSource();
-            var result = remoteControl ? RemoteControlDockingTests.RunAsync(finished) : RunAsync(finished);
+            var result = brandingOnly ? RemoteControlBrandingTests.RunAsync(finished) :
+                remoteControl ? RemoteControlDockingTests.RunAsync(finished) : RunAsync(finished);
             Dispatcher.UIThread.MainLoop(finished.Token);
             result.GetAwaiter().GetResult();
-            Task.Run(() => ProductionAttachmentTests.RunAsync(useNativeShortcut: !remoteControl)).GetAwaiter().GetResult();
+            if (!brandingOnly)
+                Task.Run(() => ProductionAttachmentTests.RunAsync(useNativeShortcut: !remoteControl)).GetAwaiter().GetResult();
             return 0;
         }
         catch (Exception ex)

@@ -1,10 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
+    <ApplicationIcon>Resources/Branding/retro-ide.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" />
     <EmbeddedResource Include="Resources/en.json" />
+    <EmbeddedResource Include="Resources/Branding/retro-ide-256.png" LogicalName="RetroIde.Branding.Icon" />
+    <None Update="Resources/Branding/*.png" CopyToPublishDirectory="PreserveNewest" TargetPath="AppIcons/%(Filename)%(Extension)" />
     <InternalsVisibleTo Include="RetroIde.UnitTests" />
     <InternalsVisibleTo Include="RetroIde.IntegrationTests" />
     <InternalsVisibleTo Include="RetroIde.NativeTests" />

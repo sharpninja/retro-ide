@@ -25,18 +25,20 @@ public sealed class WorkbenchApp : Avalonia.Application
 {
     private readonly ILoggerFactory _logs;
     private readonly ILogger _logger;
+    private readonly bool _showStartupSplash;
     private Task<RunningMcp?>? _attachmentStartup;
     private Action? _stopDesktop;
     private Dispatcher? _dispatcher;
     internal static WorkbenchApp? Instance { get; private set; }
 
     /// <summary>Creates a workbench for Avalonia's application loader.</summary>
-    public WorkbenchApp() : this(NullLoggerFactory.Instance) { }
+    public WorkbenchApp() : this(NullLoggerFactory.Instance, showStartupSplash: false) { }
 
-    internal WorkbenchApp(ILoggerFactory logs)
+    internal WorkbenchApp(ILoggerFactory logs, bool showStartupSplash = true)
     {
         _logs = logs;
         _logger = logs.CreateLogger<WorkbenchApp>();
+        _showStartupSplash = showStartupSplash;
     }
 
     internal static string DefaultDataFolder => Path.Combine(
@@ -51,7 +53,7 @@ public sealed class WorkbenchApp : Avalonia.Application
             _dispatcher = Dispatcher.UIThread;
             _dispatcher.UnhandledException += OnDispatcherException;
         }
-        Name = "Retro IDE";
+        Name = BrandingPanel.ProductName;
         RequestedThemeVariant = ThemeVariant.Dark;
         Styles.Add(new FluentTheme());
         Styles.Add(new DockFluentTheme());
@@ -73,6 +75,7 @@ public sealed class WorkbenchApp : Avalonia.Application
                 { Source: { } source } => DocumentSurface.Create(source),
                 { GitDiff: { } diff } => GitDiffSurface.Create(diff),
                 { GitHistory: { } history } => GitHistorySurface.Create(history),
+                { Id: "start" } => new BrandingPanel(document.Localization, _logger),
                 _ => PaneContent(document!.Localization, document.Id, document: true),
             })));
     }
@@ -98,6 +101,8 @@ public sealed class WorkbenchApp : Avalonia.Application
             };
             desktop.Exit += (_, _) => StopDesktop();
             var window = new WorkbenchWindow(session, layouts);
+            if (_showStartupSplash)
+                window.ShowStartupSplash();
             desktop.MainWindow = window;
             var monitor = desktop.Args?.Contains("--mcp", StringComparer.Ordinal) == true;
             var mutate = desktop.Args?.Contains("--mcp-mutate", StringComparer.Ordinal) == true;

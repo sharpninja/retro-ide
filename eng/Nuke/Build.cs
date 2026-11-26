@@ -6,6 +6,7 @@ using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
 internal sealed class Build : NukeBuild
 {
+    private static readonly int[] IconSizes = [16, 24, 32, 48, 64, 128, 256, 512];
     private readonly string _releaseId = $"{DateTime.UtcNow:yyyyMMddTHHmmssZ}-{Guid.NewGuid():N}";
     private AbsolutePath Bundle => RootDirectory / "artifacts" / "omarchy" / _releaseId;
 
@@ -57,6 +58,7 @@ internal sealed class Build : NukeBuild
         if (!File.Exists(mcp) || (File.GetUnixFileMode(mcp) & UnixFileMode.UserExecute) == 0)
             throw new InvalidOperationException("The published MCP executable is missing or lacks execute permission.");
         Directory.Move(staging, release);
+        InstallIcons(Path.Combine(release, "workbench", "AppIcons"), data);
 
         var current = Path.Combine(install, "current");
         var workbench = Path.Combine(current, "workbench", "RetroIde.Workbench");
@@ -68,11 +70,33 @@ internal sealed class Build : NukeBuild
         File.WriteAllText(pendingDesktop,
             "[Desktop Entry]\nType=Application\nName=Retro IDE\n" +
             $"Exec={DesktopArgument(workbench)}\n" +
-            "Icon=applications-development\nTerminal=false\nCategories=Development;IDE;\n");
+            "Icon=retro-ide\nTerminal=false\nCategories=Development;IDE;\n");
         File.Move(pendingDesktop, desktop, overwrite: true);
         ReplaceLink(current, release);
         Console.WriteLine($"Installed Retro IDE at {release}");
         Console.WriteLine($"Desktop launcher {desktop}");
+    }
+
+    private void InstallIcons(string assets, string data)
+    {
+        var sourceFiles = IconSizes.Select(size => Path.Combine(assets, $"retro-ide-{size}.png")).ToArray();
+        if (sourceFiles.Any(file => !File.Exists(file)))
+            throw new InvalidOperationException("The published Retro IDE icon set is incomplete.");
+
+        foreach (var (size, source) in IconSizes.Zip(sourceFiles))
+        {
+            var dimension = $"{size}x{size}";
+            var directory = Path.Combine(data, "icons", "hicolor", dimension, "apps");
+            Directory.CreateDirectory(directory);
+            var target = Path.Combine(directory, "retro-ide.png");
+            var pending = target + "." + _releaseId;
+            try
+            {
+                File.Copy(source, pending);
+                File.Move(pending, target, overwrite: true);
+            }
+            finally { File.Delete(pending); }
+        }
     }
 
     private static void CopyBundle(string source, string destination)

@@ -4,6 +4,10 @@ namespace RetroIde.Workbench;
 
 internal static class WorkbenchText
 {
+    internal const string BrandingDescription = "branding.description";
+    internal const string BrandingOpenRepository = "branding.open-repository";
+    internal const string BrandingRepositoryUnavailable = "branding.repository-unavailable";
+    internal const string BrandingContinue = "branding.continue";
     internal const string FileMenu = "menu.file";
     internal const string ViewMenu = "menu.view";
     internal const string LanguageMenu = "menu.language";
@@ -114,6 +118,7 @@ internal static class WorkbenchText
             GitResetMode, GitResetSoft, GitResetMixed, GitResetHard, GitResetSoftEffect, GitResetMixedEffect, GitResetHardEffect,
             GitResetIndexPaths, GitResetTrackedPaths, GitResetBlockedPaths, GitResetApply,
             GitStashTitle, GitStashMessage, GitStashUntracked, GitStashIndex,
+            BrandingDescription, BrandingOpenRepository, BrandingRepositoryUnavailable, BrandingContinue,
             GitPatchTitle, GitPatchIndex, GitPatchWorktree, GitPatchLayer, GitPatchPaths, GitPatchEmpty, GitPatchFileError,
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupBrowseError, GitSetupCancel,
             GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,

@@ -17,7 +17,7 @@ namespace RetroIde.Workbench;
 
 /// <summary>The main desktop entry point with an MDI Dock surface and shared command bindings.</summary>
 /// <remarks>TEST-RETRO-007#ac-test-toolkit-bindings</remarks>
-public sealed class WorkbenchWindow : Window
+public sealed partial class WorkbenchWindow : Window
 {
     private readonly WorkbenchSession _session;
     private readonly LayoutStore? _layouts;
@@ -33,7 +33,8 @@ public sealed class WorkbenchWindow : Window
         _layouts = layouts;
         _logger = session.Logs.CreateLogger<WorkbenchWindow>();
         DataContext = session.View;
-        Title = "Retro IDE";
+        Title = BrandingPanel.ProductName;
+        Icon = BrandingPanel.CreateIcon();
         Width = 1200;
         Height = 780;
         MinWidth = 750;
@@ -108,7 +109,7 @@ public sealed class WorkbenchWindow : Window
         session.SourceControl.PromptPatchesAsync = ShowGitPatchesAsync;
         session.Layout.Factory.DefaultHostWindowLocator = () =>
         {
-            var floating = new HostWindow();
+            var floating = new HostWindow { Icon = BrandingPanel.CreateIcon() };
             ApplyLanguageDirection(floating, localization);
             AddFocusShortcut(floating);
             ExplorerPane.RegisterShortcuts(floating, session.ExplorerView);
@@ -119,8 +120,14 @@ public sealed class WorkbenchWindow : Window
         // Dock initializes its locator when the layout is created, before the workbench binds commands.
         session.Layout.Factory.HostWindowLocator![nameof(Dock.Model.Core.IDockWindow)] = session.Layout.Factory.DefaultHostWindowLocator;
 
-        Content = BuildSurface(session, menu, FocusButton);
-        Opened += (_, _) => session.Layout.ShowFloatingLayouts();
+        _desktopSurface = BuildSurface(session, menu, FocusButton);
+        _surface = new Grid { Children = { _desktopSurface } };
+        Content = _surface;
+        Opened += (_, _) =>
+        {
+            if (_startupSplash is null)
+                session.Layout.ShowFloatingLayouts();
+        };
         Closed += (_, _) =>
         {
             _closed = true;
