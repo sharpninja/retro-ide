@@ -47,7 +47,11 @@ internal interface IGitRegistration
     IGitBranchSwitch? BeginBranchSwitch(GitWorktree repository, string[] paths);
 
     /// <summary>Revalidates the captured worktree and protects the listed source paths, or all source paths when null.</summary>
-    Task<GitIntegrationLease> BeginIntegrationAsync(GitSelection selection, string[]? paths, CancellationToken token);
+    Task<GitIntegrationLease> BeginIntegrationAsync(GitSelection selection, string[]? paths, CancellationToken token,
+        GitWorktree? relatedWorktree = null);
+
+    /// <summary>Releases workspace roots belonging to a successfully removed checkout.</summary>
+    Task ForgetRemovedWorktreeAsync(GitWorktree repository);
 
     /// <summary>Registers the installed checkout as a workspace root and makes it the selected Git worktree.</summary>
     /// <param name="repository">The installed native checkout.</param>

@@ -49,12 +49,18 @@ internal static class GitHistorySurface
         var refPane = CreateRefPane(view, refActions);
         Place(refPane, 1, 0);
         var worktrees = CreateList<GitHistoryOperations.Worktree>(view, "git.history.worktrees", "References.Worktrees", worktree =>
-            new StackPanel
-            {
-                Children = { new TextBlock { Text = worktree.Branch ?? worktree.Head, TextTrimming = TextTrimming.CharacterEllipsis },
-                    new TextBlock { Text = worktree.Path, TextTrimming = TextTrimming.CharacterEllipsis } },
-            });
-        Place(Section(view, WorkbenchText.GitHistoryWorktrees, worktrees), 2, 0);
+            BuildWorktreeRow(view, worktree));
+        worktrees.Bind(ListBox.SelectedItemProperty, new Binding(nameof(view.SelectedWorktree)) { Source = view, Mode = BindingMode.TwoWay });
+        var worktreeActions = new WrapPanel { Children =
+        {
+            Button(WorkbenchCommands.RefreshGitWorktrees, view.RefreshWorktreesCommand),
+            Button(WorkbenchCommands.AddGitWorktree, view.AddWorktreeCommand),
+            Button(WorkbenchCommands.OpenGitWorktree, view.OpenWorktreeCommand),
+            Button(WorkbenchCommands.LockGitWorktree, view.LockWorktreeCommand),
+            Button(WorkbenchCommands.UnlockGitWorktree, view.UnlockWorktreeCommand),
+            Button(WorkbenchCommands.RemoveGitWorktree, view.RemoveWorktreeCommand),
+        } };
+        Place(Section(view, WorkbenchText.GitHistoryWorktrees, worktrees, worktreeActions), 2, 0);
 
         var graph = CreateList<GitHistoryGraph.Row>(view, "git.history.graph", nameof(view.Rows), BuildGraphRow);
         graph.Styles.Add(new Style(selector => selector.OfType<ListBoxItem>())
@@ -109,6 +115,8 @@ internal static class GitHistorySurface
             (review, token) => ShowAsync<GitResetDialog.Choice>(() => new GitResetDialog(view.Localization, review), token);
         Func<GitTagDialog.Prompt, CancellationToken, Task<GitTagDialog.Choice?>> tag =
             (prompt, token) => ShowAsync<GitTagDialog.Choice>(() => new GitTagDialog(view.Localization, prompt), token);
+        Func<GitWorktreeDialog.Prompt, CancellationToken, Task<GitWorktreeDialog.Choice?>> worktree =
+            (prompt, token) => ShowAsync<GitWorktreeDialog.Choice>(() => new GitWorktreeDialog(view.Localization, prompt), token);
         surface.AttachedToVisualTree += (_, _) =>
         {
             view.PromptBranchAsync = branch;
@@ -117,6 +125,7 @@ internal static class GitHistorySurface
             view.PromptStartAsync = start;
             view.PromptResetAsync = reset;
             view.PromptTagAsync = tag;
+            view.PromptWorktreeAsync = worktree;
         };
         surface.DetachedFromVisualTree += (_, _) =>
         {
@@ -132,6 +141,8 @@ internal static class GitHistorySurface
                 view.PromptResetAsync = null;
             if (view.PromptTagAsync == tag)
                 view.PromptTagAsync = null;
+            if (view.PromptWorktreeAsync == worktree)
+                view.PromptWorktreeAsync = null;
         };
 
         async Task<T?> ShowAsync<T>(Func<Window> create, CancellationToken token) where T : class
@@ -147,6 +158,25 @@ internal static class GitHistorySurface
             }));
             return await dialog.ShowDialog<T?>(window).ConfigureAwait(true);
         }
+    }
+
+    private static Control BuildWorktreeRow(GitHistoryViewModel view, GitHistoryOperations.Worktree worktree)
+    {
+        var status = new TextBlock { TextTrimming = TextTrimming.CharacterEllipsis };
+        var slug = worktree.IsLocked ? WorkbenchText.GitWorktreeLocked : worktree.IsPrunable ? WorkbenchText.GitWorktreePrunable :
+            worktree.IsPrimary ? WorkbenchText.GitWorktreePrimary : null;
+        if (slug is not null)
+        {
+            var reason = worktree.LockReason ?? worktree.PruneReason;
+            view.Localization.Observe(status, () => status.Text = string.IsNullOrEmpty(reason)
+                ? view.Localization.Text(slug) : $"{view.Localization.Text(slug)} · {reason}");
+        }
+        else
+            status.IsVisible = false;
+        var branch = new TextBlock { Text = worktree.Branch ?? worktree.Head, TextTrimming = TextTrimming.CharacterEllipsis };
+        var path = new TextBlock { Text = worktree.Path, TextTrimming = TextTrimming.CharacterEllipsis };
+        ToolTip.SetTip(path, worktree.Path);
+        return new StackPanel { Children = { branch, path, status } };
     }
 
     private static Control CreateRefPane(GitHistoryViewModel view, Control open)

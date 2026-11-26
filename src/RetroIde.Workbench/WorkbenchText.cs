@@ -86,6 +86,13 @@ internal static class WorkbenchText
     internal const string GitHistoryRefs = "git.history.refs";
     internal const string GitHistoryGraph = "git.history.graph";
     internal const string GitHistoryWorktrees = "git.history.worktrees";
+    internal const string GitWorktreeNewBranch = "git.worktree.branch.new";
+    internal const string GitWorktreeExistingBranch = "git.worktree.branch.existing";
+    internal const string GitWorktreePrimary = "git.worktree.state.primary";
+    internal const string GitWorktreeLocked = "git.worktree.state.locked";
+    internal const string GitWorktreePrunable = "git.worktree.state.prunable";
+    internal const string GitWorktreeLockReason = "git.worktree.lock.reason";
+    internal const string GitWorktreeRemoveConfirmation = "git.worktree.remove.confirmation";
     internal const string GitBranchName = "git.branch.name";
     internal const string GitTagName = "git.tag.name";
     internal const string GitTagObject = "git.tag.object";
@@ -136,6 +143,8 @@ internal static class WorkbenchText
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupBrowseError, GitSetupCancel,
             GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,
             GitHistoryTitle, GitHistoryRefs, GitHistoryGraph, GitHistoryWorktrees,
+            GitWorktreeNewBranch, GitWorktreeExistingBranch, GitWorktreePrimary, GitWorktreeLocked,
+            GitWorktreePrunable, GitWorktreeLockReason, GitWorktreeRemoveConfirmation,
             GitBranchName, GitBranchCheckout,
             GitTagName, GitTagObject, GitTagTarget, GitTagAuthor, GitTagDate, GitTagAnnotation,
             GitRemoteTitle, GitRemoteName, GitRemoteUrl, GitRemotePush, GitRemoteClose, GitUpstreamClear,

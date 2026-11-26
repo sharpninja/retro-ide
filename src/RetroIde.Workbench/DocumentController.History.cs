@@ -81,6 +81,18 @@ internal sealed partial class DocumentController
                 CompleteAsync(view, _features.Git.InspectTag, readTag, request),
             GitTagOperations.DeleteInput deleteTag when string.Equals(request.CommandId, _features.Git.DeleteTag.Id, StringComparison.Ordinal) =>
                 CompleteAsync(view, _features.Git.DeleteTag, deleteTag, request),
+            GitWorktreeOperations.ListInput worktrees when string.Equals(request.CommandId, _features.Git.ListWorktrees.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.ListWorktrees, worktrees, request),
+            GitWorktreeOperations.AddInput addTree when string.Equals(request.CommandId, _features.Git.AddWorktree.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.AddWorktree, addTree, request),
+            GitWorktreeOperations.TargetInput openTree when string.Equals(request.CommandId, _features.Git.OpenWorktree.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.OpenWorktree, openTree, request),
+            GitWorktreeOperations.TargetInput lockTree when string.Equals(request.CommandId, _features.Git.LockWorktree.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.LockWorktree, lockTree, request),
+            GitWorktreeOperations.TargetInput unlockTree when string.Equals(request.CommandId, _features.Git.UnlockWorktree.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.UnlockWorktree, unlockTree, request),
+            GitWorktreeOperations.TargetInput removeTree when string.Equals(request.CommandId, _features.Git.RemoveWorktree.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.RemoveWorktree, removeTree, request),
             GitRemoteOperations.ListInput remotes when string.Equals(request.CommandId, _features.Git.Remotes.Id, StringComparison.Ordinal) =>
                 CompleteAsync(view, _features.Git.Remotes, remotes, request),
             GitHistoryOperations.RefsInput refs when string.Equals(request.CommandId, _features.Git.Refs.Id, StringComparison.Ordinal) =>

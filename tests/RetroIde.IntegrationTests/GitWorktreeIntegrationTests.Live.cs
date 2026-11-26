@@ -46,6 +46,7 @@ public sealed partial class GitWorktreeIntegrationTests
                 "git_get_commit_state", "git_commit", "git_amend", "git_list_refs", "git_get_history", "git_get_commit_details",
                 "git_open_history", "git_close_history", "git_create_branch", "git_switch_branch", "git_rename_branch", "git_delete_branch",
                 "git_get_tag", "git_create_tag", "git_delete_tag",
+                "git_list_worktrees", "git_add_worktree", "git_open_worktree", "git_lock_worktree", "git_unlock_worktree", "git_remove_worktree",
                 "git_list_remotes", "git_add_remote", "git_set_remote_url", "git_rename_remote", "git_remove_remote", "git_fetch", "git_set_upstream",
                 "git_pull", "git_push", "git_get_operation", "git_continue_operation", "git_abort_operation", "git_skip_operation", "git_start_operation",
                 "git_review_reset", "git_reset", "git_list_stashes", "git_inspect_stash", "git_create_stash", "git_apply_stash",

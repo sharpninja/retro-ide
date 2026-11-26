@@ -63,6 +63,26 @@ internal sealed class WorkspaceExplorer
         }
     }
 
+    internal bool RemoveRootsUnder(string directory)
+    {
+        lock (_gate)
+        {
+            var removed = _roots.Values.Where(root => NativeGit.ContainsPath(directory, root.Path))
+                .Select(root => root.Id).ToHashSet();
+            if (removed.Count == 0)
+                return false;
+
+            foreach (var rootId in removed)
+                _roots.Remove(rootId);
+            _expanded.RemoveWhere(address => removed.Contains(address.RootId));
+            if (_selection is { } selected && removed.Contains(selected.RootId))
+                _selection = null;
+            if (_gitSelection is { } git && removed.Contains(git.Address.RootId))
+                _gitSelection = null;
+            return true;
+        }
+    }
+
     public bool SetExpanded(Address address, bool isExpanded)
     {
         lock (_gate)

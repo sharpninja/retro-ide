@@ -531,13 +531,21 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         public IGitBranchSwitch? BeginBranchSwitch(GitWorktree repository, string[] paths) =>
             Controller._documents?.BeginBranchSwitch(repository, paths);
 
-        public Task<GitIntegrationLease> BeginIntegrationAsync(GitSelection selection, string[]? paths, CancellationToken token) =>
+        public Task<GitIntegrationLease> BeginIntegrationAsync(GitSelection selection, string[]? paths, CancellationToken token,
+            GitWorktree? relatedWorktree = null) =>
             Dispatcher.UIThread.InvokeAsync(() =>
             {
                 token.ThrowIfCancellationRequested();
                 if (!ReferenceEquals(Controller.Resolve(View.ViewKey), this) || !ReferenceEquals(SelectedGit, selection))
                     return new GitIntegrationLease(null, "git_selection_changed");
-                return new GitIntegrationLease(Controller._documents?.BeginBranchSwitch(selection.Repository, paths));
+                return new GitIntegrationLease(Controller._documents?.BeginBranchSwitch(relatedWorktree ?? selection.Repository, paths));
+            }).GetTask();
+
+        public Task ForgetRemovedWorktreeAsync(GitWorktree repository) =>
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (ReferenceEquals(Controller.Resolve(View.ViewKey), this) && Explorer.RemoveRootsUnder(repository.WorktreePath))
+                    Controller.PublishExplorerState();
             }).GetTask();
 
         public bool HasExplorer => Controller._explorerView?.ParentViewKey == View.ViewKey;

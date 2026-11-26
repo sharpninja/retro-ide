@@ -28,7 +28,7 @@ internal sealed partial class GitHistoryViewModel : ObservableObject, IView
     public event EventHandler<ViewCommandRequested>? CommandRequested;
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(NextPageCommand), nameof(PreviousPageCommand), nameof(CreateBranchCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand), nameof(PreviousPageCommand), nameof(CreateBranchCommand), nameof(AddWorktreeCommand))]
     public partial GitHistoryOperations.HistoryPage Page { get; private set; }
     [ObservableProperty]
     public partial GitHistoryOperations.RefState References { get; private set; }
@@ -54,6 +54,7 @@ internal sealed partial class GitHistoryViewModel : ObservableObject, IView
     {
         SelectedCommit = null;
         SelectedReference = null;
+        SelectedWorktree = null;
         Details = null;
         References = references;
         Page = page;

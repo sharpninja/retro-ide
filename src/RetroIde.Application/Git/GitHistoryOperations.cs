@@ -15,7 +15,8 @@ internal static class GitHistoryOperations
     internal sealed record CloseHistoryInput(Guid ViewKey);
     internal sealed record Reference(string Name, string ObjectId, string ObjectType, string? PeeledObjectId = null,
         string? Upstream = null, string? SymbolicTarget = null);
-    internal sealed record Worktree(string Path, bool IsDetached, bool IsBare, bool IsLocked, bool IsPrunable, string? Head = null, string? Branch = null);
+    internal sealed record Worktree(string Path, bool IsDetached, bool IsBare, bool IsLocked, bool IsPrunable,
+        string? Head = null, string? Branch = null, bool IsPrimary = false, string? LockReason = null, string? PruneReason = null);
     internal sealed record RefState(GitWorktree Repository, Reference[] Refs, Worktree[] Worktrees);
     internal sealed record Commit(string Id, string[] Parents, string Author, string Email, string AuthoredAt, string Subject, string[] Refs);
     internal sealed record HistoryPage(GitWorktree Repository, int Offset, int Limit, bool HasMore, Commit[] Commits,
@@ -98,8 +99,7 @@ internal static class GitHistoryOperations
     {
         var refs = await RunAsync(repository, token, "for-each-ref", "--sort=refname", $"--format={RefFields}",
             "refs/heads", "refs/remotes", "refs/tags").ConfigureAwait(false);
-        var trees = await RunAsync(repository, token, "worktree", "list", "--porcelain", "-z").ConfigureAwait(false);
-        if (refs is null || trees is null)
+        if (refs is null)
             throw new InvalidDataException("Git reference data is unavailable.");
         var refsFields = refs.Split('\0');
         if ((refsFields.Length - 1) % 6 != 0)
@@ -111,7 +111,15 @@ internal static class GitHistoryOperations
                 Optional(refsFields[i + 3]), Optional(refsFields[i + 4]), Optional(refsFields[i + 5])));
         }
 
-        var worktrees = trees.Split("\0\0", StringSplitOptions.RemoveEmptyEntries).Select(record =>
+        var worktrees = await ReadWorktreesAsync(repository, token).ConfigureAwait(false);
+        return new(repository, [.. references], worktrees);
+    }
+
+    internal static async Task<Worktree[]> ReadWorktreesAsync(GitWorktree repo, CancellationToken token)
+    {
+        var output = await RunAsync(repo, token, "worktree", "list", "--porcelain", "-z").ConfigureAwait(false)
+            ?? throw new InvalidDataException("Git worktree data is unavailable.");
+        return output.Split("\0\0", StringSplitOptions.RemoveEmptyEntries).Select((record, index) =>
         {
             var fields = record.Split('\0');
             if (!fields[0].StartsWith("worktree ", StringComparison.Ordinal))
@@ -120,9 +128,9 @@ internal static class GitHistoryOperations
             bool Has(string name) => fields.Any(field => string.Equals(field, name, StringComparison.Ordinal) ||
                 field.StartsWith(name + ' ', StringComparison.Ordinal));
             return new Worktree(Path.GetFullPath(fields[0]["worktree ".Length..]),
-                Has("detached"), Has("bare"), Has("locked"), Has("prunable"), Value("HEAD "), Value("branch "));
+                Has("detached"), Has("bare"), Has("locked"), Has("prunable"), Value("HEAD "), Value("branch "),
+                IsPrimary: index == 0, LockReason: Value("locked "), PruneReason: Value("prunable "));
         }).ToArray();
-        return new(repository, [.. references], worktrees);
     }
 
     private static async Task<string?> ResolveAnchorAsync(HistoryInput input, Reference? reference, GitWorktree repo, CancellationToken token)

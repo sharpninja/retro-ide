@@ -66,6 +66,12 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor CreateGitTag = Create("git.tag.create", "Ctrl+Alt+F8");
     public static readonly CommandDescriptor InspectGitTag = Create("git.tag.read", "Ctrl+Alt+Shift+F8");
     public static readonly CommandDescriptor DeleteGitTag = Create("git.tag.delete", "Ctrl+Alt+Shift+F7");
+    public static readonly CommandDescriptor RefreshGitWorktrees = Create("git.worktree.list", "Alt+Shift+F6");
+    public static readonly CommandDescriptor AddGitWorktree = Create("git.worktree.add", "Ctrl+Shift+F6");
+    public static readonly CommandDescriptor OpenGitWorktree = Create("git.worktree.open", "Alt+Shift+F10");
+    public static readonly CommandDescriptor LockGitWorktree = Create("git.worktree.lock", "Ctrl+Shift+F10");
+    public static readonly CommandDescriptor UnlockGitWorktree = Create("git.worktree.unlock", "Alt+Shift+F11");
+    public static readonly CommandDescriptor RemoveGitWorktree = Create("git.worktree.remove", "Ctrl+Shift+F11");
     public static readonly CommandDescriptor ShowGitRemotes = Create("git.remotes.open", "Ctrl+Alt+Shift+T");
     public static readonly CommandDescriptor RefreshGitRemotes = Create("git.remotes.read", "Alt+Shift+R");
     public static readonly CommandDescriptor AddGitRemote = Create("git.remote.add", "Ctrl+Alt+A");
@@ -88,6 +94,7 @@ internal static class WorkbenchCommands
             OpenGitHistory, CurrentGitHistory,
             ShowGitRefHistory, PreviousGitHistoryPage, NextGitHistoryPage, InspectGitCommit, CreateGitBranch, SwitchGitBranch,
             CreateGitTag, InspectGitTag, DeleteGitTag,
+            RefreshGitWorktrees, AddGitWorktree, OpenGitWorktree, LockGitWorktree, UnlockGitWorktree, RemoveGitWorktree,
             RenameGitBranch, DeleteGitBranch, ShowGitRemotes, RefreshGitRemotes, AddGitRemote, EditGitRemote,
             RenameGitRemote, RemoveGitRemote, FetchGitRemote, PushGitRemote, PullGitRemote, SetGitUpstream];
 

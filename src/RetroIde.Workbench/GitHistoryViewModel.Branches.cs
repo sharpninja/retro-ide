@@ -129,5 +129,6 @@ internal sealed partial class GitHistoryViewModel
         CreateTagCommand.NotifyCanExecuteChanged();
         InspectTagCommand.NotifyCanExecuteChanged();
         DeleteTagCommand.NotifyCanExecuteChanged();
+        NotifyWorktreeCommands();
     }
 }

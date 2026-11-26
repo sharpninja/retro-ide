@@ -12,10 +12,10 @@ using RetroIde.Workbench;
 
 namespace RetroIde.NativeTests;
 
-internal static class RemoteControlGitTests
+internal static partial class RemoteControlGitTests
 {
     /// <summary>Exercises the Source Control commands and staged diff in a native desktop without physical input.</summary>
-    /// <remarks>TEST-RETRO-013#ac-test-git-stage-and-push; TEST-RETRO-015#ac-test-mcp-same-instance.</remarks>
+    /// <remarks>TEST-RETRO-013#ac-test-git-stage-and-push, ac-test-git-extensions; TEST-RETRO-015#ac-test-mcp-same-instance.</remarks>
     internal static async Task RunAsync()
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(65));
@@ -78,6 +78,7 @@ internal static class RemoteControlGitTests
             await VerifyCommitAsync(window, session, sample, token).ConfigureAwait(true);
             await VerifyHistoryAsync(window, session, token).ConfigureAwait(true);
             await VerifyTagsAsync(window, sample, token).ConfigureAwait(true);
+            await VerifyWorktreesAsync(window, session, sample, token).ConfigureAwait(true);
             await VerifyBranchAsync(window, sample, token).ConfigureAwait(true);
             await VerifyBranchMaintenanceAsync(window, sample, token).ConfigureAwait(true);
             await VerifyRemoteSyncAsync(window, sample, token).ConfigureAwait(true);
