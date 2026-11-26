@@ -10,7 +10,7 @@ internal interface IWorkbenchWorkspaceContext
 
 /// <summary>Composes one workbench and its live registration independently of emulator sessions.</summary>
 /// <remarks>TEST-RETRO-001#verify-ac-behavior-desktop-2</remarks>
-public sealed class WorkbenchSession : IDisposable
+public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
 {
     /// <summary>Creates a workbench and applies a saved layout if it is compatible.</summary>
     public WorkbenchSession(Guid workspaceId, WorkbenchLayoutState? savedLayout = null)
@@ -80,6 +80,13 @@ public sealed class WorkbenchSession : IDisposable
         Layout.Dispose();
         Interaction.Dispose();
         Localization.Dispose();
+    }
+
+    /// <summary>Drains native background work before releasing the workbench and its views.</summary>
+    public async ValueTask DisposeAsync()
+    {
+        try { await Controller.DrainGitRefreshAsync(View).ConfigureAwait(true); }
+        finally { Dispose(); }
     }
 
     private sealed record StandaloneWorkspace(Guid WorkspaceId) : IWorkbenchWorkspaceContext;

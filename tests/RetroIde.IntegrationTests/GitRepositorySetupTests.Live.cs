@@ -21,7 +21,7 @@ public sealed partial class GitRepositorySetupTests
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(40));
         var token = deadline.Token;
         using var sample = await GitWorktreeFixture.CreateAsync("git", token);
-        using var session = new WorkbenchSession(Guid.NewGuid());
+        await using var session = new WorkbenchSession(Guid.NewGuid());
         var scratch = Directory.CreateTempSubdirectory("retro-ide-setup-mcp-");
         try
         {
@@ -47,7 +47,8 @@ public sealed partial class GitRepositorySetupTests
             }
 
             var oldContext = (await InvokeAsync(direct, "workbench_get_context", token)).GetProperty("context");
-            await VerifyProvisionAsync(new McpSetupPort(direct, bridge, token), sample.Remote);
+            await VerifyProvisionAsync(new McpSetupPort(direct, bridge, token), sample.Remote,
+                () => session.Controller.DrainGitRefreshAsync(session.View));
             var protectedPath = Path.Combine(scratch.FullName, "protected checkout");
             var current = (await InvokeAsync(direct, "workbench_get_context", token)).GetProperty("context");
             var stale = await InvokeAsync(direct, "git_initialize_repository", token,
@@ -74,7 +75,7 @@ public sealed partial class GitRepositorySetupTests
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(45));
         var token = deadline.Token;
         using var sample = await GitWorktreeFixture.CreateAsync("git", token);
-        using var session = new WorkbenchSession(Guid.NewGuid());
+        await using var session = new WorkbenchSession(Guid.NewGuid());
         var scratch = Directory.CreateTempSubdirectory("retro-ide-setup-view-");
         var window = new WorkbenchWindow(session);
         window.Show();
@@ -115,6 +116,7 @@ public sealed partial class GitRepositorySetupTests
         finally
         {
             window.Close();
+            await session.Controller.DrainGitRefreshAsync(session.View);
             GitWorktreeFixture.DeleteOwnedDirectory(scratch);
         }
     }

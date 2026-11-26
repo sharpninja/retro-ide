@@ -25,6 +25,7 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
     private readonly WorkbenchUnitOfWork _unitOfWork;
     private readonly Dictionary<Guid, Registration> _views = [];
     private readonly CancellationTokenSource _shutdown = new();
+    private Task _retiredGitReads = Task.CompletedTask;
     private bool _disposed;
 
     internal WorkbenchController(WorkspaceExplorer explorer, DockLayout layout, InteractionBlocks interaction, FeatureRegistry registry, WorkbenchLocalization localization)
@@ -78,7 +79,7 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
             return;
 
         registration.Grant.Revoke();
-        _ = registration.StopGitMonitor(closing: true);
+        _retiredGitReads = CombineDrains(_retiredGitReads, registration.StopGitMonitor(closing: true));
         if (_explorerView is { } explorer && explorer.ParentViewKey == view.ViewKey)
         {
             _explorerView = null;
@@ -162,7 +163,10 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
     }
 
     internal Task DrainGitRefreshAsync(WorkbenchViewModel view) =>
-        Resolve(view.ViewKey)?.StopGitMonitor(closing: true) ?? Task.CompletedTask;
+        CombineDrains(_retiredGitReads, Resolve(view.ViewKey)?.StopGitMonitor(closing: true) ?? Task.CompletedTask);
+
+    private static Task CombineDrains(Task first, Task second) =>
+        first.IsCompletedSuccessfully ? second : second.IsCompletedSuccessfully ? first : Task.WhenAll(first, second);
 
     /// <inheritdoc />
     public Task<OperationResult> DispatchAsync<TInput>(Feature<TInput> feature, TInput input, WorkbenchAddress? context,
@@ -369,9 +373,7 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
             {
                 _gitMonitor = null;
                 monitor.Dispose();
-                _drainingMonitors = _drainingMonitors.IsCompletedSuccessfully
-                    ? monitor.Completion
-                    : Task.WhenAll(_drainingMonitors, monitor.Completion);
+                _drainingMonitors = CombineDrains(_drainingMonitors, monitor.Completion);
             }
             return _drainingMonitors;
         }

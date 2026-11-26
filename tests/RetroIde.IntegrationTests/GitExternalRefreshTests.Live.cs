@@ -16,7 +16,7 @@ public sealed partial class GitWorkspaceStateTests
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(40));
         var token = deadline.Token;
         using var sample = await GitWorktreeFixture.CreateAsync("git", token);
-        using var session = new WorkbenchSession(Guid.NewGuid());
+        await using var session = new WorkbenchSession(Guid.NewGuid());
         var window = new WorkbenchWindow(session) { Width = 1440, Height = 900 };
         window.Show();
         try
@@ -64,17 +64,19 @@ public sealed partial class GitWorkspaceStateTests
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var token = deadline.Token;
         using var sample = await GitWorktreeFixture.CreateAsync("git", token);
-        using var session = new WorkbenchSession(Guid.NewGuid());
+        await using var session = new WorkbenchSession(Guid.NewGuid());
         await using var connection = await WorkspaceConnection.ConnectAsync(session, token);
         var primary = await connection.AddRootAsync(sample.Primary);
         var linked = await connection.AddRootAsync(sample.Linked);
         await connection.ChangeAsync("git_select_repository", Address(primary, ""));
-        await WaitForConditionAsync(() => session.SourceControl.Status?.Branch == "main", "The primary watcher did not start.", token);
+        await WaitForConditionAsync(() => string.Equals(session.SourceControl.Status?.Branch, "main", StringComparison.Ordinal),
+            "The primary watcher did not start.", token);
 
         var oldScope = await BeginHeldReadAsync(session, token);
         Assert.Equal(sample.Primary, oldScope.Selection.Repository.WorktreePath, NativePaths);
         await connection.ChangeAsync("git_select_repository", Address(linked, ""));
-        await WaitForConditionAsync(() => session.SourceControl.Status?.Branch == "fixture-linked", "The linked watcher did not start.", token);
+        await WaitForConditionAsync(() => string.Equals(session.SourceControl.Status?.Branch, "fixture-linked", StringComparison.Ordinal),
+            "The linked watcher did not start.", token);
         Assert.Equal("git_selection_changed", (await oldScope.FinishAsync("obsolete-worktree")).Code);
         Assert.Equal("fixture-linked", session.SourceControl.Status?.Branch);
 

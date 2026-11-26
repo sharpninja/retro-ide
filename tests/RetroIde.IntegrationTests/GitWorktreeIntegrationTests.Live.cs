@@ -19,7 +19,7 @@ public sealed partial class GitWorktreeIntegrationTests
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var token = deadline.Token;
         using var sample = await CreateSampleAsync(token);
-        using var session = new WorkbenchSession(Guid.NewGuid());
+        await using var session = new WorkbenchSession(Guid.NewGuid());
         var scratch = Directory.CreateTempSubdirectory("retro-ide-git-context-");
         try
         {

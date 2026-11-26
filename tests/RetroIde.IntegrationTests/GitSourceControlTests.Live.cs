@@ -23,7 +23,7 @@ public sealed partial class GitSourceControlTests
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(35));
         var token = deadline.Token;
         using var sample = await CreateSourceControlSampleAsync(token);
-        using var session = new WorkbenchSession(Guid.NewGuid());
+        await using var session = new WorkbenchSession(Guid.NewGuid());
         var window = new WorkbenchWindow(session) { Width = 1280, Height = 900 };
         window.Show();
         try

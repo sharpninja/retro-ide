@@ -28,7 +28,7 @@ public sealed partial class GitWorkspaceStateTests
             var store = new WorkspaceExplorerStore(Path.Combine(folder.FullName, "workspace.json"));
             Guid workspace;
             Guid explorer;
-            using (var before = new WorkbenchSession(store, null))
+            await using (var before = new WorkbenchSession(store, null))
             {
                 var window = new WorkbenchWindow(before);
                 window.Show();
@@ -43,7 +43,7 @@ public sealed partial class GitWorkspaceStateTests
 
             // A file used to locate the worktree is transient. The saved identity belongs to its checkout.
             File.Delete(Path.Combine(sample.Linked, GitWorktreeFixture.ChangedPath));
-            using (var reopened = new WorkbenchSession(store, null))
+            await using (var reopened = new WorkbenchSession(store, null))
             {
                 var window = new WorkbenchWindow(reopened);
                 window.Show();
@@ -62,7 +62,7 @@ public sealed partial class GitWorkspaceStateTests
             }
 
             Directory.Move(sample.Linked, sample.Linked + "-removed");
-            using var missing = new WorkbenchSession(store, null);
+            await using var missing = new WorkbenchSession(store, null);
             await ObserveRestoreAsync(missing, token);
             await using var client = await WorkspaceConnection.ConnectAsync(missing, token);
             var absent = await client.CallAsync("git_get_status");
@@ -91,7 +91,7 @@ public sealed partial class GitWorkspaceStateTests
         GitWorktreeFixture.Write(sample.Primary, ".gitignore", "ignored.data\n");
         GitWorktreeFixture.Write(sample.Primary, "untracked.asm", "new file\n");
         GitWorktreeFixture.Write(sample.Primary, "ignored.data", "ignored\n");
-        using var session = new WorkbenchSession(Guid.NewGuid());
+        await using var session = new WorkbenchSession(Guid.NewGuid());
         var window = new WorkbenchWindow(session) { Width = 1440, Height = 1000 };
         window.Show();
         try

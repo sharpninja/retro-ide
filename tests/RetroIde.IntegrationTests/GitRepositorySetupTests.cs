@@ -49,7 +49,7 @@ public sealed partial class GitRepositorySetupTests
     }
 
     /// <summary>Runs the same filesystem, checkout and workspace expectations against either setup implementation.</summary>
-    private static async Task VerifyProvisionAsync(IProvisionPort port, string remote)
+    private static async Task VerifyProvisionAsync(IProvisionPort port, string remote, Func<Task>? beforeCleanup = null)
     {
         var scratch = Directory.CreateTempSubdirectory("retro-ide-provision-");
         try
@@ -93,7 +93,12 @@ public sealed partial class GitRepositorySetupTests
             Assert.Equal(4, (await port.RootsAsync().ConfigureAwait(true)).Distinct(NativePath).Count());
             await VerifySelectedAsync(port, empty, hasCommit: true).ConfigureAwait(true);
         }
-        finally { GitWorktreeFixture.DeleteOwnedDirectory(scratch); }
+        finally
+        {
+            if (beforeCleanup is not null)
+                await beforeCleanup().ConfigureAwait(true);
+            GitWorktreeFixture.DeleteOwnedDirectory(scratch);
+        }
     }
 
     private static async Task VerifySelectedAsync(IProvisionPort port, string path, bool hasCommit)
