@@ -26,56 +26,66 @@ internal static class RemoteControlBrandingTests
         using var session = new WorkbenchSession(Guid.NewGuid());
         var window = new WorkbenchWindow(session) { Width = 1000, Height = 660 };
         var target = new Uri("https://github.com/sharpninja/retro-ide");
+        var startup = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         Uri? opened = null;
         window.ShowStartupSplash(uri =>
         {
             opened = uri;
             return Task.FromResult(true);
-        }, TimeSpan.FromMinutes(1));
+        }, startup.Task);
         window.Show();
         try
         {
             window.UpdateLayout();
             var link = window.GetVisualDescendants().OfType<HyperlinkButton>().Single(control =>
                 string.Equals(AutomationProperties.GetAutomationId(control), "branding.splash.repository", StringComparison.Ordinal));
-            if (window.Icon is null || window.FocusButton.IsEffectivelyVisible ||
+            if (window.Icon is null || window.FocusButton.IsEffectivelyEnabled || window.FocusButton.Bounds.Width <= 0 ||
                 !string.Equals(link.Content as string, target.AbsoluteUri, StringComparison.Ordinal))
-                throw new InvalidOperationException("The startup splash did not show a branded window and its repository link.");
+                throw new InvalidOperationException("The splash did not show its link over the laid-out, disabled workbench.");
+            window.ShowAttachmentPaths("Test MCP attachment");
             await CaptureAsync(window, token).ConfigureAwait(true);
             await WorkbenchRemoteControl.ClickAsync(window, "branding.splash.repository").ConfigureAwait(true);
             await ((IAsyncRelayCommand)link.Command!).ExecutionTask!.WaitAsync(token).ConfigureAwait(true);
             if (opened != target || !link.IsVisited)
                 throw new InvalidOperationException("The splash hyperlink did not dispatch the expected GitHub URL.");
-            await WorkbenchRemoteControl.ClickAsync(window, "branding.splash.continue").ConfigureAwait(true);
-            window.UpdateLayout();
-            if (!window.FocusButton.IsEffectivelyVisible || window.GetVisualDescendants().Contains(link))
-                throw new InvalidOperationException("Continue did not remove the splash and reveal the workbench.");
+            if (!window.GetVisualDescendants().Contains(link))
+                throw new InvalidOperationException("The splash closed before workspace readiness.");
+            startup.SetResult();
+            await WaitForWorkbenchAsync(window, token).ConfigureAwait(true);
+            if (window.GetVisualDescendants().Contains(link) || !window.GetVisualDescendants().OfType<TextBox>()
+                .Any(control => string.Equals(control.Text, "Test MCP attachment", StringComparison.Ordinal)))
+                throw new InvalidOperationException("Readiness did not reveal the workbench and its MCP attachment status.");
             session.Layout.SelectDocument("start");
             while (!HasStartLink(window))
                 await Task.Delay(20, token).ConfigureAwait(true);
         }
         finally { window.Close(); }
 
-        await VerifyTimedDismissalAsync(token).ConfigureAwait(true);
-        Console.WriteLine("RemoteControl verified the native window icon, splash GitHub link, Continue, Start Page, and timed dismissal.");
+        await VerifyDefaultDismissalAsync(token).ConfigureAwait(true);
+        Console.WriteLine("RemoteControl verified the native icon, splash GitHub link, readiness-based dismissal, and Start Page.");
     }
 
     private static bool HasStartLink(Window window) => window.GetVisualDescendants().OfType<HyperlinkButton>()
         .Any(control => control.IsEffectivelyVisible &&
             string.Equals(AutomationProperties.GetAutomationId(control), "branding.start.repository", StringComparison.Ordinal));
 
-    private static async Task VerifyTimedDismissalAsync(CancellationToken token)
+    private static async Task VerifyDefaultDismissalAsync(CancellationToken token)
     {
         using var session = new WorkbenchSession(Guid.NewGuid());
         var window = new WorkbenchWindow(session);
-        window.ShowStartupSplash(duration: TimeSpan.FromMilliseconds(100));
+        window.ShowStartupSplash();
         window.Show();
         try
         {
-            while (!window.FocusButton.IsEffectivelyVisible)
-                await Task.Delay(20, token).ConfigureAwait(true);
+            await WaitForWorkbenchAsync(window, token).ConfigureAwait(true);
         }
         finally { window.Close(); }
+    }
+
+    private static async Task WaitForWorkbenchAsync(WorkbenchWindow window, CancellationToken token)
+    {
+        while (!window.FocusButton.IsEffectivelyEnabled)
+            await Task.Delay(20, token).ConfigureAwait(true);
     }
 
     private static async Task CaptureAsync(Window window, CancellationToken token)

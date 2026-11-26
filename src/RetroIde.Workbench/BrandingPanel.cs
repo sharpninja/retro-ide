@@ -22,10 +22,10 @@ internal sealed class BrandingPanel : Border
     private static readonly IBrush Body = Brush.Parse("#B2C4DC");
     private static readonly IBrush Link = Brush.Parse("#63EBD9");
 
-    internal BrandingPanel(WorkbenchLocalization localization, ILogger logger, Action? dismiss = null, Func<Uri, Task<bool>>? launch = null)
+    internal BrandingPanel(WorkbenchLocalization localization, ILogger logger, bool startup = false, Func<Uri, Task<bool>>? launch = null)
     {
         Background = Canvas;
-        var surface = dismiss is null ? "branding.start" : "branding.splash";
+        var surface = startup ? "branding.splash" : "branding.start";
         AutomationProperties.SetAutomationId(this, surface);
         var mark = new Image { Source = Logo.Value, Width = 148, Height = 148, VerticalAlignment = VerticalAlignment.Center };
         var title = new TextBlock { Text = ProductName, FontSize = 44, FontWeight = FontWeight.Bold, Foreground = Heading };
@@ -61,14 +61,6 @@ internal sealed class BrandingPanel : Border
         });
         var details = new StackPanel { Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
         details.Children.AddRange([title, description, repository, status]);
-        if (dismiss is not null)
-        {
-            ContinueButton = new Button { HorizontalAlignment = HorizontalAlignment.Left, IsCancel = true, Command = new RelayCommand(dismiss) };
-            AutomationProperties.SetAutomationId(ContinueButton, "branding.splash.continue");
-            localization.Observe(ContinueButton, () => ContinueButton.Content = localization.Text(WorkbenchText.BrandingContinue));
-            details.Children.Add(ContinueButton);
-        }
-
         var content = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 28 };
         Grid.SetColumn(details, 1);
         content.Children.AddRange([mark, details]);
@@ -79,8 +71,6 @@ internal sealed class BrandingPanel : Border
             VerticalAlignment = VerticalAlignment.Center, Child = content,
         };
     }
-
-    internal Button? ContinueButton { get; }
 
     internal static WindowIcon CreateIcon() => new(Logo.Value);
 

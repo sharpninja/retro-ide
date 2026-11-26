@@ -5,7 +5,6 @@
     "branding.description": "Development workbench for retro computers and emulators",
     "branding.open-repository": "Open the Retro IDE repository in your browser",
     "branding.repository-unavailable": "Could not launch the browser. The repository address is shown above.",
-    "branding.continue": "Continue to Workbench",
     "command.workbench.view.focus.label": "Focus tool pane",
     "command.workspace.open-project.label": "Open Project…",
     "command.workspace.open-folder.label": "Open Folder…",

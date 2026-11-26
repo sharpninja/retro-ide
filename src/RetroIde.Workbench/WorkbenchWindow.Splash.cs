@@ -1,53 +1,66 @@
 using Avalonia.Controls;
+using Avalonia.Rendering.Composition;
 using Avalonia.Threading;
+using RetroIde.Application;
 
 namespace RetroIde.Workbench;
 
 public sealed partial class WorkbenchWindow
 {
     private readonly Grid _surface;
-    private readonly Control _desktopSurface;
+    private readonly DockPanel _desktopSurface;
     private BrandingPanel? _startupSplash;
 
-    internal void ShowStartupSplash(Func<Uri, Task<bool>>? launch = null, TimeSpan? duration = null)
+    internal void ShowStartupSplash(Func<Uri, Task<bool>>? launch = null, Task? startupReady = null)
     {
         if (_startupSplash is not null)
             return;
 
-        var timer = new DispatcherTimer { Interval = duration ?? TimeSpan.FromSeconds(3.2) };
-        _startupSplash = new BrandingPanel(_session.Localization, _logger, Dismiss, launch);
-        _desktopSurface.IsVisible = false;
+        _startupSplash = new BrandingPanel(_session.Localization, _logger, startup: true, launch);
+        _desktopSurface.IsEnabled = false;
         _surface.Children.Add(_startupSplash);
+        var cancellation = new CancellationTokenSource();
         Opened += Start;
         Closed += OnClosed;
-        timer.Tick += OnTick;
 
-        void Start(object? sender, EventArgs args)
+        async void Start(object? sender, EventArgs args)
         {
-            _startupSplash?.ContinueButton?.Focus();
-            timer.Start();
+            Opened -= Start;
+            await DismissWhenReadyAsync(startupReady ?? _session.GitRestoration, cancellation.Token).ConfigureAwait(true);
         }
 
-        void OnClosed(object? sender, EventArgs args) => Stop();
-        void OnTick(object? sender, EventArgs args) => Dismiss();
-
-        void Stop()
+        void OnClosed(object? sender, EventArgs args)
         {
-            timer.Stop();
-            timer.Tick -= OnTick;
             Opened -= Start;
             Closed -= OnClosed;
+            cancellation.Cancel();
+            cancellation.Dispose();
         }
+    }
 
-        void Dismiss()
+    private async Task DismissWhenReadyAsync(Task startupReady, CancellationToken token)
+    {
+        try
         {
-            if (_startupSplash is not { } splash)
-                return;
-            Stop();
-            _startupSplash = null;
-            _surface.Children.Remove(splash);
-            _desktopSurface.IsVisible = true;
+            await startupReady.WaitAsync(token).ConfigureAwait(true);
+            token.ThrowIfCancellationRequested();
             _session.Layout.ShowFloatingLayouts();
+            await Dispatcher.Yield(DispatcherPriority.Loaded);
+            token.ThrowIfCancellationRequested();
+            UpdateLayout();
+            if (ElementComposition.GetElementVisual(_desktopSurface) is { } visual)
+                await visual.Compositor.RequestCommitAsync().WaitAsync(token).ConfigureAwait(true);
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
+        {
+            RuntimeFailures.Report(_logger, error, "complete the startup splash");
+        }
+        if (token.IsCancellationRequested || _closed || _startupSplash is not { } splash)
+            return;
+
+        _startupSplash = null;
+        _surface.Children.Remove(splash);
+        _desktopSurface.IsEnabled = true;
     }
 }

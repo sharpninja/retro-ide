@@ -479,8 +479,7 @@ public sealed partial class WorkbenchWindow : Window
     internal void ShowAttachmentPaths(string message)
     {
         var label = new TextBox { Text = message, IsReadOnly = true, BorderThickness = new Thickness(0), MaxHeight = 64, TextWrapping = TextWrapping.Wrap };
-        var panel = (DockPanel)Content!;
         DockPanel.SetDock(label, Avalonia.Controls.Dock.Bottom);
-        panel.Children.Insert(2, label);
+        _desktopSurface.Children.Insert(2, label);
     }
 }

@@ -13,7 +13,7 @@ internal sealed class Build : NukeBuild
     public static int Main() => Execute<Build>(build => build.PublishOmarchy);
 
     public Target PublishOmarchy => task => task
-        .Description("Publish the Retro IDE workbench and MCP stdio executable for Linux x64.")
+        .Description("Publish trimmed, self-contained ReadyToRun executables for Linux x64.")
         .Executes(() =>
         {
             Publish("RetroIde.Workbench", "workbench");
@@ -29,7 +29,15 @@ internal sealed class Build : NukeBuild
         .SetProject(RootDirectory / "src" / project / (project + ".csproj"))
         .SetConfiguration("Release")
         .SetRuntime("linux-x64")
-        .SetSelfContained(false)
+        .SetSelfContained(true)
+        .SetProperty("PublishReadyToRun", true)
+        .SetProperty("PublishSingleFile", true)
+        .SetProperty("PublishTrimmed", true)
+        .SetProperty("TrimMode", "partial")
+        .SetProperty("JsonSerializerIsReflectionEnabledByDefault", true)
+        .SetProperty("IncludeNativeLibrariesForSelfExtract", true)
+        .SetProperty("DebugType", "embedded")
+        .SetProperty("PublishDocumentationFiles", false)
         .SetOutput(Bundle / folder));
 
     private void Deploy()
