@@ -104,7 +104,8 @@ internal static class SourceControlPane
             (WorkbenchCommands.AmendCommit, view.AmendCommand), (WorkbenchCommands.OpenGitHistory, view.OpenHistoryCommand)];
 
     private static (CommandDescriptor Descriptor, ICommand Command)[] RecoveryActions(SourceControlViewModel view) =>
-        [(WorkbenchCommands.ContinueGitOperation, view.ContinueOperationCommand), (WorkbenchCommands.AbortGitOperation, view.AbortOperationCommand)];
+        [(WorkbenchCommands.ContinueGitOperation, view.ContinueOperationCommand), (WorkbenchCommands.SkipGitOperation, view.SkipOperationCommand),
+            (WorkbenchCommands.AbortGitOperation, view.AbortOperationCommand)];
 
     private static Control CreateRecovery(SourceControlViewModel view)
     {

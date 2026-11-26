@@ -323,14 +323,30 @@ internal static class RemoteControlGitTests
         if (!string.Equals(banner.Text, "Merge in progress", StringComparison.Ordinal))
             throw new InvalidOperationException($"Source Control showed an unexpected Git operation label: {banner.Text}");
 
-        await ConfirmAsync("git.operation.abort.cancel").ConfigureAwait(true);
+        var skip = await FindAsync<Button>(window, "git.operation.skip.toolbar", token).ConfigureAwait(true);
+        if (skip.IsEffectivelyEnabled)
+            throw new InvalidOperationException("Source Control enabled Skip for a merge.");
+        await ConfirmAsync("git.operation.abort", "cancel").ConfigureAwait(true);
         _ = await sample.GitAsync(worktree, token, "rev-parse", "--verify", "MERGE_HEAD").ConfigureAwait(true);
-        await ConfirmAsync("git.operation.abort.confirm").ConfigureAwait(true);
+        await ConfirmAsync("git.operation.abort", "confirm").ConfigureAwait(true);
         if ((await sample.RunAsync(worktree, token, "rev-parse", "--verify", "MERGE_HEAD").ConfigureAwait(true)).ExitCode == 0 ||
             !string.Equals(before, (await sample.GitAsync(worktree, token, "rev-parse", "HEAD").ConfigureAwait(true)).Trim(), StringComparison.Ordinal) ||
             !string.Equals(Original, await File.ReadAllTextAsync(Path.Combine(worktree, path), token).ConfigureAwait(true), StringComparison.Ordinal))
             throw new InvalidOperationException("The confirmed Abort did not restore the selected Git worktree.");
         Console.WriteLine("RemoteControl identified a native merge conflict, canceled an abort, then confirmed recovery in the selected checkout.");
+
+        if ((await sample.RunAsync(worktree, token, "cherry-pick", incoming).ConfigureAwait(true)).ExitCode == 0)
+            throw new InvalidOperationException("The Skip fixture did not pause on a cherry-pick conflict.");
+        while (session.SourceControl.OperationKind is not "cherry-pick")
+            await Task.Delay(20, token).ConfigureAwait(true);
+        await ConfirmAsync("git.operation.skip", "cancel", incoming).ConfigureAwait(true);
+        _ = await sample.GitAsync(worktree, token, "rev-parse", "--verify", "CHERRY_PICK_HEAD").ConfigureAwait(true);
+        await ConfirmAsync("git.operation.skip", "confirm", incoming).ConfigureAwait(true);
+        if ((await sample.RunAsync(worktree, token, "rev-parse", "--verify", "CHERRY_PICK_HEAD").ConfigureAwait(true)).ExitCode == 0 ||
+            !string.Equals(before, (await sample.GitAsync(worktree, token, "rev-parse", "HEAD").ConfigureAwait(true)).Trim(), StringComparison.Ordinal) ||
+            !string.Equals(Original, await File.ReadAllTextAsync(Path.Combine(worktree, path), token).ConfigureAwait(true), StringComparison.Ordinal))
+            throw new InvalidOperationException("The confirmed Skip did not omit the reviewed cherry-pick step.");
+        Console.WriteLine("RemoteControl reviewed and skipped a paused cherry-pick without physical input.");
 
         async Task CommitSideAsync(string root, string message)
         {
@@ -347,17 +363,24 @@ internal static class RemoteControlGitTests
                 throw new InvalidOperationException($"The Git control did not dispatch {id}.")).WaitAsync(token).ConfigureAwait(true);
         }
 
-        async Task ConfirmAsync(string id)
+        async Task ConfirmAsync(string command, string answer, string? expectedCommit = null)
         {
-            const string Abort = "git.operation.abort.toolbar";
-            var abort = await FindAsync<Button>(window, Abort, token).ConfigureAwait(true);
-            abort.BringIntoView();
-            await WorkbenchRemoteControl.ClickAsync(window, Abort).ConfigureAwait(true);
+            var id = command + ".toolbar";
+            var button = await FindAsync<Button>(window, id, token).ConfigureAwait(true);
+            while (!button.IsEffectivelyEnabled)
+                await Task.Delay(20, token).ConfigureAwait(true);
+            button.BringIntoView();
+            await WorkbenchRemoteControl.ClickAsync(window, id).ConfigureAwait(true);
             while (window.OwnedWindows.Count == 0)
                 await Task.Delay(20, token).ConfigureAwait(true);
-            await WorkbenchRemoteControl.ClickAsync(window.OwnedWindows.Single(), id).ConfigureAwait(true);
-            await (session.SourceControl.AbortOperationCommand.ExecutionTask ??
-                throw new InvalidOperationException("The Abort command was not dispatched.")).WaitAsync(token).ConfigureAwait(true);
+            var confirmation = window.OwnedWindows.Single();
+            await FindAsync<Button>(confirmation, command + "." + answer, token).ConfigureAwait(true);
+            if (expectedCommit is not null && !confirmation.GetVisualDescendants().OfType<SelectableTextBlock>()
+                .Any(text => text.IsEffectivelyVisible && string.Equals(text.Text, expectedCommit, StringComparison.Ordinal)))
+                throw new InvalidOperationException("The Skip confirmation did not identify the pending commit.");
+            await WorkbenchRemoteControl.ClickAsync(confirmation, command + "." + answer).ConfigureAwait(true);
+            await (((IAsyncRelayCommand)button.Command!).ExecutionTask ??
+                throw new InvalidOperationException($"The recovery command {command} was not dispatched.")).WaitAsync(token).ConfigureAwait(true);
         }
     }
 

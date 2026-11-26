@@ -278,6 +278,8 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                     DispatchToViewAsync(git, registration, _registry.Git.ContinueOperation, resume, request),
                 GitOperationRecovery.RecoverInput abort when string.Equals(request.CommandId, _registry.Git.AbortOperation.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.AbortOperation, abort, request),
+                GitOperationRecovery.RecoverInput skip when string.Equals(request.CommandId, _registry.Git.SkipOperation.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.SkipOperation, skip, request),
                 GitFeatures.InitializeInput initialize when string.Equals(request.CommandId, _registry.Git.Initialize.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.Initialize, initialize, request, refreshOrigin: registration),
                 GitFeatures.CloneInput clone when string.Equals(request.CommandId, _registry.Git.Clone.Id, StringComparison.Ordinal) =>

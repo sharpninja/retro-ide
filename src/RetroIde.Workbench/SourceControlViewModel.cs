@@ -28,7 +28,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
 
     internal Func<bool, CancellationToken, Task<GitSetupDialog.Choice?>>? PromptSetupAsync { get; set; }
     internal Func<GitCommitOperations.CommitState, bool, CancellationToken, Task<string?>>? PromptCommitAsync { get; set; }
-    internal Func<GitOperationRecovery.State, CancellationToken, Task<bool>>? PromptAbortAsync { get; set; }
+    internal Func<GitOperationRecovery.State, GitOperationRecovery.Action, CancellationToken, Task<bool>>? PromptRecoveryAsync { get; set; }
 
     public event EventHandler<ViewCommandRequested>? CommandRequested;
 
@@ -43,7 +43,8 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Staged), nameof(Working), nameof(Conflicts), nameof(OperationKind))]
-    [NotifyCanExecuteChangedFor(nameof(ContinueOperationCommand), nameof(AbortOperationCommand), nameof(CommitCommand), nameof(AmendCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ContinueOperationCommand), nameof(AbortOperationCommand), nameof(SkipOperationCommand),
+        nameof(CommitCommand), nameof(AmendCommand))]
     public partial GitStatus? Status { get; private set; }
 
     [ObservableProperty]
@@ -108,6 +109,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         OpenHistoryCommand.NotifyCanExecuteChanged();
         ContinueOperationCommand.NotifyCanExecuteChanged();
         AbortOperationCommand.NotifyCanExecuteChanged();
+        SkipOperationCommand.NotifyCanExecuteChanged();
         NotifyFileCommands();
     }
 
@@ -127,6 +129,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     private bool CanCommit() => CanRefreshStatus() && OperationKind is null;
     private bool CanAbortOperation() => CanRefreshStatus() && GitOperationRecovery.IsSupported(OperationKind);
     private bool CanContinueOperation() => CanAbortOperation() && !Conflicts.Any();
+    private bool CanSkipOperation() => CanRefreshStatus() && GitOperationRecovery.SupportsSkip(OperationKind);
 
     [RelayCommand(CanExecute = nameof(CanOpenDiff))]
     private Task OpenDiffAsync(CancellationToken cancellationToken) =>
@@ -186,21 +189,30 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     private Task AmendAsync(CancellationToken cancellationToken) => CommitOrAmendAsync(amend: true, cancellationToken);
 
     [RelayCommand(CanExecute = nameof(CanContinueOperation))]
-    private Task ContinueOperationAsync(CancellationToken token) => RecoverOperationAsync(abort: false, token);
+    private Task ContinueOperationAsync(CancellationToken token) => RecoverOperationAsync(GitOperationRecovery.Action.Continue, token);
 
     [RelayCommand(CanExecute = nameof(CanAbortOperation))]
-    private Task AbortOperationAsync(CancellationToken token) => RecoverOperationAsync(abort: true, token);
+    private Task AbortOperationAsync(CancellationToken token) => RecoverOperationAsync(GitOperationRecovery.Action.Abort, token);
 
-    private async Task RecoverOperationAsync(bool abort, CancellationToken token)
+    [RelayCommand(CanExecute = nameof(CanSkipOperation))]
+    private Task SkipOperationAsync(CancellationToken token) => RecoverOperationAsync(GitOperationRecovery.Action.Skip, token);
+
+    private async Task RecoverOperationAsync(GitOperationRecovery.Action action, CancellationToken token)
     {
         if (Repository is not { } repository)
             return;
         var result = await RequestAsync(registry.Git.Operation, new GitOperationRecovery.ReadInput(repository.WorktreePath), token).ConfigureAwait(true);
         if (result is not { Code: "ok", Data: { } data } ||
-            data.Deserialize<GitOperationRecovery.State>(WireJson.Options) is not { Revision: { } revision } state ||
-            (abort ? !state.CanAbort : !state.CanContinue))
+            data.Deserialize<GitOperationRecovery.State>(WireJson.Options) is not { Revision: { } revision } state)
             return;
-        if (abort && (PromptAbortAsync is not { } prompt || !await prompt(state, token).ConfigureAwait(true)))
+        var (available, feature) = action switch
+        {
+            GitOperationRecovery.Action.Abort => (state.CanAbort, registry.Git.AbortOperation),
+            GitOperationRecovery.Action.Skip => (state.CanSkip, registry.Git.SkipOperation),
+            _ => (state.CanContinue, registry.Git.ContinueOperation),
+        };
+        if (!available || action is not GitOperationRecovery.Action.Continue &&
+            (PromptRecoveryAsync is not { } prompt || !await prompt(state, action, token).ConfigureAwait(true)))
             return;
         if (token.IsCancellationRequested || ParentViewKey is null)
             return;
@@ -208,8 +220,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         interaction.Begin(PaneId);
         try
         {
-            await RequestAsync(abort ? registry.Git.AbortOperation : registry.Git.ContinueOperation,
-                new GitOperationRecovery.RecoverInput(repository.WorktreePath, revision), token).ConfigureAwait(true);
+            await RequestAsync(feature, new GitOperationRecovery.RecoverInput(repository.WorktreePath, revision), token).ConfigureAwait(true);
         }
         finally { interaction.End(PaneId); }
     }

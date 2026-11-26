@@ -12,6 +12,7 @@ internal static class WorkbenchText
     internal const string GitWorking = "git.status.group.working";
     internal const string GitConflicts = "git.status.group.conflicts";
     internal const string GitAbortExplanation = "git.operation.abort-explanation";
+    internal const string GitSkipExplanation = "git.operation.skip-explanation";
     internal const string GitStartCheckout = "git.operation.start.checkout";
     internal const string GitStartTarget = "git.operation.start.target";
     internal const string GitStartKind = "git.operation.start.kind";
@@ -84,7 +85,7 @@ internal static class WorkbenchText
     internal static IReadOnlyList<string> Required { get; } =
         [FileMenu, ViewMenu, LanguageMenu, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
             ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts, GitDiffStaged, GitDiffWorking, GitDiffHunks,
-            GitAbortExplanation, GitMergeOperation, GitRebaseOperation, GitCherryPickOperation, GitRevertOperation, GitOtherOperation,
+            GitAbortExplanation, GitSkipExplanation, GitMergeOperation, GitRebaseOperation, GitCherryPickOperation, GitRevertOperation, GitOtherOperation,
             GitStartCheckout, GitStartTarget, GitStartKind, GitStartMerge, GitStartRebase, GitStartCherryPick, GitStartRevert,
             GitStartApply, GitMainline, GitDetachedHead,
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel,

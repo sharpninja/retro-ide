@@ -38,6 +38,8 @@ Select a commit in **Git History** and choose **Apply Commit**. Review the check
 
 Source Control shows when the selected worktree has a paused merge, rebase, cherry-pick, or revert. Resolve the paths under **Conflicts** and stage the resolutions to enable **Continue Git Operation**. Git uses the operation’s prepared commit message and runs its configured hooks. **Abort Git Operation** asks you to confirm the affected worktree before Git restores its earlier state. Save or discard open editor changes in that worktree before either action. Retro IDE rechecks the operation’s reviewed index and working changes before invoking Git. [Git merge](https://git-scm.com/docs/git-merge) · [Git rebase](https://git-scm.com/docs/git-rebase) · [Git cherry-pick](https://git-scm.com/docs/git-cherry-pick) · [Git revert](https://git-scm.com/docs/git-revert)
 
+**Skip Current Commit** lets you review and omit the paused commit in a rebase, cherry-pick, or revert. Git resumes the remaining sequence and may pause at the next conflict. [Git rebase](https://git-scm.com/docs/git-rebase) · [Git cherry-pick](https://git-scm.com/docs/git-cherry-pick) · [Git revert](https://git-scm.com/docs/git-revert)
+
 ## Workflows
 
 | Area | IDE commands and views |

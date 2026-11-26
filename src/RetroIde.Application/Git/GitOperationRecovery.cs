@@ -25,8 +25,12 @@ internal static class GitOperationRecovery
 
     internal sealed record ReadInput(string WorktreePath);
     internal sealed record RecoverInput(string WorktreePath, string Revision);
+    internal enum Action { Continue, Skip, Abort }
     internal sealed record State(GitWorktree Repository, string Kind, string? Head, string? Revision, string[] Conflicts,
-        bool CanContinue, bool CanAbort);
+        bool CanContinue, bool CanAbort, string? PendingCommit = null)
+    {
+        public bool CanSkip => CanAbort && SupportsSkip(Kind);
+    }
 
     internal static string? ReadKind(GitWorktree repo)
     {
@@ -52,6 +56,7 @@ internal static class GitOperationRecovery
     }
 
     internal static bool IsSupported(string? kind) => kind is "merge" or "rebase" or "cherry-pick" or "revert";
+    internal static bool SupportsSkip(string? kind) => kind is "rebase" or "cherry-pick" or "revert";
 
     internal static Task<FeatureOutcome> ReadAsync(ReadInput input, IWorkbenchRegistration view, CancellationToken token) =>
         WithSelectionAsync(input.WorktreePath, view, async (_, selection) =>
@@ -65,24 +70,24 @@ internal static class GitOperationRecovery
             };
         }, token);
 
-    internal static Task<FeatureOutcome> RecoverAsync(RecoverInput input, IWorkbenchRegistration view, bool abort, CancellationToken token) =>
+    internal static Task<FeatureOutcome> RecoverAsync(RecoverInput input, IWorkbenchRegistration view, Action action, CancellationToken token) =>
         WithSelectionAsync(input.WorktreePath, view, async (git, selection) =>
         {
             var state = await CaptureAsync(selection, token).ConfigureAwait(false);
-            if (Validate(state, input.Revision, abort) is { } problem)
+            if (Validate(state, input.Revision, action) is { } problem)
                 return problem;
             return new FeatureOutcome("ok", "Git operation recovery prepared.")
             {
                 Commit = current => SameSelection(current, selection)
                     ? new FeatureOutcome("ok", "Git operation recovery authorized.")
                     {
-                        ExecuteAuthorizedAsync = cancellation => TryAsync(() => ApplyAsync(git, selection, input.Revision, abort, cancellation)),
+                        ExecuteAuthorizedAsync = cancellation => TryAsync(() => ApplyAsync(git, selection, input.Revision, action, cancellation)),
                     }
                     : ChangedSelection(),
             };
         }, token);
 
-    private static async Task<FeatureOutcome> ApplyAsync(IGitRegistration git, GitSelection selection, string revision, bool abort, CancellationToken token)
+    private static async Task<FeatureOutcome> ApplyAsync(IGitRegistration git, GitSelection selection, string revision, Action action, CancellationToken token)
     {
         // Resuming a sequencer may also apply later commits. Hold all open buffers in this worktree until Git returns.
         var lease = await git.BeginIntegrationAsync(selection, paths: null, token).ConfigureAwait(false);
@@ -93,30 +98,38 @@ internal static class GitOperationRecovery
         try
         {
             var before = await CaptureAsync(selection, token).ConfigureAwait(false);
-            if (Validate(before, revision, abort) is { } problem)
+            if (Validate(before, revision, action) is { } problem)
                 return problem;
             var repo = selection.Repository;
-            if (abort && await WouldOverwriteUntrackedAsync(selection, before.Kind, token).ConfigureAwait(false))
-                return new("git_operation_local_changes", "Move untracked or ignored files that would be overwritten when restoring this operation.");
+            if (action is Action.Abort or Action.Skip &&
+                await WouldOverwriteUntrackedAsync(selection, before, action, token).ConfigureAwait(false))
+                return new("git_operation_local_changes", "Move untracked or ignored files that this recovery could overwrite.");
 
             var arguments = NativeGit.WorktreeArguments(repo);
-            arguments.AddRange(["-c", "submodule.recurse=false", before.Kind, abort ? "--abort" : "--continue"]);
+            var nativeOption = action switch { Action.Abort => "--abort", Action.Skip => "--skip", _ => "--continue" };
+            arguments.AddRange(["-c", "submodule.recurse=false", before.Kind, nativeOption]);
             token.ThrowIfCancellationRequested();
             invoked = true;
             var result = await NativeGit.RunCaptureAsync(repo.WorktreePath, arguments, CancellationToken.None,
-                reuseCommitMessage: !abort).ConfigureAwait(false);
+                reuseCommitMessage: action is not Action.Abort).ConfigureAwait(false);
             var after = await CaptureAsync(selection, CancellationToken.None).ConfigureAwait(false);
             if (result.ExitCode == 0)
-                return FeatureOutcome.Success(abort ? "Git operation aborted." : "Git operation continued.", after);
-            return new FeatureOutcome(after.Conflicts.Length > 0 && !abort ? "git_operation_paused" : "git_operation_failed",
-                after.Conflicts.Length > 0 && !abort ? "Git paused with unresolved conflicts." :
+                return FeatureOutcome.Success(action switch
+                {
+                    Action.Abort => "Git operation aborted.",
+                    Action.Skip => "Git skipped the current step.",
+                    _ => "Git operation continued.",
+                }, after);
+            var paused = after.Conflicts.Length > 0 && action is not Action.Abort;
+            return new FeatureOutcome(paused ? "git_operation_paused" : "git_operation_failed",
+                paused ? "Git paused with unresolved conflicts." :
                     "Git could not recover the operation. Check worktree status and the native Git configuration.",
                 JsonSerializer.SerializeToElement(after, WireJson.Options));
         }
         finally { await guard.CompleteAsync(invoked).ConfigureAwait(false); }
     }
 
-    private static async Task<bool> WouldOverwriteUntrackedAsync(GitSelection selection, string kind, CancellationToken token)
+    private static async Task<bool> WouldOverwriteUntrackedAsync(GitSelection selection, State state, Action action, CancellationToken token)
     {
         var repo = selection.Repository;
         var status = await NativeGit.ReadStatusAsync(selection, token).ConfigureAwait(false)
@@ -125,7 +138,7 @@ internal static class GitOperationRecovery
         if (local.Length == 0)
             return false;
 
-        var original = kind switch
+        var original = action is Action.Skip ? status.Head : state.Kind switch
         {
             "rebase" => RelativeFile(repo, "rebase-merge/orig-head") ?? RelativeFile(repo, "rebase-apply/orig-head"),
             "merge" => RelativeFile(repo, "ORIG_HEAD"),
@@ -137,20 +150,59 @@ internal static class GitOperationRecovery
         arguments.AddRange(["ls-tree", "-r", "--full-tree", "--name-only", "-z", original!.Trim()]);
         var tree = await NativeGit.RunAsync(repo.WorktreePath, arguments, token).ConfigureAwait(false)
             ?? throw new InvalidDataException("Git could not inspect the restore point.");
-        return Collides(tree.Split('\0', StringSplitOptions.RemoveEmptyEntries), local);
+        if (Collides(tree.Split('\0', StringSplitOptions.RemoveEmptyEntries), local))
+            return true;
+        return action is Action.Skip && await WouldReplayOverLocalFilesAsync(repo, state, local, token).ConfigureAwait(false);
+    }
+
+    private static async Task<bool> WouldReplayOverLocalFilesAsync(GitWorktree repo, State state, string[] local, CancellationToken token)
+    {
+        var path = state.Kind is "rebase" ? "rebase-merge/git-rebase-todo" : "sequencer/todo";
+        var sequence = RelativeFile(repo, path);
+        if (sequence is null)
+            return false;
+
+        var commits = new List<string>();
+        foreach (var line in sequence.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            var fields = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            if (fields.Length < 2 || fields[0] is not ("pick" or "p" or "revert" or "reword" or "r" or "edit" or "e" or
+                "squash" or "s" or "fixup" or "f" or "merge" or "m"))
+                continue;
+            var commit = fields[1] is "-c" or "-C" && fields.Length > 2 ? fields[2] : fields[1];
+            if (commit.Length is >= 4 and <= 64 && commit.All(char.IsAsciiHexDigit))
+                commits.Add(commit);
+        }
+        // A cherry-pick or revert todo starts with the paused step. Rebase keeps it in its done file.
+        if (state.Kind is not "rebase" && commits.Count > 0 &&
+            state.PendingCommit?.StartsWith(commits[0], StringComparison.OrdinalIgnoreCase) == true)
+            commits.RemoveAt(0);
+        foreach (var batch in commits.Chunk(64))
+        {
+            var arguments = NativeGit.WorktreeArguments(repo);
+            arguments.AddRange(["log", "--no-walk=unsorted", "--root", "--diff-merges=first-parent", "--no-renames",
+                "--no-ext-diff", "--no-textconv", "--name-only", "--format=", "-z", .. batch, "--"]);
+            var paths = await NativeGit.RunAsync(repo.WorktreePath, arguments, token).ConfigureAwait(false)
+                ?? throw new InvalidDataException("Git could not inspect the remaining sequence.");
+            if (Collides(paths.Split('\0', StringSplitOptions.RemoveEmptyEntries), local))
+                return true;
+        }
+        return false;
     }
 
     internal static bool Collides(string[] paths, string[] local) => paths.Any(path => local.Any(entry =>
         string.Equals(path, entry, PathComparison) || path.StartsWith(entry + "/", PathComparison) ||
         entry.StartsWith(path + "/", PathComparison)));
 
-    private static FeatureOutcome? Validate(State state, string revision, bool abort)
+    private static FeatureOutcome? Validate(State state, string revision, Action action)
     {
         if (!state.CanAbort)
             return new("git_operation_unavailable", "No supported Git operation is paused in the selected worktree.");
         if (!string.Equals(state.Revision, revision, StringComparison.Ordinal))
-            return new("git_operation_changed", "Git operation state changed. Review it again before continuing.");
-        return !abort && !state.CanContinue
+            return new("git_operation_changed", "Git operation state changed. Review it again before recovery.");
+        if (action is Action.Skip && !state.CanSkip)
+            return new("git_operation_skip_unsupported", "Git does not support skipping a step in this operation.");
+        return action is Action.Continue && !state.CanContinue
             ? new("git_operation_conflicts", "Resolve and stage all conflicts before continuing.") : null;
     }
 
@@ -170,6 +222,7 @@ internal static class GitOperationRecovery
         arguments.AddRange(["diff", "--binary", "--no-ext-diff", "--no-textconv", "--no-color", "HEAD", "--"]);
         var working = await NativeGit.ReadBytesAsync(repo.WorktreePath, arguments, token).ConfigureAwait(false)
             ?? throw new InvalidDataException("Git could not capture working changes.");
+        var pending = ReadPendingCommit(repo, kind);
         var finalControls = CaptureControls(repo, token);
         if (!string.Equals(kind, ReadKind(repo), StringComparison.Ordinal) || !controls!.AsSpan().SequenceEqual(finalControls))
             throw new InvalidDataException("Git operation changed during inspection.");
@@ -178,7 +231,20 @@ internal static class GitOperationRecovery
         revision.AppendData(finalControls);
         revision.AppendData(SHA256.HashData(working));
         revision.AppendData(JsonSerializer.SerializeToUtf8Bytes(new { repo.WorktreePath, repo.GitDirectory, kind, status.Head, status.Entries }, WireJson.Options));
-        return new(repo, kind!, status.Head, Convert.ToHexString(revision.GetHashAndReset()), conflicts, conflicts.Length == 0, true);
+        return new(repo, kind!, status.Head, Convert.ToHexString(revision.GetHashAndReset()), conflicts, conflicts.Length == 0, true, pending);
+    }
+
+    private static string? ReadPendingCommit(GitWorktree repo, string? kind)
+    {
+        var commit = (kind switch
+        {
+            "rebase" => RelativeFile(repo, "REBASE_HEAD") ?? RelativeFile(repo, "rebase-merge/stopped-sha") ??
+                RelativeFile(repo, "rebase-apply/original-commit"),
+            "cherry-pick" => RelativeFile(repo, "CHERRY_PICK_HEAD"),
+            "revert" => RelativeFile(repo, "REVERT_HEAD"),
+            _ => null,
+        })?.Trim();
+        return GitHistoryOperations.IsObjectId(commit) ? commit : null;
     }
 
     private static byte[] CaptureControls(GitWorktree repo, CancellationToken token)

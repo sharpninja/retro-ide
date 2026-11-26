@@ -100,7 +100,7 @@ public sealed class WorkbenchWindow : Window
         session.ExplorerView.PickDirectoryAsync = PickWorkspaceDirectoryAsync;
         session.SourceControl.PromptSetupAsync = PromptGitSetupAsync;
         session.SourceControl.PromptCommitAsync = PromptGitCommitAsync;
-        session.SourceControl.PromptAbortAsync = PromptGitAbortAsync;
+        session.SourceControl.PromptRecoveryAsync = PromptGitRecoveryAsync;
         session.Layout.Factory.DefaultHostWindowLocator = () =>
         {
             var floating = new HostWindow();
@@ -123,7 +123,7 @@ public sealed class WorkbenchWindow : Window
             session.ExplorerView.PickDirectoryAsync = null;
             session.SourceControl.PromptSetupAsync = null;
             session.SourceControl.PromptCommitAsync = null;
-            session.SourceControl.PromptAbortAsync = null;
+            session.SourceControl.PromptRecoveryAsync = null;
             session.Controller.Unregister(session.View);
         };
 
@@ -200,11 +200,11 @@ public sealed class WorkbenchWindow : Window
         return await dialog.ShowDialog<string?>(this).ConfigureAwait(true);
     }
 
-    private async Task<bool> PromptGitAbortAsync(GitOperationRecovery.State state, CancellationToken token)
+    private async Task<bool> PromptGitRecoveryAsync(GitOperationRecovery.State state, GitOperationRecovery.Action action, CancellationToken token)
     {
         if (token.IsCancellationRequested || _closed)
             return false;
-        var dialog = new GitAbortOperationDialog(_session.Localization, state) { FlowDirection = FlowDirection };
+        var dialog = new GitRecoveryDialog(_session.Localization, state, action) { FlowDirection = FlowDirection };
         using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
         {
             if (dialog.IsVisible)
