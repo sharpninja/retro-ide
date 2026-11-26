@@ -175,13 +175,17 @@ internal sealed class GitWorktreeFixture : IDisposable
     }
 
     /// <inheritdoc />
-    public void Dispose()
+    public void Dispose() => DeleteOwnedDirectory(_root);
+
+    /// <summary>Removes a fixture-owned directory, including Windows read-only Git objects.</summary>
+    internal static void DeleteOwnedDirectory(DirectoryInfo directory)
     {
         if (OperatingSystem.IsWindows())
-            foreach (var file in _root.EnumerateFiles("*", SearchOption.AllDirectories))
+            foreach (var file in directory.EnumerateFiles("*",
+                new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint }))
                 if (file.IsReadOnly)
                     file.IsReadOnly = false;
-        _root.Delete(recursive: true);
+        directory.Delete(recursive: true);
     }
 
     /// <summary>Contains a native Git process result.</summary>

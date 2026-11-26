@@ -1,3 +1,4 @@
+using RetroIde.Application.Git;
 using RetroIde.Testing;
 using Xunit;
 using Xunit.Sdk;
@@ -20,6 +21,31 @@ public sealed partial class GitRepositorySetupTests
         using var sample = await GitWorktreeFixture.CreateAsync("git", token).ConfigureAwait(true);
         await VerifyProvisionAsync(new NativeReference(sample, token), sample.Remote).ConfigureAwait(true);
         await Assert.ThrowsAnyAsync<XunitException>(() => VerifyProvisionAsync(new NativeReference(sample, token, fault), sample.Remote)).ConfigureAwait(true);
+    }
+
+    /// <summary>Discards a fully prepared checkout without removing or exposing the destination.</summary>
+    [Fact]
+    public async Task Discarding_a_prepared_clone_removes_read_only_staging()
+    {
+        var token = TestContext.Current.CancellationToken;
+        using var sample = await GitWorktreeFixture.CreateAsync("git", token).ConfigureAwait(true);
+        var scratch = Directory.CreateTempSubdirectory("retro-ide-setup-discard-");
+        try
+        {
+            var destination = scratch.CreateSubdirectory("uninstalled clone");
+            using (await PreparedGitRepository.PrepareAsync(destination.FullName, sample.Remote, token).ConfigureAwait(true))
+            {
+                Assert.Empty(destination.EnumerateFileSystemInfos());
+                var stage = Assert.Single(scratch.EnumerateDirectories(), entry => !NativePath.Equals(entry.FullName, destination.FullName));
+                var objects = new DirectoryInfo(Path.Combine(stage.FullName, "checkout", ".git", "objects"));
+                var blob = objects.EnumerateFiles("*", SearchOption.AllDirectories).First();
+                if (OperatingSystem.IsWindows())
+                    blob.IsReadOnly = true;
+            }
+            Assert.Equal(destination.FullName, Assert.Single(scratch.EnumerateDirectories()).FullName, NativePath);
+            Assert.Empty(destination.EnumerateFileSystemInfos());
+        }
+        finally { GitWorktreeFixture.DeleteOwnedDirectory(scratch); }
     }
 
     /// <summary>Runs the same filesystem, checkout and workspace expectations against either setup implementation.</summary>
@@ -67,7 +93,7 @@ public sealed partial class GitRepositorySetupTests
             Assert.Equal(4, (await port.RootsAsync().ConfigureAwait(true)).Distinct(NativePath).Count());
             await VerifySelectedAsync(port, empty, hasCommit: true).ConfigureAwait(true);
         }
-        finally { scratch.Delete(recursive: true); }
+        finally { GitWorktreeFixture.DeleteOwnedDirectory(scratch); }
     }
 
     private static async Task VerifySelectedAsync(IProvisionPort port, string path, bool hasCommit)
@@ -109,7 +135,7 @@ public sealed partial class GitRepositorySetupTests
                     Directory.CreateDirectory(destination);
                 return "git_clone_failed";
             }
-            await git.GitAsync(git.Primary, token, "clone", "--", source, destination).ConfigureAwait(false);
+            await git.GitAsync(git.Primary, token, "clone", "--no-hardlinks", "--", source, destination).ConfigureAwait(false);
             return Register(destination);
         }
 

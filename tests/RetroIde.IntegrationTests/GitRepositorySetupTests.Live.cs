@@ -115,7 +115,7 @@ public sealed partial class GitRepositorySetupTests
         finally
         {
             window.Close();
-            scratch.Delete(recursive: true);
+            GitWorktreeFixture.DeleteOwnedDirectory(scratch);
         }
     }
 
