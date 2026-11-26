@@ -30,7 +30,11 @@ internal sealed class GitCommitDialog : Window
         AutomationProperties.SetAutomationId(submit, "git.commit.submit");
         localization.Observe(submit, () => submit.Content = localization.Text(action));
         var canCommit = amend ? state.Head is not null : state.HasStagedChanges;
-        message.TextChanged += (_, _) => UpdateSubmit();
+        message.PropertyChanged += (_, args) =>
+        {
+            if (args.Property == TextBox.TextProperty)
+                UpdateSubmit();
+        };
         UpdateSubmit();
         submit.Click += (_, _) =>
         {
