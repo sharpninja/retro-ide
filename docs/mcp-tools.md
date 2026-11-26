@@ -39,7 +39,7 @@ Read-only attachments can list workspace roots and children and read a live docu
 
 ## Phase 03 Git tools in development
 
-The Phase 03 candidate exposes native Git discovery, selection, and status through the same attached workbench over stdio and Streamable HTTP. Discovery takes a literal path within an open Project Explorer root. Use an empty `relativePath` to inspect the root itself.
+The Phase 03 candidate exposes native Git discovery, selection, status, file diffs, and whole-file stage and unstage through the same attached workbench over stdio and Streamable HTTP. Discovery takes a literal path within an open Project Explorer root. Use an empty `relativePath` to inspect the root itself.
 
 | Tool | Arguments | Result |
 | --- | --- | --- |
@@ -48,8 +48,13 @@ The Phase 03 candidate exposes native Git discovery, selection, and status throu
 | `git_get_status` | None | The selected worktree's branch, HEAD, upstream and divergence when available, and entries with independent index and working-tree status. Rename and copy entries also give the original path. `trackedPaths` lists index paths within the captured scope. |
 | `git_initialize_repository` | Absolute `destination`, current workbench `context` | The registered workspace `root` and `repository` in `data`. The IDE selects both after setup. Requires a write-enabled attachment. |
 | `git_clone_repository` | Git `source`, absolute `destination`, current workbench `context` | The installed workspace `root` and selected `repository` in `data`. Requires a write-enabled attachment and a new or empty destination. |
+| `git_get_diff` | Selected `worktreePath`, literal `path`, `layer` of `staged` or `working` | A Git patch and its layer, path, and repository identity. An unchanged layer returns an empty patch. |
+| `git_stage_file` | Selected `worktreePath`, literal `path`, current workbench `context` | The path and repository with `staged: true`. Requires a write-enabled attachment. |
+| `git_unstage_file` | Selected `worktreePath`, literal `path`, current workbench `context` | The path and repository with `staged: false`. Requires a write-enabled attachment. |
 
 Selection is scoped to the attached workbench. Desktop commands and attached clients share the selection and status shown in Source Control and Project Explorer. On desktop restart, the workspace revalidates the saved checkout before issuing a new attachment. Select a worktree before reading status. If its selection changes while status is being prepared, refresh the context and read again. [Git integration](git-integration.md)
+
+Pass the exact checkout-relative `path` returned by status, including spaces, Unicode, and other literal characters. If the index is locked or changed during preparation, the mutation returns `git_index_busy` or `git_index_changed`. Read the current status and retry after the other Git operation finishes.
 
 ## One feature registry
 

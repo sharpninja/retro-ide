@@ -14,6 +14,8 @@ Discover repositories for project and folder roots. Opening a nested repository 
 
 Project Explorer shows tracked, untracked, ignored, modified, staged, and conflicted badges for the selected worktree’s authorized directory. External changes to the worktree, its index, or its refs refresh Explorer and Source Control automatically. **Refresh Status** and the attached MCP status tool can also request a refresh. Selecting another checkout clears the previous badges. A file with both staged and working-tree changes shows both labels. If the selected checkout becomes unavailable, the IDE clears its status and refreshes it when it returns. [Git status](https://git-scm.com/docs/git-status#_porcelain_format_version_2) · [Git index paths](https://git-scm.com/docs/git-ls-files)
 
+The Phase 03 MCP candidate reads working changes against the index and staged changes against HEAD. It can stage or unstage a whole file in the selected checkout, including a linked worktree. Unstaging preserves the working copy. Each index update is prepared privately and published only while holding Git’s index lock and after verifying the index still matches its starting state. [Git diff](https://git-scm.com/docs/git-diff) · [Path-specific Git reset](https://git-scm.com/docs/git-reset) · [MCP tools](mcp-tools.md#phase-03-git-tools-in-development)
+
 ## Workflows
 
 | Area | IDE commands and views |
