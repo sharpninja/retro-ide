@@ -5,7 +5,7 @@ using Avalonia.Controls;
 
 namespace RetroIde.NativeTests;
 
-// Uses native input on a dedicated test display or interactive Windows CI desktop.
+// Uses native input on a dedicated test display or an available Windows desktop.
 internal sealed partial class NativeInput : IDisposable
 {
     private readonly IntPtr _display;

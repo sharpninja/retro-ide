@@ -2,6 +2,8 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
+using RetroIde.Application.Workspaces;
+using RetroIde.Application.Localization;
 
 namespace RetroIde.Application;
 
@@ -51,6 +53,9 @@ public sealed class ActorGrant(string actor, Guid workspaceId, Guid viewKey, boo
 /// <remarks>TEST-RETRO-007#ac-test-cqrs-unit-of-work</remarks>
 public sealed record OperationResult(Guid OperationId, string Code, string Summary, JsonElement? Context = null)
 {
+    /// <summary>Gets the detached data returned by a feature, when applicable.</summary>
+    public JsonElement? Data { get; init; }
+
     /// <summary>Creates a structured rejection without view context.</summary>
     public static OperationResult Failure(Guid operationId, string code, string summary) => new(operationId, code, summary);
 }
@@ -115,6 +120,7 @@ public abstract class FeatureRegistration
     public bool IsMutation { get; }
 
     internal abstract JsonObject InputSchema { get; }
+    internal abstract Type? DataType { get; }
 
     /// <summary>Adapts wire arguments to the registered typed operation.</summary>
     public abstract Task<OperationResult> InvokeAsync(IWorkbenchDispatcher dispatcher, ViewContextContract contract,
@@ -125,15 +131,30 @@ public abstract class FeatureRegistration
 /// <remarks>TEST-RETRO-015#ac-test-mcp-inventory</remarks>
 public sealed class Feature<TInput> : FeatureRegistration where TInput : class
 {
-    private readonly Func<TInput, IWorkbenchRegistration, (string Code, string Summary)> _handler;
+    private readonly Func<TInput, IWorkbenchRegistration, FeatureOutcome>? _handler;
+    internal Func<TInput, IWorkbenchRegistration, CancellationToken, Task<FeatureOutcome>>? PrepareAsync { get; }
 
     internal Feature(string id, string toolName, string description, bool mutation,
-        Func<TInput, IWorkbenchRegistration, (string Code, string Summary)> handler)
-        : base(id, toolName, description, mutation) => _handler = handler;
+        Func<TInput, IWorkbenchRegistration, FeatureOutcome> handler, Type? dataType = null)
+        : base(id, toolName, description, mutation)
+    {
+        _handler = handler;
+        DataType = dataType;
+    }
+
+    internal Feature(string id, string toolName, string description,
+        Func<TInput, IWorkbenchRegistration, CancellationToken, Task<FeatureOutcome>> prepareAsync, Type dataType, bool mutation = false)
+        : base(id, toolName, description, mutation)
+    {
+        PrepareAsync = prepareAsync;
+        DataType = dataType;
+    }
 
     internal override JsonObject InputSchema => WireJson.Options.GetJsonSchemaAsNode(typeof(TInput), FeatureRegistry.RequiredRoot).AsObject();
+    internal override Type? DataType { get; }
 
-    internal (string Code, string Summary) Execute(TInput input, IWorkbenchRegistration view) => _handler(input, view);
+    internal FeatureOutcome Execute(TInput input, IWorkbenchRegistration view) =>
+        (_handler ?? throw new InvalidOperationException("Use async dispatch for this feature."))(input, view);
 
     /// <inheritdoc />
     public override Task<OperationResult> InvokeAsync(IWorkbenchDispatcher dispatcher, ViewContextContract contract,
@@ -175,20 +196,40 @@ public sealed class Feature<TInput> : FeatureRegistration where TInput : class
 /// <remarks>TEST-RETRO-015#ac-test-mcp-inventory</remarks>
 public sealed class FeatureRegistry
 {
+    internal const string FocusToolId = "workbench.view.focus";
+
     internal static JsonSchemaExporterOptions RequiredRoot { get; } = new() { TreatNullObliviousAsNonNullable = true };
 
     /// <summary>Registers the workbench handlers against the live ViewModel contract.</summary>
     public FeatureRegistry(ViewContextContract context)
+        : this(context, documentContext: null)
     {
+    }
+
+    internal FeatureRegistry(ViewContextContract context, ViewContextContract? documentContext,
+        Func<DocumentSaveSnapshot, CancellationToken, Task<PreparedDocumentSave>>? stageSave = null)
+    {
+        DocumentContextContract = documentContext;
         Context = context;
         GetContext = new("workbench.context.read", "workbench_get_context", "Read the selected workbench's live public context.", false,
-            static (_, _) => ("ok", "Workbench context read."));
-        FocusTool = new("workbench.view.focus", "workbench_focus_tool", "Focus a tool pane using the current workbench context.", true,
+            static (_, _) => new("ok", "Workbench context read."));
+        FocusTool = new(FocusToolId, "workbench_focus_tool", "Focus a tool pane using the current workbench context.", true,
             static (input, view) => view.TryFocus(input.ToolId)
-                ? ("ok", "Tool focused.")
-                : ("tool_unavailable", "The selected tool cannot be focused."));
-        Features = ImmutableArray.Create<FeatureRegistration>(GetContext, FocusTool);
+                ? new("ok", "Tool focused.")
+                : new("tool_unavailable", "The selected tool cannot be focused."));
+        Explorer = new ExplorerFeatures(stageSave);
+        Documents = new DocumentFeatures();
+        Localization = new LocalizationFeatures();
+        Features = ImmutableArray.Create<FeatureRegistration>(GetContext, FocusTool, Explorer.OpenRoot, Explorer.ReadRoots,
+            Explorer.ReadChildren, Explorer.SetExpansion, Explorer.SelectEntry, Explorer.OpenEntry, Explorer.RevealEntry,
+            Explorer.SaveDocument, Documents.GetContext, Documents.Find, Documents.Replace, Documents.Close,
+            Documents.Edit, Documents.Undo, Documents.Redo, Localization.GetLanguage, Localization.SetLanguage);
     }
+
+    internal ExplorerFeatures Explorer { get; }
+    internal DocumentFeatures Documents { get; }
+    internal LocalizationFeatures Localization { get; }
+    internal ViewContextContract? DocumentContextContract { get; }
 
     /// <summary>Gets the public workbench context contract shared by its tools.</summary>
     public ViewContextContract Context { get; }
@@ -206,6 +247,7 @@ public sealed class FeatureRegistry
     public FeatureDescription Describe(FeatureRegistration feature)
     {
         var input = feature.InputSchema;
+        ProjectDocumentMember(input);
         if (feature.IsMutation)
         {
             input["properties"]!.AsObject().Add("context", JsonNode.Parse(Context.Schema.GetRawText()));
@@ -213,8 +255,30 @@ public sealed class FeatureRegistry
         }
 
         var output = WireJson.Options.GetJsonSchemaAsNode(typeof(OperationResult), RequiredRoot).AsObject();
-        output["properties"]!.AsObject()["context"] = JsonNode.Parse(Context.Schema.GetRawText());
+        var properties = output["properties"]!.AsObject();
+        properties["context"] = JsonNode.Parse(Context.Schema.GetRawText());
+        if (feature.DataType is { } type)
+            properties["data"] = DescribeData(type);
+        else
+            properties.Remove("data");
         return new FeatureDescription(JsonSerializer.SerializeToElement(input), JsonSerializer.SerializeToElement(output));
+    }
+
+    private JsonNode DescribeData(Type type)
+    {
+        if (type == typeof(DocumentContext) && DocumentContextContract is { } contract)
+            return JsonNode.Parse(contract.Schema.GetRawText())!;
+
+        var schema = WireJson.Options.GetJsonSchemaAsNode(type, RequiredRoot);
+        if (schema is JsonObject envelope)
+            ProjectDocumentMember(envelope);
+        return schema;
+    }
+
+    private void ProjectDocumentMember(JsonObject schema)
+    {
+        if (DocumentContextContract is { } contract && schema["properties"] is JsonObject properties && properties.ContainsKey("document"))
+            properties["document"] = JsonNode.Parse(contract.Schema.GetRawText());
     }
 }
 
@@ -222,37 +286,88 @@ public sealed class FeatureRegistry
 /// <remarks>TEST-RETRO-007#ac-test-cqrs-unit-of-work; TEST-RETRO-015#ac-test-mcp-scope</remarks>
 public sealed class WorkbenchUnitOfWork(ViewContextContract contract, Func<Guid, IWorkbenchRegistration?> resolve)
 {
-    /// <summary>Executes one feature in the authorized registration. The caller owns dispatcher affinity.</summary>
+    /// <summary>Executes one synchronous feature in the authorized registration.</summary>
     public OperationResult Execute<TInput>(Feature<TInput> feature, TInput input, WorkbenchAddress? captured,
         ActorGrant actor, Guid operationId, CancellationToken cancellationToken) where TInput : class
     {
         return actor.Authorize(operationId, feature.IsMutation, () =>
         {
-            if (cancellationToken.IsCancellationRequested)
-                return Reject("cancelled", "The operation was cancelled.");
-            if (captured is not null && captured.WorkspaceId != actor.WorkspaceId)
-                return Reject("workspace_mismatch", "The context belongs to a different workspace.");
-
-            var view = resolve(captured?.ViewKey ?? actor.ViewKey);
-            if (view is null)
-                return Reject("view_closed", "The workbench registration is no longer live.");
-
-            var current = view.Address;
-            if (current.WorkspaceId != actor.WorkspaceId || current.ViewKey != actor.ViewKey)
-                return Reject("view_mismatch", "The registration is outside the attachment scope.");
-            if (feature.IsMutation && captured is null)
-                return Reject("invalid_arguments", "A captured workbench context is required.");
-            if (captured is not null && captured.WorkbenchRevision != current.WorkbenchRevision)
-                return Reject("stale_revision", "The workbench changed. Read its current context and retry.");
-            if (captured is not null && !string.Equals(captured.ActiveToolId, current.ActiveToolId, StringComparison.Ordinal))
-                return Reject("context_mismatch", "The captured tool selection differs from the workbench.");
-
-            var (code, summary) = feature.Execute(input, view);
-            return string.Equals(code, "ok", StringComparison.Ordinal)
-                ? new OperationResult(operationId, code, summary, contract.Capture(view.ContextSource))
-                : Reject(code, summary);
+            var failure = Validate(captured, actor, feature.IsMutation, operationId, cancellationToken, out var view);
+            return failure ?? Complete(operationId, view!, feature.Execute(input, view!));
         });
+    }
+
+    internal async Task<OperationResult> ExecuteAsync<TInput>(Feature<TInput> feature, TInput input, WorkbenchAddress? captured,
+        ActorGrant actor, Guid operationId, CancellationToken cancellationToken) where TInput : class
+    {
+        if (feature.PrepareAsync is not { } prepare)
+            return Execute(feature, input, captured, actor, operationId, cancellationToken);
+
+        // Preparation can do I/O. Apply any modeled change only after revalidating
+        // the grant and registration on the caller's dispatcher.
+        Task<FeatureOutcome>? pending = null;
+        IWorkbenchRegistration? origin = null;
+        var prepared = actor.Authorize(operationId, feature.IsMutation, () =>
+        {
+            var failure = Validate(captured, actor, feature.IsMutation, operationId, cancellationToken, out origin);
+            if (failure is not null)
+                return failure;
+            pending = prepare(input, origin!, cancellationToken);
+            return new OperationResult(operationId, "prepared", "");
+        });
+        if (pending is null)
+            return prepared;
+
+        FeatureOutcome outcome;
+        try { outcome = await pending.ConfigureAwait(true); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return OperationResult.Failure(operationId, "cancelled", "The operation was cancelled.");
+        }
+        using var preparedResource = outcome.PreparedResource;
+        return actor.Authorize(operationId, feature.IsMutation, () =>
+        {
+            var failure = Validate(captured, actor, feature.IsMutation, operationId, cancellationToken, out var current,
+                compareRevision: !outcome.KeepCapturedTarget);
+            if (failure is not null)
+                return failure;
+            if (!ReferenceEquals(origin, current))
+                return OperationResult.Failure(operationId, "view_closed", "The originating registration is no longer live.");
+
+            var committed = outcome.Commit?.Invoke(current!) ?? outcome;
+            return Complete(operationId, current!, committed);
+        });
+    }
+
+    private OperationResult? Validate(WorkbenchAddress? captured, ActorGrant actor, bool mutation, Guid operationId,
+        CancellationToken cancellationToken, out IWorkbenchRegistration? view, bool compareRevision = true)
+    {
+        view = null;
+        if (cancellationToken.IsCancellationRequested)
+            return Reject("cancelled", "The operation was cancelled.");
+        if (captured is not null && captured.WorkspaceId != actor.WorkspaceId)
+            return Reject("workspace_mismatch", "The context belongs to a different workspace.");
+
+        view = resolve(captured?.ViewKey ?? actor.ViewKey);
+        if (view is null)
+            return Reject("view_closed", "The workbench registration is no longer live.");
+
+        var current = view.Address;
+        if (current.WorkspaceId != actor.WorkspaceId || current.ViewKey != actor.ViewKey)
+            return Reject("view_mismatch", "The registration is outside the attachment scope.");
+        if (mutation && captured is null)
+            return Reject("invalid_arguments", "A captured workbench context is required.");
+        if (compareRevision && captured is not null && captured.WorkbenchRevision != current.WorkbenchRevision)
+            return Reject("stale_revision", "The workbench changed. Read its current context and retry.");
+        if (compareRevision && captured is not null && !string.Equals(captured.ActiveToolId, current.ActiveToolId, StringComparison.Ordinal))
+            return Reject("context_mismatch", "The captured tool selection differs from the workbench.");
+        return null;
 
         OperationResult Reject(string code, string summary) => OperationResult.Failure(operationId, code, summary);
     }
+
+    private OperationResult Complete(Guid operationId, IWorkbenchRegistration view, FeatureOutcome outcome) =>
+        string.Equals(outcome.Code, "ok", StringComparison.Ordinal)
+            ? new OperationResult(operationId, outcome.Code, outcome.Summary, contract.Capture(view.ContextSource)) { Data = outcome.Data }
+            : OperationResult.Failure(operationId, outcome.Code, outcome.Summary);
 }

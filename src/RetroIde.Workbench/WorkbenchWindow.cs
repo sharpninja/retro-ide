@@ -6,6 +6,7 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Dock.Avalonia.Controls;
 using RetroIde.Application;
@@ -34,7 +35,9 @@ public sealed class WorkbenchWindow : Window
         MinWidth = 750;
         MinHeight = 480;
 
-        CommandPresentation = CommandPresentation.Create(CommandPresentation.Focus(session.Registry));
+        var localization = session.Localization;
+        var focusDescriptor = WorkbenchCommands.FocusTool;
+        CommandPresentation = CommandPresentation.Create(focusDescriptor, localization);
         var focusCommand = session.View.FocusCommand;
         FocusMenu = new MenuItem
         {
@@ -48,12 +51,15 @@ public sealed class WorkbenchWindow : Window
         focusCommand.CanExecuteChanged += UpdateFocusEligibility;
         UpdateFocusEligibility(null, EventArgs.Empty);
         Closed += (_, _) => focusCommand.CanExecuteChanged -= UpdateFocusEligibility;
-        var viewMenu = new MenuItem { Header = "_View", ItemsSource = new[] { FocusMenu } };
-        var menu = new Menu { ItemsSource = new[] { viewMenu } };
+        var viewMenu = new MenuItem { ItemsSource = new[] { FocusMenu, CreateLanguageMenu(session) } };
+        localization.Observe(viewMenu, () => viewMenu.Header = localization.Text(WorkbenchText.ViewMenu));
+        var menu = new Menu { ItemsSource = new[] { ExplorerPane.CreateFileMenu(session.ExplorerView), viewMenu } };
 
         FocusButtonLabel = new TextBlock { Text = CommandPresentation.Label };
         FocusButtonShortcut = new TextBlock { Text = CommandPresentation.Shortcut, Opacity = 0.62 };
         FocusButtonIcon = CreateIcon();
+        var translatedIcon = new Image { Width = 16, Height = 16, IsVisible = false };
+        var iconFrame = new Grid { Children = { FocusButtonIcon, translatedIcon } };
         FocusButton = new Button
         {
             Command = focusCommand,
@@ -61,17 +67,38 @@ public sealed class WorkbenchWindow : Window
             {
                 Orientation = Orientation.Horizontal,
                 Spacing = 8,
-                Children = { FocusButtonIcon, FocusButtonLabel, FocusButtonShortcut },
+                Children = { iconFrame, FocusButtonLabel, FocusButtonShortcut },
             },
         };
         AutomationProperties.SetAutomationId(FocusButton, session.Registry.FocusTool.Id + ".toolbar");
         AutomationProperties.SetName(FocusButton, CommandPresentation.Label);
         ToolTip.SetTip(FocusButton, $"{CommandPresentation.Label} ({CommandPresentation.Shortcut})");
+        localization.Observe(FocusButton, () =>
+        {
+            var presentation = CommandPresentation.Create(focusDescriptor, localization);
+            CommandPresentation = presentation;
+            FocusButtonLabel.Text = presentation.Label;
+            FocusButtonShortcut.Text = presentation.Shortcut;
+            FocusButtonIcon.Data = presentation.IconGeometry;
+            FocusButtonIcon.IsVisible = presentation.Image is null;
+            translatedIcon.Source = presentation.Image;
+            translatedIcon.IsVisible = presentation.Image is not null;
+            FocusMenu.Header = presentation.Label;
+            FocusMenu.Icon = presentation.CreateIcon(16);
+            AutomationProperties.SetName(FocusMenu, presentation.Label);
+            AutomationProperties.SetName(FocusButton, presentation.Label);
+            ToolTip.SetTip(FocusButton, $"{presentation.Label} ({presentation.Shortcut})");
+        });
+        ApplyLanguageDirection(this, localization);
         FocusShortcut = AddFocusShortcut(this);
+        ExplorerPane.RegisterShortcuts(this, session.ExplorerView);
+        session.ExplorerView.PickDirectoryAsync = PickWorkspaceDirectoryAsync;
         session.Layout.Factory.DefaultHostWindowLocator = () =>
         {
             var floating = new HostWindow();
+            ApplyLanguageDirection(floating, localization);
             AddFocusShortcut(floating);
+            ExplorerPane.RegisterShortcuts(floating, session.ExplorerView);
             TrackFloatingInteraction(floating);
             return floating;
         };
@@ -84,6 +111,7 @@ public sealed class WorkbenchWindow : Window
         {
             _closed = true;
             _closeSave?.Cancel();
+            session.ExplorerView.PickDirectoryAsync = null;
             session.Controller.Unregister(session.View);
         };
 
@@ -92,11 +120,52 @@ public sealed class WorkbenchWindow : Window
         KeyBinding AddFocusShortcut(Window surface) => RegisterShortcut(surface, focusCommand, CommandPresentation.Gesture);
     }
 
+    private static void ApplyLanguageDirection(Window window, WorkbenchLocalization localization)
+    {
+        Apply(null, EventArgs.Empty);
+        window.Opened += (_, _) =>
+        {
+            localization.Changed += Apply;
+            Apply(null, EventArgs.Empty);
+        };
+        window.Closed += (_, _) => localization.Changed -= Apply;
+
+        void Apply(object? sender, EventArgs args) => window.FlowDirection = localization.State.RightToLeft
+            ? FlowDirection.RightToLeft
+            : FlowDirection.LeftToRight;
+    }
+
+    private static MenuItem CreateLanguageMenu(WorkbenchSession session)
+    {
+        var localization = session.Localization;
+        var menu = new MenuItem
+        {
+            ItemsSource = localization.State.AvailableLocales.Select(tag =>
+            {
+                var culture = System.Globalization.CultureInfo.GetCultureInfo(tag);
+                var entry = new MenuItem { Header = culture.NativeName, Command = session.View.SetDisplayLanguageCommand, CommandParameter = tag };
+                AutomationProperties.SetAutomationId(entry, "workbench.language." + tag);
+                return entry;
+            }).ToArray(),
+        };
+        localization.Observe(menu, () => menu.Header = localization.Text(WorkbenchText.LanguageMenu));
+        return menu;
+    }
+
+    private async Task<string?> PickWorkspaceDirectoryAsync(CancellationToken token)
+    {
+        if (token.IsCancellationRequested || !StorageProvider.CanPickFolder)
+            return null;
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions()).ConfigureAwait(true);
+        return folders.FirstOrDefault()?.TryGetLocalPath();
+    }
+
     private void TrackFloatingInteraction(HostWindow floating)
     {
         floating.Closing += (_, args) =>
         {
-            if (_closeSave is not null && args.CloseReason is not (WindowCloseReason.ApplicationShutdown or WindowCloseReason.OSShutdown))
+            if (_closeSave is not null && args.CloseReason is not
+                (WindowCloseReason.OwnerWindowClosing or WindowCloseReason.ApplicationShutdown or WindowCloseReason.OSShutdown))
                 args.Cancel = true;
         };
         floating.Opened += (_, _) =>
@@ -140,7 +209,15 @@ public sealed class WorkbenchWindow : Window
     protected override void OnClosing(WindowClosingEventArgs args)
     {
         base.OnClosing(args);
-        if (args.Cancel || _layouts is null || _replayingClose ||
+        if (args.CloseReason is not (WindowCloseReason.ApplicationShutdown or WindowCloseReason.OSShutdown) &&
+            _session.Documents.HasUnsavedDocuments)
+        {
+            args.Cancel = true;
+            _session.View.Receive(OperationResult.Failure(Guid.NewGuid(), "unsaved", "Save open documents before closing Retro IDE."));
+            return;
+        }
+
+        if (args.Cancel || (_layouts is null && _session.ExplorerStore is null) || _replayingClose ||
             args.CloseReason is WindowCloseReason.ApplicationShutdown or WindowCloseReason.OSShutdown)
             return; // A forced shutdown can proceed; Closed cancels any pending save.
 
@@ -148,40 +225,54 @@ public sealed class WorkbenchWindow : Window
         if (_closeSave is null)
         {
             _closeSave = new CancellationTokenSource();
-            _ = SaveLayoutAndCloseAsync(_layouts, _closeSave);
+            _ = SaveStateAndCloseAsync(_closeSave);
         }
     }
 
-    private async Task SaveLayoutAndCloseAsync(LayoutStore store, CancellationTokenSource closeSave)
+    private async Task SaveStateAndCloseAsync(CancellationTokenSource closeSave)
     {
+        var interaction = _session.Interaction;
+        interaction.Begin(InteractionBlocks.WorkbenchScope);
         try
         {
-            var snapshot = _session.Layout.Capture();
-            await _session.Interaction.RunAsync(InteractionBlocks.WorkbenchScope, token =>
+            var token = closeSave.Token;
+            if (_layouts is { } layouts)
             {
-                store.Save(snapshot, token);
-                return Task.CompletedTask;
-            }, closeSave.Token).ConfigureAwait(true);
-        }
-        catch (OperationCanceledException) when (closeSave.IsCancellationRequested) { }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Console.Error.WriteLine("Unable to save the Retro IDE layout.");
+                var snapshot = _session.Layout.Capture();
+                await SaveStateAsync(() => layouts.Save(snapshot, token), "layout", token).ConfigureAwait(true);
+            }
+            if (_session.ExplorerStore is { } workspace)
+            {
+                var snapshot = _session.Explorer.Snapshot();
+                await SaveStateAsync(() => workspace.Save(snapshot, token), "workspace state", token).ConfigureAwait(true);
+            }
+
+            // Leave the original Closing callback before replaying it. Hold the block
+            // until the replay completes so the saved dock layout cannot be edited in between.
+            await Dispatcher.Yield(DispatcherPriority.Background);
+            if (_closed)
+                return;
+
+            _replayingClose = true;
+            try { Close(); }
+            finally { _replayingClose = false; }
         }
         finally
         {
-            // A fast save or a synchronous failure can complete inside the original close callback.
-            await Dispatcher.Yield(DispatcherPriority.Background);
             _closeSave = null;
             closeSave.Dispose();
+            interaction.End(InteractionBlocks.WorkbenchScope);
         }
+    }
 
-        if (_closed)
-            return;
-
-        _replayingClose = true;
-        try { Close(); }
-        finally { _replayingClose = false; }
+    private static async Task SaveStateAsync(Action save, string name, CancellationToken token)
+    {
+        try { await Task.Run(save, token).ConfigureAwait(true); }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine($"Unable to save the Retro IDE {name}.");
+        }
     }
 
     private static DockPanel BuildSurface(WorkbenchSession session, Menu menu, Button focusButton)
@@ -193,8 +284,23 @@ public sealed class WorkbenchWindow : Window
             SelectedIndex = Array.FindIndex(tools, tool => string.Equals(tool.Id, session.View.FocusTarget, StringComparison.Ordinal)),
             MinWidth = 162,
         };
+        var refreshing = false;
         picker.SelectionChanged += (_, _) =>
-            session.View.FocusTarget = picker.SelectedIndex >= 0 ? tools[picker.SelectedIndex].Id : null;
+        {
+            if (!refreshing)
+                session.View.FocusTarget = picker.SelectedIndex >= 0 ? tools[picker.SelectedIndex].Id : null;
+        };
+        session.Localization.Observe(picker, () =>
+        {
+            refreshing = true;
+            try
+            {
+                picker.ItemsSource = tools.Select(tool => session.Localization.Text(WorkbenchText.PaneTitle(tool.Id))).ToArray();
+                picker.SelectedIndex = Array.FindIndex(tools, tool => string.Equals(tool.Id, session.View.FocusTarget, StringComparison.Ordinal));
+                AutomationProperties.SetName(picker, session.Localization.Text(WorkbenchText.FocusSelector));
+            }
+            finally { refreshing = false; }
+        });
 
         var commandBar = new StackPanel
         {
@@ -204,11 +310,18 @@ public sealed class WorkbenchWindow : Window
             Children = { picker, focusButton },
         };
 
-        var status = new TextBlock { Text = "No emulator connected", Margin = new Thickness(12, 4), TextTrimming = TextTrimming.CharacterEllipsis };
-        status.Bind(TextBlock.TextProperty, new Binding(nameof(WorkbenchViewModel.LastResult) + "." + nameof(OperationResult.Summary))
+        var status = new TextBlock { Margin = new Thickness(12, 4), TextTrimming = TextTrimming.CharacterEllipsis };
+        IDisposable? statusBinding = null;
+        session.Localization.Observe(status, () =>
         {
-            FallbackValue = "No emulator connected",
-            TargetNullValue = "No emulator connected",
+            var fallback = session.Localization.Text(WorkbenchText.NoEmulator);
+            statusBinding?.Dispose();
+            statusBinding = status.Bind(TextBlock.TextProperty,
+                new Binding(nameof(WorkbenchViewModel.LastResult) + "." + nameof(OperationResult.Summary))
+                {
+                    FallbackValue = fallback,
+                    TargetNullValue = fallback,
+                });
         });
         var dock = new DockControl
         {
@@ -235,7 +348,7 @@ public sealed class WorkbenchWindow : Window
     internal TextBlock FocusButtonLabel { get; }
     internal TextBlock FocusButtonShortcut { get; }
     internal PathIcon FocusButtonIcon { get; }
-    internal CommandPresentation CommandPresentation { get; }
+    internal CommandPresentation CommandPresentation { get; private set; }
 
     internal void ShowAttachmentPaths(string message)
     {

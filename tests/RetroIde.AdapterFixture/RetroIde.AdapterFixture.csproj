@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Support/AdapterFixtureSnapshot.cs" Link="AdapterFixtureSnapshot.cs" />
+  </ItemGroup>
+</Project>

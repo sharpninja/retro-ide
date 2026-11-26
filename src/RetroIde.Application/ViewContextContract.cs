@@ -48,6 +48,11 @@ public sealed class ViewContextContract
 
     /// <summary>Loads and validates the workbench ViewModel's public context metadata.</summary>
     public ViewContextContract(Type viewModelType)
+        : this(viewModelType, typeof(WorkbenchAddress))
+    {
+    }
+
+    internal ViewContextContract(Type viewModelType, Type addressType)
     {
         var nullability = new NullabilityInfoContext();
         _members = viewModelType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -67,19 +72,19 @@ public sealed class ViewContextContract
             var nullable = nullability.Create(property).ReadState == NullabilityState.Nullable;
             var schema = WireJson.Options.GetJsonSchemaAsNode(property.PropertyType,
                 new JsonSchemaExporterOptions { TreatNullObliviousAsNonNullable = !nullable });
-            if (name is "viewKey" or "workspaceId")
+            if (name is "viewKey" or "workspaceId" or "documentId" or "rootId")
                 schema["not"] = new JsonObject { ["const"] = Guid.Empty.ToString() };
-            if (name == "workbenchRevision")
+            if (name is "workbenchRevision" or "revision")
                 schema["minimum"] = 0;
             properties[name] = schema;
             required.Add(name);
         }
 
-        var addressFields = typeof(WorkbenchAddress).GetProperties().ToDictionary(p => JsonNamingPolicy.CamelCase.ConvertName(p.Name), StringComparer.Ordinal);
+        var addressFields = addressType.GetProperties().ToDictionary(p => JsonNamingPolicy.CamelCase.ConvertName(p.Name), StringComparer.Ordinal);
         if (_members.Length != addressFields.Count ||
             _members.Any(member => !addressFields.TryGetValue(member.Name, out var field) || field.PropertyType != member.Property.PropertyType ||
                 nullability.Create(field).ReadState != nullability.Create(member.Property).ReadState))
-            throw new InvalidOperationException("The typed workbench address must match the exposed ViewModel properties.");
+            throw new InvalidOperationException("The typed address must match the exposed ViewModel properties.");
 
         Schema = JsonSerializer.SerializeToElement(new JsonObject
         {

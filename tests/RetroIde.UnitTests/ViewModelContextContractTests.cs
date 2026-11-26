@@ -51,7 +51,8 @@ public sealed class ViewModelContextContractTests
     {
         var contract = new ViewContextContract(typeof(WorkbenchViewModel));
         var registry = new FeatureRegistry(contract);
-        Assert.Equal(["workbench_focus_tool", "workbench_get_context"], registry.Features.Select(x => x.ToolName).Order(StringComparer.Ordinal), StringComparer.Ordinal);
+        Assert.Equal(["editor_close_document", "editor_edit_text", "editor_find_text", "editor_get_document", "editor_redo", "editor_replace_text", "editor_save_document", "editor_undo", "workbench_focus_tool", "workbench_get_context", "workbench_get_display_language", "workbench_set_display_language", "workspace_list_children", "workspace_list_roots", "workspace_open_file", "workspace_open_root", "workspace_reveal_entry", "workspace_select_entry", "workspace_set_expanded"],
+            registry.Features.Select(x => x.ToolName).Order(StringComparer.Ordinal), StringComparer.Ordinal);
         Assert.Equal(registry.Features.Count, registry.Features.Select(x => x.Id).Distinct(StringComparer.Ordinal).Count());
         var focus = registry.Describe(registry.FocusTool);
         var read = registry.Describe(registry.GetContext);

@@ -1,0 +1,24 @@
+# Phase 02 test-criterion IDs projected from QBrain effective requirements.
+# Project Explorer, source tabs and localization. Breakpoint navigation is in Phase 06.
+# QBrain export SHA256: dcf0d1e54ad9fcd945fbcb2e22880f20e582b68cbfc968e162df3aa5bec7e8ab.
+payload:
+  result:
+    testing:
+    - id: TEST-RETRO-007
+      acceptanceCriteria:
+      - id: ac-test-controller-ownership
+    - id: TEST-RETRO-008
+      acceptanceCriteria:
+      - id: ac-test-resource-fallback
+      - id: ac-test-pack-validation
+      - id: ac-test-live-language
+      - id: ac-test-localized-formatting
+    - id: TEST-RETRO-011
+      acceptanceCriteria:
+      - id: ac-test-buffer-state
+      - id: ac-test-save-source
+    - id: TEST-RETRO-012
+      acceptanceCriteria:
+      - id: ac-test-explorer-mixed-roots
+      - id: ac-test-explorer-persistence
+      - id: ac-test-explorer-changes

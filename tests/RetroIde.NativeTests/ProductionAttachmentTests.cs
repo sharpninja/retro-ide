@@ -24,7 +24,7 @@ internal static class ProductionAttachmentTests
     internal static async Task RunAsync(bool useNativeShortcut)
     {
         var root = Directory.CreateTempSubdirectory("retro-ide-desktops-");
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(65));
         var token = timeout.Token;
         try
         {
@@ -86,13 +86,17 @@ internal static class ProductionAttachmentTests
             Console.WriteLine($"HTTP and stdio focused Registers at revisions {fromHttp.WorkbenchRevision}, {fromStdio.WorkbenchRevision}.");
             Console.WriteLine("Wrong endpoint returned HTTP 401. Both selected clients rejected the other workspace and its context stayed unchanged.");
 
+            await Phase02AttachmentTests.RunAsync(direct, bridge, otherClient, root.FullName, token).ConfigureAwait(false);
+            var last = await ReadContextAsync(direct, token).ConfigureAwait(false);
+            var beforeClose = await FocusAsync(direct, last, "registers", token).ConfigureAwait(false);
+
             await selected.CloseAsync(input, token).ConfigureAwait(false);
             await selected.WaitForExitAsync(token).ConfigureAwait(false);
             Require(!File.Exists(selectedPath), "The selected descriptor survived a graceful desktop shutdown.");
             var persisted = new LayoutStore(Path.Combine(selected.Folder, "layout.json")).Load();
             Require(persisted?.ActiveTool == "registers", "The production close did not persist Registers as the active tool.");
-            await RequireUnavailableAsync(direct, fromStdio, "HTTP", token).ConfigureAwait(false);
-            await RequireUnavailableAsync(bridge, fromStdio, "stdio", token).ConfigureAwait(false);
+            await RequireUnavailableAsync(direct, beforeClose, "HTTP", token).ConfigureAwait(false);
+            await RequireUnavailableAsync(bridge, beforeClose, "stdio", token).ConfigureAwait(false);
             Require(!other.Process.HasExited && untouched == await ReadContextAsync(otherClient, token).ConfigureAwait(false),
                 "Closing the selected desktop affected the other desktop.");
             await other.CloseAsync(input, token).ConfigureAwait(false);
@@ -100,7 +104,7 @@ internal static class ProductionAttachmentTests
             Require(!File.Exists(otherPath), "The other descriptor survived a graceful desktop shutdown.");
             Console.WriteLine("Both live clients lost access after the selected desktop closed. Both desktops exited normally and removed their descriptors.");
 
-            await VerifyProcessRestartAsync(selected.Folder, fromStdio, input, token).ConfigureAwait(false);
+            await VerifyProcessRestartAsync(selected.Folder, beforeClose, input, token).ConfigureAwait(false);
         }
         finally { root.Delete(recursive: true); }
     }
@@ -113,12 +117,13 @@ internal static class ProductionAttachmentTests
         using var http = descriptor.CreateHttpClient();
         await using var client = await ConnectAsync(descriptor, http, token).ConfigureAwait(false);
         var restored = await ReadContextAsync(client, token).ConfigureAwait(false);
-        Require(restored.ActiveToolId == "registers" && restored.ViewKey != previous.ViewKey,
-            "The production process restart did not restore Registers with a fresh registration.");
+        Require(restored.ActiveToolId == "registers" && restored.ViewKey != previous.ViewKey && restored.WorkspaceId == previous.WorkspaceId,
+            "The production process restart did not restore Registers and the workspace with a fresh view registration.");
+        await Phase02AttachmentTests.VerifyReopenAsync(client, token).ConfigureAwait(false);
         await reopened.CloseAsync(input, token).ConfigureAwait(false);
         await reopened.WaitForExitAsync(token).ConfigureAwait(false);
         Require(!File.Exists(path), "The restarted desktop did not remove its attachment descriptor.");
-        Console.WriteLine("A fresh production process restored Registers from the saved layout and published a new ViewModel registration.");
+        Console.WriteLine("A fresh production process restored Registers and the workspace ID, then published a new ViewModel registration.");
     }
 
     private static Task<McpClient> ConnectAsync(AttachmentDescriptor descriptor, HttpClient http, CancellationToken token) =>
