@@ -22,6 +22,7 @@ public sealed partial class Phase02EditorBufferContractTests
     [InlineData("no-redo")]
     [InlineData("highlight-unknown")]
     [InlineData("missing-syntax")]
+    [InlineData("ignored-plain-selection")]
     public async Task Reference_editor_rejects_each_buffer_fault(string fault)
     {
         using var files = new BufferFixture();
@@ -39,6 +40,12 @@ public sealed partial class Phase02EditorBufferContractTests
         await editor.AppendAsync(second, "!");
         var modifiedPlain = await editor.ObserveAsync(second);
         Assert.Equal(Plain + "!", modifiedPlain.Text);
+        await editor.SelectAsync(second, caret: 5, start: 0, length: 5);
+        var plainSelection = await editor.ObserveAsync(second);
+        Assert.Equal((5, 0, 5), (plainSelection.Caret, plainSelection.Start, plainSelection.Length));
+        await editor.FindAsync(second, "alpha");
+        var plainMatch = await editor.ObserveAsync(second);
+        Assert.Equal((6, 5), (plainMatch.Start, plainMatch.Length));
 
         var code = await editor.ObserveAsync(first);
         Assert.Equal(Source, code.Text);
@@ -63,11 +70,14 @@ public sealed partial class Phase02EditorBufferContractTests
         Assert.Equal(edited, await editor.ObserveAsync(first));
         await editor.UndoAsync(first);
         Assert.Equal(Source, (await editor.ObserveAsync(first)).Text);
-        Assert.Equal(Plain + "!", (await editor.ObserveAsync(second)).Text);
+        Assert.Equal(plainMatch, await editor.ObserveAsync(second));
         await editor.RedoAsync(first);
         Assert.Equal(ReplacedSource, (await editor.ObserveAsync(first)).Text);
         await editor.UndoAsync(second);
         Assert.Equal(Plain, (await editor.ObserveAsync(second)).Text);
+        await editor.RedoAsync(second);
+        Assert.Equal(Plain + "!", (await editor.ObserveAsync(second)).Text);
+        await editor.UndoAsync(second);
         Assert.Equal(ReplacedSource, (await editor.ObserveAsync(first)).Text);
     }
 
@@ -128,6 +138,7 @@ public sealed partial class Phase02EditorBufferContractTests
 
         private readonly Dictionary<Guid, Tab> _tabs = [];
         private readonly object _shared = new();
+        private Guid _plainTab;
 
         public async Task<Guid> OpenAsync(string relativePath)
         {
@@ -135,6 +146,8 @@ public sealed partial class Phase02EditorBufferContractTests
             var code = string.Equals(relativePath, files.CodeName, StringComparison.Ordinal);
             var grammar = code ? !Fault("missing-syntax") : Fault("highlight-unknown");
             var key = Guid.NewGuid();
+            if (!code)
+                _plainTab = key;
             _tabs.Add(key, new Tab(source, grammar, Fault("shared-buffer") ? _shared : new object()));
             return key;
         }
@@ -148,6 +161,8 @@ public sealed partial class Phase02EditorBufferContractTests
 
         public Task SelectAsync(Guid tab, int caret, int start, int length)
         {
+            if (tab == _plainTab && Fault("ignored-plain-selection"))
+                return Task.CompletedTask;
             var entry = _tabs[tab];
             entry.Caret = caret;
             entry.Start = start;
