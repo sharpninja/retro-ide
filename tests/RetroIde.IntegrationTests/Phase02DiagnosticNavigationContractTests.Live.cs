@@ -113,7 +113,12 @@ public sealed partial class Phase02DiagnosticNavigationContractTests
         }
 
         // Late binding keeps the same rendered control assertions usable against the pre-editor workbench.
-        private static object? Read(object instance, string name) =>
-            Assert.IsAssignableFrom<PropertyInfo>(instance.GetType().GetProperty(name)).GetValue(instance);
+        private static object? Read(object instance, string name)
+        {
+            const BindingFlags Access = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+            var property = instance.GetType().GetProperty(name, Access);
+            Assert.True(property is not null, $"Missing observable property {instance.GetType().Name}.{name}.");
+            return property.GetValue(instance);
+        }
     }
 }
