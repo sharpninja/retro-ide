@@ -4,6 +4,7 @@ namespace RetroIde.GitFixture;
 
 /// <summary>Verifies the native Git behavior used by the Source Control workbench tests.</summary>
 /// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-multiple-repos, ac-test-git-stage-and-push, ac-test-git-recovery. Establish native worktree, literal path, partial hunk, and conflict controls before the IDE binding.</remarks>
+/// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-stage-and-push, ac-test-git-recovery. Verify rejected push and merge/rebase recovery against real repositories.</remarks>
 internal static class Program
 {
     private static readonly StringComparer Paths =
@@ -138,7 +139,7 @@ internal static class Program
         Console.WriteLine("Native staged and unstaged one hunk, then rejected the stale preimage without changing the index.");
     }
 
-    /// <summary>Verifies native divergence reporting, three conflict stages and abort isolation.</summary>
+    /// <summary>Verifies native divergence, rejected push, conflict stages and abort isolation.</summary>
     /// <param name="fixture">The primary, linked and peer checkouts.</param>
     /// <param name="token">Cancellation for native Git commands.</param>
     private static async Task VerifyDivergenceAndAbortAsync(GitWorktreeFixture fixture, CancellationToken token)
@@ -153,6 +154,13 @@ internal static class Program
 
         var counts = await fixture.GitAsync(fixture.Primary, token, "rev-list", "--left-right", "--count", "HEAD...origin/main").ConfigureAwait(false);
         Require(string.Equals(counts.Trim(), "1\t1", StringComparison.Ordinal), "The isolated remote did not diverge.");
+        var remoteTip = await fixture.GitAsync(fixture.Primary, token, "ls-remote", "--heads", "origin", "refs/heads/main").ConfigureAwait(false);
+        var rejectedPush = await fixture.RunAsync(fixture.Primary, token, "push", "--porcelain", "origin", "main:main").ConfigureAwait(false);
+        Require(rejectedPush.ExitCode != 0 && rejectedPush.Output.Contains("[rejected] (non-fast-forward)", StringComparison.Ordinal),
+            "A divergent push did not report a non-fast-forward rejection.");
+        var retainedTip = await fixture.GitAsync(fixture.Primary, token, "ls-remote", "--heads", "origin", "refs/heads/main").ConfigureAwait(false);
+        Require(string.Equals(remoteTip, retainedTip, StringComparison.Ordinal), "The rejected push changed the bare remote tip.");
+
         var head = await fixture.GitAsync(fixture.Primary, token, "rev-parse", "HEAD").ConfigureAwait(false);
         var failure = await fixture.RunAsync(fixture.Primary, token, "merge", "--no-edit", "origin/main").ConfigureAwait(false);
         Require(failure.ExitCode == 1, "The conflicting merge did not return Git's conflict exit status.");
@@ -161,13 +169,35 @@ internal static class Program
         Require(Enumerable.Range(1, 3).All(stage => conflicted.Contains($" {stage}\t{path}\0", StringComparison.Ordinal)),
             "Native Git did not report all three merge stages.");
         await fixture.GitAsync(fixture.Primary, token, "merge", "--abort").ConfigureAwait(false);
+        await VerifyAbortedOperationAsync(fixture, head, token).ConfigureAwait(false);
+
+        var rebase = await fixture.RunAsync(fixture.Primary, token, "rebase", "--merge", "origin/main").ConfigureAwait(false);
+        Require(rebase.ExitCode == 1, "The conflicting rebase did not return Git's conflict exit status.");
+        var rebaseState = await fixture.GitAsync(fixture.Primary, token, "rev-parse", "--path-format=absolute", "--git-path", "rebase-merge").ConfigureAwait(false);
+        var rebasePath = rebaseState.TrimEnd('\r', '\n');
+        Require(Directory.Exists(rebasePath), "Git did not expose the active rebase worktree state.");
+        var rebasedConflict = await fixture.GitAsync(fixture.Primary, token, "--literal-pathspecs", "ls-files", "--unmerged", "-z", "--", path)
+            .ConfigureAwait(false);
+        Require(Enumerable.Range(1, 3).All(stage => rebasedConflict.Contains($" {stage}\t{path}\0", StringComparison.Ordinal)),
+            "Native Git did not report all three rebase stages.");
+        await fixture.GitAsync(fixture.Primary, token, "rebase", "--abort").ConfigureAwait(false);
+        Require(!Directory.Exists(rebasePath), "Git retained the active rebase state after abort.");
+        await VerifyAbortedOperationAsync(fixture, head, token).ConfigureAwait(false);
+        Console.WriteLine("Native Git rejected the divergent push and recovered the primary checkout after merge and rebase conflicts.");
+    }
+
+    /// <summary>Checks the primary checkout's restored head and index and the linked checkout's original files.</summary>
+    /// <param name="fixture">The primary and linked checkouts.</param>
+    /// <param name="head">The primary commit before the aborted operation.</param>
+    /// <param name="token">Cancellation for native Git commands.</param>
+    private static async Task VerifyAbortedOperationAsync(GitWorktreeFixture fixture, string head, CancellationToken token)
+    {
         var after = await fixture.GitAsync(fixture.Primary, token, "rev-parse", "HEAD").ConfigureAwait(false);
         var clean = await fixture.GitAsync(fixture.Primary, token, "status", "--porcelain=v2", "-z").ConfigureAwait(false);
-        Require(string.Equals(head, after, StringComparison.Ordinal) && clean.Length == 0, "Aborting the merge did not restore the primary checkout.");
-        Require(string.Equals(File.ReadAllText(Path.Combine(fixture.Linked, path)), GitWorktreeFixture.SeedConflict, StringComparison.Ordinal) &&
+        Require(string.Equals(head, after, StringComparison.Ordinal) && clean.Length == 0, "Aborting the operation did not restore the primary checkout.");
+        Require(string.Equals(File.ReadAllText(Path.Combine(fixture.Linked, GitWorktreeFixture.ConflictPath)), GitWorktreeFixture.SeedConflict, StringComparison.Ordinal) &&
             string.Equals(File.ReadAllText(Path.Combine(fixture.Linked, GitWorktreeFixture.ChangedPath)), "linked text\n", StringComparison.Ordinal),
-            "Merge recovery changed files in the linked checkout.");
-        Console.WriteLine("The local remotes diverged. Merge exposed all three conflict stages and abort preserved the linked checkout.");
+            "Recovery changed files in the linked checkout.");
     }
 
     /// <summary>Reads authoritative absolute Git-directory and index paths from the selected checkouts.</summary>
