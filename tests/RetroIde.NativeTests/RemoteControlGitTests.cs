@@ -348,6 +348,15 @@ internal static class RemoteControlGitTests
             throw new InvalidOperationException("The confirmed Skip did not omit the reviewed cherry-pick step.");
         Console.WriteLine("RemoteControl reviewed and skipped a paused cherry-pick without physical input.");
 
+        await ReviewResetAsync("git.reset.cancel").ConfigureAwait(true);
+        if (!string.Equals(before, (await sample.GitAsync(worktree, token, "rev-parse", "HEAD").ConfigureAwait(true)).Trim(), StringComparison.Ordinal))
+            throw new InvalidOperationException("Cancel changed HEAD during reset review.");
+        await ReviewResetAsync("git.reset.submit").ConfigureAwait(true);
+        if (!string.Equals(incoming, (await sample.GitAsync(worktree, token, "rev-parse", "HEAD").ConfigureAwait(true)).Trim(), StringComparison.Ordinal) ||
+            !string.Equals("native linked branch\n", await File.ReadAllTextAsync(Path.Combine(worktree, path), token).ConfigureAwait(true), StringComparison.Ordinal))
+            throw new InvalidOperationException("The confirmed hard reset did not restore the reviewed commit.");
+        Console.WriteLine("RemoteControl reviewed a hard reset, canceled it, then reset the selected checkout to the reviewed commit.");
+
         async Task CommitSideAsync(string root, string message)
         {
             await sample.GitAsync(root, token, "add", "--", path).ConfigureAwait(true);
@@ -381,6 +390,28 @@ internal static class RemoteControlGitTests
             await WorkbenchRemoteControl.ClickAsync(confirmation, command + "." + answer).ConfigureAwait(true);
             await (((IAsyncRelayCommand)button.Command!).ExecutionTask ??
                 throw new InvalidOperationException($"The recovery command {command} was not dispatched.")).WaitAsync(token).ConfigureAwait(true);
+        }
+
+        async Task ReviewResetAsync(string answer)
+        {
+            const string Id = "git.reset.commit.toolbar";
+            var button = await FindAsync<Button>(window, Id, token).ConfigureAwait(true);
+            button.BringIntoView();
+            await WorkbenchRemoteControl.ClickAsync(window, Id).ConfigureAwait(true);
+            while (window.OwnedWindows.Count == 0)
+                await Task.Delay(20, token).ConfigureAwait(true);
+            var resetDialog = window.OwnedWindows.Single();
+            var mode = await FindAsync<ComboBox>(resetDialog, "git.reset.mode", token).ConfigureAwait(true);
+            if (mode.SelectedItem is not ComboBoxItem { Tag: "mixed" })
+                throw new InvalidOperationException("Reset review did not default to Mixed.");
+            mode.SelectedItem = ((IEnumerable<ComboBoxItem>)mode.ItemsSource!).Single(item => item.Tag is "hard");
+            var effect = await FindAsync<TextBlock>(resetDialog, "git.reset.effect", token).ConfigureAwait(true);
+            if (effect.Text?.Contains("tracked files", StringComparison.Ordinal) != true ||
+                !resetDialog.GetVisualDescendants().OfType<SelectableTextBlock>().Any(text => string.Equals(text.Text, incoming, StringComparison.Ordinal)))
+                throw new InvalidOperationException("Reset review did not show the target commit and hard reset effect.");
+            await WorkbenchRemoteControl.ClickAsync(resetDialog, answer).ConfigureAwait(true);
+            await (((IAsyncRelayCommand)button.Command!).ExecutionTask ??
+                throw new InvalidOperationException("Reset review was not dispatched.")).WaitAsync(token).ConfigureAwait(true);
         }
     }
 

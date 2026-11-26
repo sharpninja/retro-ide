@@ -23,6 +23,17 @@ internal static class WorkbenchText
     internal const string GitStartApply = "git.operation.start.apply";
     internal const string GitMainline = "git.operation.start.mainline";
     internal const string GitDetachedHead = "git.operation.start.detached";
+    internal const string GitResetMode = "git.reset.mode";
+    internal const string GitResetSoft = "git.reset.soft";
+    internal const string GitResetMixed = "git.reset.mixed";
+    internal const string GitResetHard = "git.reset.hard";
+    internal const string GitResetSoftEffect = "git.reset.soft-effect";
+    internal const string GitResetMixedEffect = "git.reset.mixed-effect";
+    internal const string GitResetHardEffect = "git.reset.hard-effect";
+    internal const string GitResetIndexPaths = "git.reset.index-paths";
+    internal const string GitResetTrackedPaths = "git.reset.tracked-paths";
+    internal const string GitResetBlockedPaths = "git.reset.blocked-paths";
+    internal const string GitResetApply = "git.reset.apply";
     private const string GitMergeOperation = "git.operation.merge";
     private const string GitRebaseOperation = "git.operation.rebase";
     private const string GitCherryPickOperation = "git.operation.cherry-pick";
@@ -88,6 +99,8 @@ internal static class WorkbenchText
             GitAbortExplanation, GitSkipExplanation, GitMergeOperation, GitRebaseOperation, GitCherryPickOperation, GitRevertOperation, GitOtherOperation,
             GitStartCheckout, GitStartTarget, GitStartKind, GitStartMerge, GitStartRebase, GitStartCherryPick, GitStartRevert,
             GitStartApply, GitMainline, GitDetachedHead,
+            GitResetMode, GitResetSoft, GitResetMixed, GitResetHard, GitResetSoftEffect, GitResetMixedEffect, GitResetHardEffect,
+            GitResetIndexPaths, GitResetTrackedPaths, GitResetBlockedPaths, GitResetApply,
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel,
             GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,
             GitHistoryTitle, GitHistoryRefs, GitHistoryGraph, GitHistoryWorktrees,

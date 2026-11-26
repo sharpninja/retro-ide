@@ -10,12 +10,13 @@ internal sealed partial class GitHistoryViewModel
     private bool _changingBranch;
     internal Func<GitBranchDialog.Prompt, CancellationToken, Task<GitBranchDialog.Choice?>>? PromptBranchAsync { get; set; }
     internal Func<GitHistoryOperations.Worktree, GitHistoryOperations.Commit, CancellationToken, Task<GitStartOperationDialog.Choice?>>? PromptStartAsync { get; set; }
+    internal Func<GitReset.Review, CancellationToken, Task<GitResetDialog.Choice?>>? PromptResetAsync { get; set; }
 
     private bool CanCreateBranch() => !_changingBranch && Page?.Anchor is not null;
     private bool CanSwitchBranch() => !_changingBranch && SelectedReference?.Name.StartsWith("refs/heads/", StringComparison.Ordinal) == true;
-    private bool CanStartOperation() => !_changingBranch && SelectedCommit is not null;
+    private bool CanApplyCommit() => !_changingBranch && SelectedCommit is not null;
 
-    [RelayCommand(CanExecute = nameof(CanStartOperation))]
+    [RelayCommand(CanExecute = nameof(CanApplyCommit))]
     private async Task StartOperationAsync(CancellationToken token)
     {
         if (SelectedCommit?.Commit is not { } target || PromptStartAsync is not { } prompt)
@@ -30,6 +31,23 @@ internal sealed partial class GitHistoryViewModel
 
         await RunHistoryMutationAsync(_git.StartOperation, new GitOperationStart.Input(path, choice.Kind, head,
             target.Id, checkout.Branch, choice.Mainline), token).ConfigureAwait(true);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanApplyCommit))]
+    private async Task ResetToCommitAsync(CancellationToken token)
+    {
+        if (SelectedCommit?.Commit is not { } target || PromptResetAsync is not { } prompt)
+            return;
+        var path = Page.Repository.WorktreePath;
+        var response = await RequestAsync(_git.ReviewReset, new GitReset.ReviewInput(path, target.Id), token).ConfigureAwait(true);
+        if (response is not { Code: "ok", Data: { } data } ||
+            data.Deserialize<GitReset.Review>(WireJson.Options) is not { } review ||
+            token.IsCancellationRequested || await prompt(review, token).ConfigureAwait(true) is not { } choice ||
+            token.IsCancellationRequested)
+            return;
+
+        await RunHistoryMutationAsync(_git.Reset, new GitReset.ResetInput(path, review.TargetCommit, review.Revision, choice.Mode), token)
+            .ConfigureAwait(true);
     }
 
     [RelayCommand(CanExecute = nameof(CanCreateBranch))]
@@ -107,5 +125,6 @@ internal sealed partial class GitHistoryViewModel
         DeleteBranchCommand.NotifyCanExecuteChanged();
         SetUpstreamCommand.NotifyCanExecuteChanged();
         StartOperationCommand.NotifyCanExecuteChanged();
+        ResetToCommitCommand.NotifyCanExecuteChanged();
     }
 }

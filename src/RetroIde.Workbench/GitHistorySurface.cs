@@ -70,7 +70,8 @@ internal static class GitHistorySurface
         var commitActions = new WrapPanel
         {
             Children = { Button(WorkbenchCommands.InspectGitCommit, view.InspectCommand),
-                Button(WorkbenchCommands.StartGitOperation, view.StartOperationCommand) },
+                Button(WorkbenchCommands.StartGitOperation, view.StartOperationCommand),
+                Button(WorkbenchCommands.ResetToGitCommit, view.ResetToCommitCommand) },
         };
         Place(CreateDetails(view, commitActions), 2, 1);
         layout.KeyBindings.Add(new KeyBinding { Command = view.CloseCommand, Gesture = KeyGesture.Parse(WorkbenchCommands.Close.EffectiveGesture) });
@@ -101,12 +102,15 @@ internal static class GitHistorySurface
         Func<GitHistoryOperations.Worktree, GitHistoryOperations.Commit, CancellationToken, Task<GitStartOperationDialog.Choice?>> start =
             (checkout, target, token) => ShowAsync<GitStartOperationDialog.Choice>(
                 () => new GitStartOperationDialog(view.Localization, checkout, target), token);
+        Func<GitReset.Review, CancellationToken, Task<GitResetDialog.Choice?>> reset =
+            (review, token) => ShowAsync<GitResetDialog.Choice>(() => new GitResetDialog(view.Localization, review), token);
         surface.AttachedToVisualTree += (_, _) =>
         {
             view.PromptBranchAsync = branch;
             view.PromptRemotesAsync = remotes;
             view.PromptUpstreamAsync = upstream;
             view.PromptStartAsync = start;
+            view.PromptResetAsync = reset;
         };
         surface.DetachedFromVisualTree += (_, _) =>
         {
@@ -118,6 +122,8 @@ internal static class GitHistorySurface
                 view.PromptUpstreamAsync = null;
             if (view.PromptStartAsync == start)
                 view.PromptStartAsync = null;
+            if (view.PromptResetAsync == reset)
+                view.PromptResetAsync = null;
         };
 
         async Task<T?> ShowAsync<T>(Func<Window> create, CancellationToken token) where T : class

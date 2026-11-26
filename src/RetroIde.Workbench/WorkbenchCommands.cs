@@ -39,6 +39,7 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor AbortGitOperation = Create("git.operation.abort", "Ctrl+Alt+Shift+Escape");
     public static readonly CommandDescriptor SkipGitOperation = Create("git.operation.skip", "Ctrl+Alt+Shift+J");
     public static readonly CommandDescriptor StartGitOperation = Create("git.operation.start", "Ctrl+Alt+Shift+I");
+    public static readonly CommandDescriptor ResetToGitCommit = Create("git.reset.commit", "Ctrl+Alt+Shift+X");
     public static readonly CommandDescriptor OpenGitHistory = Create("git.history.open", "Ctrl+Alt+L");
     public static readonly CommandDescriptor CurrentGitHistory = Create("git.history.current", "Ctrl+Alt+Shift+L");
     public static readonly CommandDescriptor ShowGitRefHistory = Create("git.history.ref", "Ctrl+Alt+Shift+B");
@@ -66,7 +67,7 @@ internal static class WorkbenchCommands
         [FocusTool, OpenFolder, OpenProject, Save, Reveal, Search, Next, Previous, Replace, ReplaceAll, Undo, Redo, Close, Discard,
             OpenSourceControl, SelectRepository, RefreshGitStatus, InitializeRepository, CloneRepository, OpenGitDiff, StageGitFile, UnstageGitFile,
             RefreshGitDiff, StageGitHunks, UnstageGitHunks, CreateCommit, AmendCommit, ContinueGitOperation, AbortGitOperation, SkipGitOperation,
-            StartGitOperation,
+            StartGitOperation, ResetToGitCommit,
             OpenGitHistory, CurrentGitHistory,
             ShowGitRefHistory, PreviousGitHistoryPage, NextGitHistoryPage, InspectGitCommit, CreateGitBranch, SwitchGitBranch,
             RenameGitBranch, DeleteGitBranch, ShowGitRemotes, RefreshGitRemotes, AddGitRemote, EditGitRemote,

@@ -40,6 +40,10 @@ Source Control shows when the selected worktree has a paused merge, rebase, cher
 
 **Skip Current Commit** lets you review and omit the paused commit in a rebase, cherry-pick, or revert. Git resumes the remaining sequence and may pause at the next conflict. [Git rebase](https://git-scm.com/docs/git-rebase) · [Git cherry-pick](https://git-scm.com/docs/git-cherry-pick) · [Git revert](https://git-scm.com/docs/git-revert)
 
+## Reset a checkout
+
+Select a commit in **Git History** and choose **Reset to Commit**. **Soft** moves HEAD and keeps the index and files. **Mixed** also resets the index and keeps working files. **Hard** also replaces tracked files with the selected commit. The dialog shows the index and tracked paths affected by the selected mode. An affected unsaved editor buffer or an untracked or ignored file in the way blocks a hard reset. Retro IDE rechecks the reviewed HEAD, index, and disk contents before applying the chosen mode. [Git reset](https://git-scm.com/docs/git-reset)
+
 ## Workflows
 
 | Area | IDE commands and views |

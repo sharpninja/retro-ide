@@ -24,4 +24,12 @@ internal sealed partial class GitFeatures
     public Feature<GitOperationStart.Input> StartOperation { get; } = new("git.operation.start", "git_start_operation",
         "Start a merge, rebase, cherry-pick, or revert from the reviewed checkout and commit.",
         GitOperationStart.StartAsync, typeof(GitOperationStart.Result), mutation: true);
+
+    public Feature<GitReset.ReviewInput> ReviewReset { get; } = new("git.reset.review", "git_review_reset",
+        "Review HEAD, index and worktree effects before resetting the selected checkout to the commit.",
+        GitReset.ReviewAsync, typeof(GitReset.Review));
+
+    public Feature<GitReset.ResetInput> Reset { get; } = new("git.reset.commit", "git_reset",
+        "Apply the selected soft, mixed or hard reset against a current reviewed revision.",
+        GitReset.ResetAsync, typeof(GitReset.Result), mutation: true);
 }
