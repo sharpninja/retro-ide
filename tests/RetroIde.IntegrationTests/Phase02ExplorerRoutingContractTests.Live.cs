@@ -99,7 +99,7 @@ public sealed partial class Phase02ExplorerRoutingContractTests
         }
 
         private static RootInfo ReadRoot(JsonElement data) =>
-            new(data.GetProperty("id").GetGuid(), ReadString(data, "kind"), ReadString(data, "path"));
+            new(data.GetProperty("id").GetGuid(), ReadString(data, "kind").ToLowerInvariant(), ReadString(data, "path"));
 
         private static DocumentInfo ReadDocument(JsonElement data) =>
             new(data.GetProperty("viewKey").GetGuid(), data.GetProperty("documentId").GetGuid(),
