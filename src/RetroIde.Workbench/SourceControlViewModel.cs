@@ -62,7 +62,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         LastResult = null;
     }
 
-    internal void DisplayStatus(GitStatus status)
+    internal void DisplayStatus(GitStatus? status)
     {
         Dispatcher.UIThread.VerifyAccess();
         Status = status;

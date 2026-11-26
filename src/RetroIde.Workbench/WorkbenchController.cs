@@ -326,6 +326,8 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         IExplorerRegistration, ILocalizationRegistration, IGitRegistration
     {
         private GitStatusMonitor? _gitMonitor;
+        private long _statusReads;
+        private long _displayedRead;
 
         public WorkbenchAddress Address => View.Address;
         public object ContextSource => View;
@@ -359,12 +361,18 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         }
 
         /// <inheritdoc />
-        public void DisplayGitStatus(GitStatus status)
+        public long BeginGitStatusRead() => ++_statusReads;
+
+        /// <inheritdoc />
+        public void DisplayGitStatus(GitStatus? status, long readOrder)
         {
+            if (readOrder < _displayedRead)
+                return;
+            _displayedRead = readOrder;
             if (Controller._sourceControlView is { } pane && pane.ParentViewKey == View.ViewKey && SelectedGit is { } scope)
             {
                 pane.DisplayStatus(status);
-                Controller._explorerView?.SetGitBadges(new GitExplorerBadges(scope, status));
+                Controller._explorerView?.SetGitBadges(status is null ? null : new GitExplorerBadges(scope, status));
             }
         }
 

@@ -154,31 +154,31 @@ internal sealed class GitFeatures
     private static async Task<FeatureOutcome> StatusAsync(StatusInput input, IWorkbenchRegistration view,
         Func<GitSelection, CancellationToken, Task<GitStatus?>> readStatus, CancellationToken token)
     {
-        if (view is not IGitRegistration { SelectedGit: { } selection })
+        if (view is not IGitRegistration { SelectedGit: { } selection } origin)
             return new("git_selection_required", "Select a Git worktree first.");
+        var readOrder = origin.BeginGitStatusRead();
         GitStatus? status;
         try { status = await readStatus(selection, token).ConfigureAwait(false); }
-        catch (Win32Exception) { return new("git_unavailable", "Git could not be started."); }
+        catch (Win32Exception) { return Publish(null, new("git_unavailable", "Git could not be started.")); }
         catch (Exception error) when (error is InvalidDataException or DecoderFallbackException)
         {
-            return new("git_output_invalid", "Git did not return readable status records.");
+            return Publish(null, new("git_output_invalid", "Git did not return readable status records."));
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            return Unavailable();
+            return Publish(null, Unavailable());
         }
-        if (status is null)
-            return Unavailable();
+        return Publish(status, status is null ? Unavailable() : null);
 
-        return new FeatureOutcome("ok", "Git status read.")
+        FeatureOutcome Publish(GitStatus? observed, FeatureOutcome? failure) => new FeatureOutcome("ok", "Git status read.")
         {
             Commit = current =>
             {
                 if (current is not IGitRegistration git || !ReferenceEquals(git.SelectedGit, selection))
                     return new("git_selection_changed", "The selected Git worktree changed while status was read.");
 
-                git.DisplayGitStatus(status);
-                return input.DisplayOnly ? new("ok", "Git status displayed.") : FeatureOutcome.Success("Git status read.", status);
+                git.DisplayGitStatus(observed, readOrder);
+                return failure ?? (input.DisplayOnly ? new("ok", "Git status displayed.") : FeatureOutcome.Success("Git status read.", observed));
             },
         };
     }

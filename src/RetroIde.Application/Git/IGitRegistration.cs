@@ -17,9 +17,13 @@ internal interface IGitRegistration
     /// <param name="address">The authorized workspace-relative directory for later discovery.</param>
     void SelectGit(GitSelection selection, WorkspaceExplorer.Address address);
 
-    /// <summary>Publishes the status of the current selection to its desktop pane.</summary>
-    /// <param name="status">The validated worktree status to display.</param>
-    void DisplayGitStatus(GitStatus status);
+    /// <summary>Captures the order of the next status read for this registration.</summary>
+    long BeginGitStatusRead();
+
+    /// <summary>Publishes the latest completed read to its desktop pane.</summary>
+    /// <param name="status">The validated status, or null if the checkout cannot be read.</param>
+    /// <param name="readOrder">The captured read order.</param>
+    void DisplayGitStatus(GitStatus? status, long readOrder);
 
     /// <summary>Registers the installed checkout as a workspace root and makes it the selected Git worktree.</summary>
     /// <param name="repository">The installed native checkout.</param>
