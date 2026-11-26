@@ -38,6 +38,13 @@ internal static class WorkbenchText
     internal const string GitHistoryWorktrees = "git.history.worktrees";
     internal const string GitBranchName = "git.branch.name";
     internal const string GitBranchCheckout = "git.branch.checkout";
+    internal const string GitRemoteTitle = "git.remotes.title";
+    internal const string GitRemoteName = "git.remotes.name";
+    internal const string GitRemoteUrl = "git.remotes.url";
+    internal const string GitRemotePush = "git.remotes.push-url";
+    internal const string GitRemoteClose = "git.remotes.close";
+    internal const string GitUpstreamClear = "git.upstream.clear";
+    private const string GitDivergence = "git.remotes.divergence";
     internal const string SearchQuery = "editor.search.query";
     internal const string SearchReplacement = "editor.search.replacement";
     internal const string SearchMatchCase = "editor.search.match-case";
@@ -57,6 +64,7 @@ internal static class WorkbenchText
             GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,
             GitHistoryTitle, GitHistoryRefs, GitHistoryGraph, GitHistoryWorktrees,
             GitBranchName, GitBranchCheckout,
+            GitRemoteTitle, GitRemoteName, GitRemoteUrl, GitRemotePush, GitRemoteClose, GitUpstreamClear,
             GitBadgeTracked, GitBadgeUntracked, GitBadgeIgnored, GitBadgeModified, GitBadgeStaged, GitBadgeStagedModified, GitBadgeConflicted];
 
     internal static string ExplorerRoot(WorkbenchLocalization localization, WorkspaceExplorer.RootKind kind, string path, bool unavailable)
@@ -69,6 +77,12 @@ internal static class WorkbenchText
     }
 
     internal static string PaneTitle(string id) => $"pane.{id}.title";
+
+    internal static string GitRemoteDivergence(WorkbenchLocalization localization, int ahead, int behind) =>
+        localization.Text(GitDivergence, new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["ahead"] = ahead, ["behind"] = behind,
+        });
 
     internal static string GitDiffName(WorkbenchLocalization localization, string path, string layer) =>
         localization.Text(GitDiffTitle, new Dictionary<string, object>(StringComparer.Ordinal)

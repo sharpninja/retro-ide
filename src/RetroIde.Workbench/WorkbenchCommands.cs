@@ -45,6 +45,14 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor SwitchGitBranch = Create("git.branch.switch", "Ctrl+Alt+Shift+V");
     public static readonly CommandDescriptor RenameGitBranch = Create("git.branch.rename", "Ctrl+Alt+Shift+N");
     public static readonly CommandDescriptor DeleteGitBranch = Create("git.branch.delete", "Ctrl+Alt+Delete");
+    public static readonly CommandDescriptor ShowGitRemotes = Create("git.remotes.open", "Ctrl+Alt+Shift+T");
+    public static readonly CommandDescriptor RefreshGitRemotes = Create("git.remotes.read", "Alt+Shift+R");
+    public static readonly CommandDescriptor AddGitRemote = Create("git.remote.add", "Ctrl+Alt+A");
+    public static readonly CommandDescriptor EditGitRemote = Create("git.remote.url", "Ctrl+Alt+E");
+    public static readonly CommandDescriptor RenameGitRemote = Create("git.remote.rename", "Ctrl+Alt+N");
+    public static readonly CommandDescriptor RemoveGitRemote = Create("git.remote.remove", "Ctrl+Alt+Shift+Delete");
+    public static readonly CommandDescriptor FetchGitRemote = Create("git.remote.fetch", "Ctrl+Alt+F");
+    public static readonly CommandDescriptor SetGitUpstream = Create("git.branch.upstream", "Ctrl+Alt+U");
 
     // A document key binding can be active inside a main or floating workbench window.
     // All commands in this catalog can share that input route, so check them together.
@@ -53,7 +61,8 @@ internal static class WorkbenchCommands
             OpenSourceControl, SelectRepository, RefreshGitStatus, InitializeRepository, CloneRepository, OpenGitDiff, StageGitFile, UnstageGitFile,
             RefreshGitDiff, StageGitHunks, UnstageGitHunks, CreateCommit, AmendCommit, OpenGitHistory, CurrentGitHistory,
             ShowGitRefHistory, PreviousGitHistoryPage, NextGitHistoryPage, InspectGitCommit, CreateGitBranch, SwitchGitBranch,
-            RenameGitBranch, DeleteGitBranch];
+            RenameGitBranch, DeleteGitBranch, ShowGitRemotes, RefreshGitRemotes, AddGitRemote, EditGitRemote,
+            RenameGitRemote, RemoveGitRemote, FetchGitRemote, SetGitUpstream];
 
     internal static void ValidateBundledResources()
     {
@@ -63,6 +72,7 @@ internal static class WorkbenchCommands
                 throw new InvalidDataException($"The required English resource '{slug}' is empty.");
         _ = WorkbenchText.ExplorerRoot(english, WorkspaceExplorer.RootKind.Folder, "example", unavailable: false);
         _ = WorkbenchText.GitDiffName(english, "example.asm", "staged");
+        _ = WorkbenchText.GitRemoteDivergence(english, 0, 0);
         _ = WorkbenchText.ExplorerRoot(english, WorkspaceExplorer.RootKind.Project, "example", unavailable: true);
         Validate(Commands, english);
     }

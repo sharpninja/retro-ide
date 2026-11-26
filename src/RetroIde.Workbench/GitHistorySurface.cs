@@ -29,7 +29,8 @@ internal static class GitHistorySurface
         reference.Bind(TextBlock.TextProperty, new Binding("Page.RefName") { Source = view, TargetNullValue = "HEAD" });
         var toolbar = new WrapPanel { Children = { Button(WorkbenchCommands.CurrentGitHistory, view.CurrentHistoryCommand),
             Button(WorkbenchCommands.PreviousGitHistoryPage, view.PreviousPageCommand),
-            Button(WorkbenchCommands.NextGitHistoryPage, view.NextPageCommand) } };
+            Button(WorkbenchCommands.NextGitHistoryPage, view.NextPageCommand),
+            Button(WorkbenchCommands.ShowGitRemotes, view.ShowRemotesCommand) } };
         var header = new StackPanel { Children = { path, reference, toolbar } };
         Grid.SetColumnSpan(header, 2);
         layout.Children.Add(header);
@@ -41,6 +42,7 @@ internal static class GitHistorySurface
             Button(WorkbenchCommands.SwitchGitBranch, view.SwitchBranchCommand),
             Button(WorkbenchCommands.RenameGitBranch, view.RenameBranchCommand),
             Button(WorkbenchCommands.DeleteGitBranch, view.DeleteBranchCommand),
+            Button(WorkbenchCommands.SetGitUpstream, view.SetUpstreamCommand),
         } };
         var refPane = CreateRefPane(view, refActions);
         Place(refPane, 1, 0);
@@ -67,7 +69,7 @@ internal static class GitHistorySurface
         Place(Section(view, WorkbenchText.GitHistoryGraph, graph), 1, 1);
         Place(CreateDetails(view, Button(WorkbenchCommands.InspectGitCommit, view.InspectCommand)), 2, 1);
         layout.KeyBindings.Add(new KeyBinding { Command = view.CloseCommand, Gesture = KeyGesture.Parse(WorkbenchCommands.Close.EffectiveGesture) });
-        ConnectBranchDialog(view, layout);
+        ConnectGitDialogs(view, layout);
         return layout;
 
         Button Button(CommandDescriptor descriptor, ICommand command)
@@ -84,27 +86,41 @@ internal static class GitHistorySurface
         }
     }
 
-    private static void ConnectBranchDialog(GitHistoryViewModel view, Control surface)
+    private static void ConnectGitDialogs(GitHistoryViewModel view, Control surface)
     {
-        Func<GitBranchDialog.Prompt, CancellationToken, Task<GitBranchDialog.Choice?>> chooser = PromptAsync;
-        surface.AttachedToVisualTree += (_, _) => view.PromptBranchAsync = chooser;
+        Func<GitBranchDialog.Prompt, CancellationToken, Task<GitBranchDialog.Choice?>> branch =
+            (input, token) => ShowAsync<GitBranchDialog.Choice>(() => new GitBranchDialog(view.Localization, input), token);
+        Func<CancellationToken, Task> remotes = token => ShowAsync<object>(() => new GitRemoteDialog(view), token);
+        Func<string, GitHistoryOperations.Reference[], CancellationToken, Task<GitUpstreamDialog.Choice?>> upstream =
+            (name, refs, token) => ShowAsync<GitUpstreamDialog.Choice>(() => new GitUpstreamDialog(view.Localization, name, refs), token);
+        surface.AttachedToVisualTree += (_, _) =>
+        {
+            view.PromptBranchAsync = branch;
+            view.PromptRemotesAsync = remotes;
+            view.PromptUpstreamAsync = upstream;
+        };
         surface.DetachedFromVisualTree += (_, _) =>
         {
-            if (view.PromptBranchAsync == chooser)
+            if (view.PromptBranchAsync == branch)
                 view.PromptBranchAsync = null;
+            if (view.PromptRemotesAsync == remotes)
+                view.PromptRemotesAsync = null;
+            if (view.PromptUpstreamAsync == upstream)
+                view.PromptUpstreamAsync = null;
         };
 
-        async Task<GitBranchDialog.Choice?> PromptAsync(GitBranchDialog.Prompt prompt, CancellationToken token)
+        async Task<T?> ShowAsync<T>(Func<Window> create, CancellationToken token) where T : class
         {
             if (token.IsCancellationRequested || TopLevel.GetTopLevel(surface) is not Window window)
                 return null;
-            var dialog = new GitBranchDialog(view.Localization, prompt) { FlowDirection = window.FlowDirection };
+            var dialog = create();
+            dialog.FlowDirection = window.FlowDirection;
             using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
             {
                 if (dialog.IsVisible)
                     dialog.Close();
             }));
-            return await dialog.ShowDialog<GitBranchDialog.Choice?>(window).ConfigureAwait(true);
+            return await dialog.ShowDialog<T?>(window).ConfigureAwait(true);
         }
     }
 

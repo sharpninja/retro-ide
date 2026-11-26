@@ -67,6 +67,13 @@ The Phase 03 candidate exposes native Git discovery, selection, status, file dif
 | `git_switch_branch` | Selected `worktreePath`, local `branchName`, target `expectedHead`, current workbench `context` | Switches to the existing local branch. Use the branch object ID from `git_list_refs` as `expectedHead`. Requires a write-enabled attachment. |
 | `git_rename_branch` | Selected `worktreePath`, local `branchName`, `expectedHead`, `newName`, current workbench `context` | Renames the reviewed local branch with its tracking configuration and reflog. Requires a write-enabled attachment. |
 | `git_delete_branch` | Selected `worktreePath`, local `branchName`, `expectedHead`, current workbench `context` | Deletes a reviewed, fully merged local branch. Requires a write-enabled attachment. |
+| `git_list_remotes` | Selected `worktreePath` | Remote names, displayed fetch and push URLs, and the configuration `revision`. URLs omit embedded credentials. |
+| `git_add_remote` | Selected `worktreePath`, remote `name`, URL or local path in `value`, `revision`, current workbench `context` | Adds a native Git remote and returns the updated remote list. |
+| `git_set_remote_url` | Selected `worktreePath`, remote `name`, URL or local path in `value`, optional `push`, `revision`, current workbench `context` | Updates the fetch URL, or the push URL when `push` is true. |
+| `git_rename_remote` | Selected `worktreePath`, remote `name`, new name in `value`, `revision`, current workbench `context` | Renames the remote and its remote-tracking refs. |
+| `git_remove_remote` | Selected `worktreePath`, remote `name`, `revision`, current workbench `context` | Removes the selected remote and its remote-tracking refs. |
+| `git_fetch` | Selected `worktreePath`, remote `name`, `revision`, optional `prune`, current workbench `context` | Fetches tracking refs and returns the active branch’s upstream and divergence when available. |
+| `git_set_upstream` | Selected `worktreePath`, local `branchName`, `expectedHead`, optional full `upstream`, current workbench `context` | Sets tracking for the reviewed branch. Omit `upstream` to clear tracking. |
 
 Selection is scoped to the attached workbench. Desktop commands and attached clients share the selection and status shown in Source Control and Project Explorer. On desktop restart, the workspace revalidates the saved checkout before issuing a new attachment. Select a worktree before reading status. If its selection changes while status is being prepared, refresh the context and read again. [Git integration](git-integration.md)
 
@@ -81,6 +88,8 @@ History and ref queries require the full worktree root to be open. A nonzero his
 Branch commands operate on the entire open worktree. A stale tip returns `git_branch_changed`. A branch checked out in another worktree returns `git_branch_in_use`. Save affected editor buffers if the operation returns `git_branch_editors_busy`.
 
 Rename protects branches checked out in another worktree. Delete returns `git_branch_in_use` for every checked-out branch and `git_branch_unmerged` when its commits are not fully merged. Refresh references after either operation.
+
+Remote configuration and fetch require write-enabled attachments. Refresh `git_list_remotes` when `git_remote_changed` is returned. Fetch accepts configured tracking and tag destinations to preserve local branch refs.
 
 ## One feature registry
 

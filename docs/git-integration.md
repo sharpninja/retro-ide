@@ -28,6 +28,8 @@ Choose **New Branch** to create a local branch from the selected commit in Git H
 
 Choose **Rename Branch** to move the local branch and keep its tracking configuration and reflog. A branch checked out in another worktree must be renamed from that checkout. **Delete Merged Branch** confirms the exact branch name and asks Git to delete it only when it is fully merged into its upstream or, without an upstream, the current HEAD. A checked-out branch cannot be deleted. [Git branch](https://git-scm.com/docs/git-branch)
 
+Open **Remotes** from Git History to add, rename, remove, or edit a remote. The URL field accepts a Git URL or local repository path. Select **Set push URL** to edit the push endpoint. Retro IDE masks embedded credentials in existing URLs. Use Git’s credential helpers or SSH credentials for authentication. Choose a remote and **Fetch** to update its tracking refs and Git’s ahead and behind counts. The checked-out branch and its files stay in place. Use **Set Upstream** on a local branch to choose or clear tracking. [Git remote](https://git-scm.com/docs/git-remote) · [Git fetch](https://git-scm.com/docs/git-fetch) · [Git credentials](https://git-scm.com/docs/gitcredentials)
+
 ## Workflows
 
 | Area | IDE commands and views |

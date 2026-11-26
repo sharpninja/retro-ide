@@ -85,5 +85,6 @@ internal sealed partial class GitHistoryViewModel
         SwitchBranchCommand.NotifyCanExecuteChanged();
         RenameBranchCommand.NotifyCanExecuteChanged();
         DeleteBranchCommand.NotifyCanExecuteChanged();
+        SetUpstreamCommand.NotifyCanExecuteChanged();
     }
 }

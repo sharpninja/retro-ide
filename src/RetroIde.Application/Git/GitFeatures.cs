@@ -6,7 +6,7 @@ namespace RetroIde.Application.Git;
 
 /// <summary>Registers scoped Git discovery, selection and status in the shared typed feature registry.</summary>
 /// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-multiple-repos; TEST-RETRO-015#ac-test-mcp-same-instance. Prepare all native reads outside the workbench dispatcher and apply selection in CQRS.</remarks>
-internal sealed class GitFeatures
+internal sealed partial class GitFeatures
 {
     /// <summary>Addresses a repository candidate by an open root and a literal relative path.</summary>
     internal sealed record LocateInput(Guid RootId, string RelativePath);

@@ -43,7 +43,8 @@ public sealed partial class GitWorktreeIntegrationTests
             foreach (var name in new[] { "git_discover_repository", "git_select_repository", "git_get_status",
                 "git_get_diff", "git_open_diff", "git_close_diff", "git_stage_file", "git_unstage_file", "git_stage_hunks", "git_unstage_hunks",
                 "git_get_commit_state", "git_commit", "git_amend", "git_list_refs", "git_get_history", "git_get_commit_details",
-                "git_open_history", "git_close_history", "git_create_branch", "git_switch_branch", "git_rename_branch", "git_delete_branch" })
+                "git_open_history", "git_close_history", "git_create_branch", "git_switch_branch", "git_rename_branch", "git_delete_branch",
+                "git_list_remotes", "git_add_remote", "git_set_remote_url", "git_rename_remote", "git_remove_remote", "git_fetch", "git_set_upstream" })
             {
                 Assert.True(directTools.Any(tool => string.Equals(tool.Name, name, StringComparison.Ordinal)),
                     $"The live workbench did not advertise {name}.");

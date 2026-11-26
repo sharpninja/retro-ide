@@ -78,6 +78,7 @@ internal static class RemoteControlGitTests
             await VerifyHistoryAsync(window, session, token).ConfigureAwait(true);
             await VerifyBranchAsync(window, sample, token).ConfigureAwait(true);
             await VerifyBranchMaintenanceAsync(window, sample, token).ConfigureAwait(true);
+            await VerifyFetchAsync(window, sample, token).ConfigureAwait(true);
 
             async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments)
             {
@@ -217,6 +218,34 @@ internal static class RemoteControlGitTests
                 await Task.Delay(20, token).ConfigureAwait(true);
             return window.OwnedWindows.Single();
         }
+    }
+
+    private static async Task VerifyFetchAsync(Window window, GitWorktreeFixture sample, CancellationToken token)
+    {
+        await sample.GitAsync(sample.Peer, token, "commit", "--allow-empty", "-m", "Native remote-only update").ConfigureAwait(true);
+        await sample.GitAsync(sample.Peer, token, "push", "origin", "main").ConfigureAwait(true);
+        var tip = await sample.GitAsync(sample.Remote, token, "rev-parse", "refs/heads/main").ConfigureAwait(true);
+        var before = await sample.GitAsync(sample.Primary, token, "rev-parse", "HEAD").ConfigureAwait(true);
+        const string Open = "git.remotes.open.toolbar";
+        var open = await FindAsync<Button>(window, Open, token).ConfigureAwait(true);
+        await WorkbenchRemoteControl.ClickAsync(window, Open).ConfigureAwait(true);
+        while (window.OwnedWindows.Count == 0)
+            await Task.Delay(20, token).ConfigureAwait(true);
+        var dialog = window.OwnedWindows.Single();
+        var list = await FindAsync<ListBox>(dialog, "git.remotes.list", token).ConfigureAwait(true);
+        list.SelectedItem = ((IEnumerable<GitRemoteOperations.Remote>)list.ItemsSource!).Single(remote =>
+            string.Equals(remote.Name, "origin", StringComparison.Ordinal));
+        const string Fetch = "git.remote.fetch.toolbar";
+        var fetch = await FindAsync<Button>(dialog, Fetch, token).ConfigureAwait(true);
+        await WorkbenchRemoteControl.ClickAsync(dialog, Fetch).ConfigureAwait(true);
+        await ((IAsyncRelayCommand)fetch.Command!).ExecutionTask!.WaitAsync(token).ConfigureAwait(true);
+        await WorkbenchRemoteControl.ClickAsync(dialog, "git.remotes.close").ConfigureAwait(true);
+        await ((IAsyncRelayCommand)open.Command!).ExecutionTask!.WaitAsync(token).ConfigureAwait(true);
+        var available = await sample.GitAsync(sample.Primary, token, "rev-parse", "refs/remotes/origin/main").ConfigureAwait(true);
+        var after = await sample.GitAsync(sample.Primary, token, "rev-parse", "HEAD").ConfigureAwait(true);
+        if (!string.Equals(tip, available, StringComparison.Ordinal) || !string.Equals(before, after, StringComparison.Ordinal))
+            throw new InvalidOperationException("The Git Remotes dialog did not fetch or unexpectedly changed local HEAD.");
+        Console.WriteLine("RemoteControl fetched a native tracking update without moving the local branch.");
     }
 
     private static async Task<T> FindAsync<T>(Window window, string id, CancellationToken token) where T : Control
