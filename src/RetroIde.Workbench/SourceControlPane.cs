@@ -60,6 +60,8 @@ internal static class SourceControlPane
             ItemsSource = new[]
             {
                 CommandPresentation.CreateMenuItem(WorkbenchCommands.OpenSourceControl, view.OpenPaneCommand, view.Localization),
+                CommandPresentation.CreateMenuItem(WorkbenchCommands.InitializeRepository, view.InitializeRepositoryCommand, view.Localization),
+                CommandPresentation.CreateMenuItem(WorkbenchCommands.CloneRepository, view.CloneRepositoryCommand, view.Localization),
                 CommandPresentation.CreateMenuItem(WorkbenchCommands.SelectRepository, view.SelectRepositoryCommand, view.Localization),
                 CommandPresentation.CreateMenuItem(WorkbenchCommands.RefreshGitStatus, view.RefreshStatusCommand, view.Localization),
             },
@@ -72,6 +74,8 @@ internal static class SourceControlPane
     internal static void RegisterShortcuts(Window window, SourceControlViewModel view)
     {
         WorkbenchWindow.RegisterShortcut(window, view.OpenPaneCommand, CommandPresentation.Create(WorkbenchCommands.OpenSourceControl).Gesture);
+        WorkbenchWindow.RegisterShortcut(window, view.InitializeRepositoryCommand, CommandPresentation.Create(WorkbenchCommands.InitializeRepository).Gesture);
+        WorkbenchWindow.RegisterShortcut(window, view.CloneRepositoryCommand, CommandPresentation.Create(WorkbenchCommands.CloneRepository).Gesture);
         WorkbenchWindow.RegisterShortcut(window, view.SelectRepositoryCommand, CommandPresentation.Create(WorkbenchCommands.SelectRepository).Gesture);
         WorkbenchWindow.RegisterShortcut(window, view.RefreshStatusCommand, CommandPresentation.Create(WorkbenchCommands.RefreshGitStatus).Gesture);
     }

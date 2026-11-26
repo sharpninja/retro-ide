@@ -248,6 +248,10 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                     DispatchToViewAsync(git, registration, _registry.Git.Select, locate, request),
                 GitFeatures.StatusInput status when string.Equals(request.CommandId, _registry.Git.Status.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.Status, status, request),
+                GitFeatures.InitializeInput initialize when string.Equals(request.CommandId, _registry.Git.Initialize.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.Initialize, initialize, request),
+                GitFeatures.CloneInput clone when string.Equals(request.CommandId, _registry.Git.Clone.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.Clone, clone, request),
                 _ => null,
             };
         }
@@ -326,6 +330,18 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         {
             if (Controller._sourceControlView is { } pane && pane.ParentViewKey == View.ViewKey)
                 pane.DisplayStatus(status);
+        }
+
+        /// <inheritdoc />
+        public GitProvisionedWorkspace OpenGitWorkspace(GitWorktree repository)
+        {
+            var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+            var root = Explorer.Roots.FirstOrDefault(item => comparer.Equals(item.Path, repository.WorktreePath))
+                ?? Explorer.AddRoot(repository.WorktreePath, WorkspaceExplorer.RootKind.Folder);
+            Explorer.Select(new WorkspaceExplorer.Address(root.Id, ""));
+            SelectGit(new GitSelection(repository, root.Path));
+            Controller.PublishExplorerState();
+            return new GitProvisionedWorkspace(root, repository);
         }
 
         public bool HasExplorer => Controller._explorerView?.ParentViewKey == View.ViewKey;

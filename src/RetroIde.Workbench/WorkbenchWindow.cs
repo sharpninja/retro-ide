@@ -97,6 +97,7 @@ public sealed class WorkbenchWindow : Window
         ExplorerPane.RegisterShortcuts(this, session.ExplorerView);
         SourceControlPane.RegisterShortcuts(this, session.SourceControl);
         session.ExplorerView.PickDirectoryAsync = PickWorkspaceDirectoryAsync;
+        session.SourceControl.PromptSetupAsync = PromptGitSetupAsync;
         session.Layout.Factory.DefaultHostWindowLocator = () =>
         {
             var floating = new HostWindow();
@@ -117,6 +118,7 @@ public sealed class WorkbenchWindow : Window
             _closed = true;
             _closeSave?.Cancel();
             session.ExplorerView.PickDirectoryAsync = null;
+            session.SourceControl.PromptSetupAsync = null;
             session.Controller.Unregister(session.View);
         };
 
@@ -163,6 +165,20 @@ public sealed class WorkbenchWindow : Window
             return null;
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions()).ConfigureAwait(true);
         return folders.FirstOrDefault()?.TryGetLocalPath();
+    }
+
+    private async Task<GitSetupDialog.Choice?> PromptGitSetupAsync(bool clone, CancellationToken token)
+    {
+        if (token.IsCancellationRequested || _closed)
+            return null;
+
+        var dialog = new GitSetupDialog(_session.Localization, clone) { FlowDirection = FlowDirection };
+        using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
+        {
+            if (dialog.IsVisible)
+                dialog.Close();
+        }));
+        return await dialog.ShowDialog<GitSetupDialog.Choice?>(this).ConfigureAwait(true);
     }
 
     private void TrackFloatingInteraction(HostWindow floating)

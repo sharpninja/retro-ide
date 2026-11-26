@@ -14,6 +14,12 @@ internal sealed class GitFeatures
     /// <summary>Requests status for the workbench's selected worktree.</summary>
     internal sealed record StatusInput;
 
+    /// <summary>Identifies the destination selected for Git Init.</summary>
+    internal sealed record InitializeInput(string Destination);
+
+    /// <summary>Identifies a native clone source and an explicit destination.</summary>
+    internal sealed record CloneInput(string Source, string Destination);
+
     /// <summary>Resolves a workspace address to its native Git worktree without changing the selection.</summary>
     public Feature<LocateInput> Discover { get; } = new("git.repository.discover", "git_discover_repository",
         "Find the native Git worktree for a literal path inside an open workspace root.",
@@ -27,6 +33,59 @@ internal sealed class GitFeatures
     /// <summary>Returns current machine-readable status for the selected worktree.</summary>
     public Feature<StatusInput> Status { get; } = new("git.status.read", "git_get_status", "Read the selected worktree's staged and working status.",
         static (_, view, token) => StatusAsync(view, token), typeof(GitStatus));
+
+    public Feature<InitializeInput> Initialize { get; } = new("git.repository.initialize", "git_initialize_repository",
+        "Initialize an absolute directory and select it as a worktree in the current workspace.",
+        static (input, view, token) => ProvisionAsync(input.Destination, source: null, view, token), typeof(GitProvisionedWorkspace), mutation: true);
+
+    public Feature<CloneInput> Clone { get; } = new("git.repository.clone", "git_clone_repository",
+        "Clone a Git source into an absolute destination and select the resulting workspace root.",
+        static (input, view, token) => string.IsNullOrWhiteSpace(input.Source)
+            ? Task.FromResult(new FeatureOutcome("git_invalid_source", "Choose a Git remote URL or an existing repository path."))
+            : ProvisionAsync(input.Destination, input.Source, view, token),
+        typeof(GitProvisionedWorkspace), mutation: true);
+
+    private static async Task<FeatureOutcome> ProvisionAsync(string destination, string? source, IWorkbenchRegistration view, CancellationToken token)
+    {
+        if (view is not (IGitRegistration and IExplorerRegistration { HasExplorer: true, CanChangeExplorer: true }))
+            return new("explorer_unavailable", "The workspace cannot accept a new Git root.");
+
+        PreparedGitRepository prepared;
+        try
+        {
+            prepared = await Task.Run(() => PreparedGitRepository.PrepareAsync(destination, source, token), token).ConfigureAwait(false);
+        }
+        catch (PreparedGitRepository.Failure error) { return new(error.Code, error.Message); }
+        catch (Win32Exception) { return new("git_unavailable", "Git could not be started."); }
+        catch (Exception error) when (error is ArgumentException or NotSupportedException)
+        {
+            return new("git_invalid_destination", "Choose a valid absolute destination folder.");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return new("git_setup_failed", "Git could not prepare the destination.");
+        }
+
+        return new FeatureOutcome("ok", "Git workspace prepared.")
+        {
+            PreparedResource = prepared,
+            Commit = current =>
+            {
+                if (current is not IGitRegistration git || current is not IExplorerRegistration { HasExplorer: true, CanChangeExplorer: true })
+                    return new("explorer_unavailable", "The workspace cannot accept a new Git root.");
+                try
+                {
+                    prepared.Install();
+                    return FeatureOutcome.Success("Git workspace opened.", git.OpenGitWorkspace(prepared.Repository));
+                }
+                catch (PreparedGitRepository.Failure error) { return new(error.Code, error.Message); }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                {
+                    return new("git_install_failed", "Git could not install the checkout at the destination.");
+                }
+            },
+        };
+    }
 
     /// <summary>Looks up a native repository and optionally applies it to the still-current workbench.</summary>
     private static async Task<FeatureOutcome> LocateAsync(LocateInput input, IWorkbenchRegistration view, bool select, CancellationToken token)

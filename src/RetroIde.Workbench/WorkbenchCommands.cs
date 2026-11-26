@@ -25,12 +25,14 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor OpenSourceControl = Create("git.source-control.focus", "Ctrl+Alt+G");
     public static readonly CommandDescriptor SelectRepository = Create("git.repository.select", "Ctrl+Alt+Shift+G");
     public static readonly CommandDescriptor RefreshGitStatus = Create("git.status.read", "Ctrl+Alt+Shift+R");
+    public static readonly CommandDescriptor InitializeRepository = Create("git.repository.initialize", "Ctrl+Alt+I");
+    public static readonly CommandDescriptor CloneRepository = Create("git.repository.clone", "Ctrl+Alt+Shift+C");
 
     // A document key binding can be active inside a main or floating workbench window.
     // All commands in this catalog can share that input route, so check them together.
     private static readonly CommandDescriptor[] Commands =
         [FocusTool, OpenFolder, OpenProject, Save, Reveal, Search, Next, Previous, Replace, ReplaceAll, Undo, Redo, Close, Discard,
-            OpenSourceControl, SelectRepository, RefreshGitStatus];
+            OpenSourceControl, SelectRepository, RefreshGitStatus, InitializeRepository, CloneRepository];
 
     internal static void ValidateBundledResources()
     {

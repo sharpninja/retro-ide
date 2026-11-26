@@ -11,6 +11,12 @@ internal static class WorkbenchText
     internal const string GitStaged = "git.status.group.staged";
     internal const string GitWorking = "git.status.group.working";
     internal const string GitConflicts = "git.status.group.conflicts";
+    internal const string GitInitAction = "git.setup.initialize";
+    internal const string GitCloneAction = "git.setup.clone";
+    internal const string GitSetupSource = "git.setup.source";
+    internal const string GitSetupDestination = "git.setup.destination";
+    internal const string GitSetupBrowse = "git.setup.browse";
+    internal const string GitSetupCancel = "git.setup.cancel";
     internal const string SearchQuery = "editor.search.query";
     internal const string SearchReplacement = "editor.search.replacement";
     internal const string SearchMatchCase = "editor.search.match-case";
@@ -25,7 +31,8 @@ internal static class WorkbenchText
 
     internal static IReadOnlyList<string> Required { get; } =
         [FileMenu, ViewMenu, LanguageMenu, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
-            ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts];
+            ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts,
+            GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel];
 
     internal static string ExplorerRoot(WorkbenchLocalization localization, WorkspaceExplorer.RootKind kind, string path, bool unavailable)
     {

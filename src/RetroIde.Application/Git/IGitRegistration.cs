@@ -19,4 +19,9 @@ internal interface IGitRegistration
     /// <summary>Publishes the status of the current selection to its desktop pane.</summary>
     /// <param name="status">The validated worktree status to display.</param>
     void DisplayGitStatus(GitStatus status);
+
+    /// <summary>Registers the installed checkout as a workspace root and makes it the selected Git worktree.</summary>
+    /// <param name="repository">The installed native checkout.</param>
+    /// <returns>The registered root and worktree identity.</returns>
+    GitProvisionedWorkspace OpenGitWorkspace(GitWorktree repository);
 }

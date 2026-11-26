@@ -9,7 +9,7 @@ namespace RetroIde.Workbench;
 
 /// <summary>Projects the selected worktree and routes Source Control commands through its registered MVC owner.</summary>
 /// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-multiple-repos; TEST-RETRO-015#ac-test-mcp-same-instance. Desktop and MCP use the same Git selection and status.</remarks>
-internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbench, FeatureRegistry registry) : ObservableObject, IView
+internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbench, FeatureRegistry registry, InteractionBlocks interaction) : ObservableObject, IView
 {
     internal const string PaneId = "source-control";
 
@@ -23,6 +23,8 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     internal Guid? ParentViewKey { get; set; }
 
     internal WorkbenchLocalization Localization => workbench.Localization ?? WorkbenchLocalization.English;
+
+    internal Func<bool, CancellationToken, Task<GitSetupDialog.Choice?>>? PromptSetupAsync { get; set; }
 
     public event EventHandler<ViewCommandRequested>? CommandRequested;
 
@@ -76,6 +78,8 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         OpenPaneCommand.NotifyCanExecuteChanged();
         SelectRepositoryCommand.NotifyCanExecuteChanged();
         RefreshStatusCommand.NotifyCanExecuteChanged();
+        InitializeRepositoryCommand.NotifyCanExecuteChanged();
+        CloneRepositoryCommand.NotifyCanExecuteChanged();
     }
 
     private bool CanOpenPane() => _available;
@@ -97,6 +101,32 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     [RelayCommand(CanExecute = nameof(CanRefreshStatus))]
     private Task RefreshStatusAsync(CancellationToken cancellationToken) =>
         RequestAsync(registry.Git.Status, new GitFeatures.StatusInput(), cancellationToken);
+
+    [RelayCommand(CanExecute = nameof(CanOpenPane))]
+    private Task InitializeRepositoryAsync(CancellationToken cancellationToken) =>
+        ProvisionAsync(clone: false, cancellationToken);
+
+    [RelayCommand(CanExecute = nameof(CanOpenPane))]
+    private Task CloneRepositoryAsync(CancellationToken cancellationToken) =>
+        ProvisionAsync(clone: true, cancellationToken);
+
+    private async Task ProvisionAsync(bool clone, CancellationToken cancellationToken)
+    {
+        if (PromptSetupAsync is not { } prompt ||
+            await prompt(clone, cancellationToken).ConfigureAwait(true) is not { } choice ||
+            cancellationToken.IsCancellationRequested || ParentViewKey is null)
+            return;
+
+        interaction.Begin(PaneId);
+        try
+        {
+            if (clone && choice.Source is { } source)
+                await RequestAsync(registry.Git.Clone, new GitFeatures.CloneInput(source, choice.Destination), cancellationToken).ConfigureAwait(true);
+            else if (!clone)
+                await RequestAsync(registry.Git.Initialize, new GitFeatures.InitializeInput(choice.Destination), cancellationToken).ConfigureAwait(true);
+        }
+        finally { interaction.End(PaneId); }
+    }
 
     private async Task RequestAsync<TInput>(Feature<TInput> feature, TInput input, CancellationToken cancellationToken) where TInput : class
     {
