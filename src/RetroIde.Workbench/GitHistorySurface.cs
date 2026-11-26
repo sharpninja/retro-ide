@@ -67,7 +67,12 @@ internal static class GitHistorySurface
                 view.InspectCommand.Execute(null);
         };
         Place(Section(view, WorkbenchText.GitHistoryGraph, graph), 1, 1);
-        Place(CreateDetails(view, Button(WorkbenchCommands.InspectGitCommit, view.InspectCommand)), 2, 1);
+        var commitActions = new WrapPanel
+        {
+            Children = { Button(WorkbenchCommands.InspectGitCommit, view.InspectCommand),
+                Button(WorkbenchCommands.StartGitOperation, view.StartOperationCommand) },
+        };
+        Place(CreateDetails(view, commitActions), 2, 1);
         layout.KeyBindings.Add(new KeyBinding { Command = view.CloseCommand, Gesture = KeyGesture.Parse(WorkbenchCommands.Close.EffectiveGesture) });
         ConnectGitDialogs(view, layout);
         return layout;
@@ -93,11 +98,15 @@ internal static class GitHistorySurface
         Func<CancellationToken, Task> remotes = token => ShowAsync<object>(() => new GitRemoteDialog(view), token);
         Func<string, GitHistoryOperations.Reference[], CancellationToken, Task<GitUpstreamDialog.Choice?>> upstream =
             (name, refs, token) => ShowAsync<GitUpstreamDialog.Choice>(() => new GitUpstreamDialog(view.Localization, name, refs), token);
+        Func<GitHistoryOperations.Worktree, GitHistoryOperations.Commit, CancellationToken, Task<GitStartOperationDialog.Choice?>> start =
+            (checkout, target, token) => ShowAsync<GitStartOperationDialog.Choice>(
+                () => new GitStartOperationDialog(view.Localization, checkout, target), token);
         surface.AttachedToVisualTree += (_, _) =>
         {
             view.PromptBranchAsync = branch;
             view.PromptRemotesAsync = remotes;
             view.PromptUpstreamAsync = upstream;
+            view.PromptStartAsync = start;
         };
         surface.DetachedFromVisualTree += (_, _) =>
         {
@@ -107,6 +116,8 @@ internal static class GitHistorySurface
                 view.PromptRemotesAsync = null;
             if (view.PromptUpstreamAsync == upstream)
                 view.PromptUpstreamAsync = null;
+            if (view.PromptStartAsync == start)
+                view.PromptStartAsync = null;
         };
 
         async Task<T?> ShowAsync<T>(Func<Window> create, CancellationToken token) where T : class
@@ -166,7 +177,7 @@ internal static class GitHistorySurface
         return summary;
     }
 
-    private static Control CreateDetails(GitHistoryViewModel view, Button inspect)
+    private static Control CreateDetails(GitHistoryViewModel view, Control actions)
     {
         var message = new TextBlock { TextWrapping = TextWrapping.Wrap };
         AutomationProperties.SetAutomationId(message, "git.history.commit-message");
@@ -186,8 +197,8 @@ internal static class GitHistorySurface
         AutomationProperties.SetAutomationId(changes, "git.history.changed-files");
         changes.Bind(ItemsControl.ItemsSourceProperty, new Binding("Details.Changes") { Source = view });
         var body = new StackPanel { Spacing = 4, Children = { id, author, date, message, changes, Bound("LastResult.Summary") } };
-        DockPanel.SetDock(inspect, Avalonia.Controls.Dock.Top);
-        return new DockPanel { Children = { inspect, new ScrollViewer { Content = body } } };
+        DockPanel.SetDock(actions, Avalonia.Controls.Dock.Top);
+        return new DockPanel { Children = { actions, new ScrollViewer { Content = body } } };
 
         TextBlock Bound(string path)
         {

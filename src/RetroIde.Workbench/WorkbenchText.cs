@@ -12,6 +12,16 @@ internal static class WorkbenchText
     internal const string GitWorking = "git.status.group.working";
     internal const string GitConflicts = "git.status.group.conflicts";
     internal const string GitAbortExplanation = "git.operation.abort-explanation";
+    internal const string GitStartCheckout = "git.operation.start.checkout";
+    internal const string GitStartTarget = "git.operation.start.target";
+    internal const string GitStartKind = "git.operation.start.kind";
+    internal const string GitStartMerge = "git.operation.start.merge";
+    internal const string GitStartRebase = "git.operation.start.rebase";
+    internal const string GitStartCherryPick = "git.operation.start.cherry-pick";
+    internal const string GitStartRevert = "git.operation.start.revert";
+    internal const string GitStartApply = "git.operation.start.apply";
+    internal const string GitMainline = "git.operation.start.mainline";
+    internal const string GitDetachedHead = "git.operation.start.detached";
     private const string GitMergeOperation = "git.operation.merge";
     private const string GitRebaseOperation = "git.operation.rebase";
     private const string GitCherryPickOperation = "git.operation.cherry-pick";
@@ -75,6 +85,8 @@ internal static class WorkbenchText
         [FileMenu, ViewMenu, LanguageMenu, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
             ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts, GitDiffStaged, GitDiffWorking, GitDiffHunks,
             GitAbortExplanation, GitMergeOperation, GitRebaseOperation, GitCherryPickOperation, GitRevertOperation, GitOtherOperation,
+            GitStartCheckout, GitStartTarget, GitStartKind, GitStartMerge, GitStartRebase, GitStartCherryPick, GitStartRevert,
+            GitStartApply, GitMainline, GitDetachedHead,
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel,
             GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,
             GitHistoryTitle, GitHistoryRefs, GitHistoryGraph, GitHistoryWorktrees,

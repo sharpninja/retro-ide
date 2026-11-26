@@ -24,6 +24,12 @@ internal static class GitHistoryOperations
     internal sealed record CommitDetails(GitWorktree Repository, Commit Commit, string Message, ChangedPath[] Changes, string? ComparedTo = null);
     internal sealed record HistoryTab(Guid ViewKey, Guid WorkspaceId, HistoryPage Page, RefState References);
 
+    internal static Worktree? CurrentWorktree(RefState state)
+    {
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        return Array.Find(state.Worktrees, tree => string.Equals(tree.Path, state.Repository.WorktreePath, comparison));
+    }
+
     internal static Task<FeatureOutcome> RefsAsync(RefsInput input, IWorkbenchRegistration view, CancellationToken token) =>
         InScopeAsync(input.WorktreePath, view, async selection =>
         {

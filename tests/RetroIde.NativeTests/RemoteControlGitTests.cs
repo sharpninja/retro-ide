@@ -287,8 +287,33 @@ internal static class RemoteControlGitTests
         await CommitSideAsync(sample.Linked, "Linked side").ConfigureAwait(true);
         var before = (await sample.GitAsync(worktree, token, "rev-parse", "HEAD").ConfigureAwait(true)).Trim();
         var incoming = (await sample.GitAsync(sample.Linked, token, "rev-parse", "HEAD").ConfigureAwait(true)).Trim();
-        if ((await sample.RunAsync(worktree, token, "merge", "--no-edit", incoming).ConfigureAwait(true)).ExitCode == 0)
-            throw new InvalidOperationException("The native recovery fixture did not leave an unresolved merge.");
+        await RunButtonAsync("git.history.open.pane").ConfigureAwait(true);
+        var refs = await FindAsync<ListBox>(window, "git.history.refs", token).ConfigureAwait(true);
+        refs.SelectedItem = ((IEnumerable<GitHistoryOperations.Reference>)refs.ItemsSource!).Single(reference =>
+            string.Equals(reference.Name, "refs/heads/fixture-linked", StringComparison.Ordinal));
+        await RunButtonAsync("git.history.ref.toolbar").ConfigureAwait(true);
+        var graph = await FindAsync<ListBox>(window, "git.history.graph", token).ConfigureAwait(true);
+        graph.SelectedItem = ((IEnumerable<GitHistoryGraph.Row>)graph.ItemsSource!).Single(row =>
+            string.Equals(row.Commit.Id, incoming, StringComparison.Ordinal));
+        const string Start = "git.operation.start.toolbar";
+        var start = await FindAsync<Button>(window, Start, token).ConfigureAwait(true);
+        start.BringIntoView();
+        await WorkbenchRemoteControl.ClickAsync(window, Start).ConfigureAwait(true);
+        while (window.OwnedWindows.Count == 0)
+            await Task.Delay(20, token).ConfigureAwait(true);
+        var dialog = window.OwnedWindows.Single();
+        var operation = await FindAsync<ComboBox>(dialog, "git.operation.start.kind", token).ConfigureAwait(true);
+        if (operation.SelectedItem is not ComboBoxItem { Tag: "merge" })
+            throw new InvalidOperationException("The operation dialog did not present Merge.");
+        if (!dialog.GetVisualDescendants().OfType<SelectableTextBlock>().Any(text => string.Equals(text.Text, incoming, StringComparison.Ordinal)))
+            throw new InvalidOperationException("The operation dialog did not review the selected target commit.");
+        await WorkbenchRemoteControl.ClickAsync(dialog, "git.operation.start.submit").ConfigureAwait(true);
+        await (((IAsyncRelayCommand)start.Command!).ExecutionTask ??
+            throw new InvalidOperationException("The start operation command was not dispatched.")).WaitAsync(token).ConfigureAwait(true);
+        var mergeHead = (await sample.GitAsync(worktree, token, "rev-parse", "--verify", "MERGE_HEAD").ConfigureAwait(true)).Trim();
+        if (!string.Equals(incoming, mergeHead, StringComparison.Ordinal))
+            throw new InvalidOperationException("The Git History command did not merge the selected commit.");
+        Console.WriteLine("RemoteControl started the reviewed Git History merge and exposed the conflict in Source Control.");
 
         var banner = await FindAsync<TextBlock>(window, "git.operation.status", token).ConfigureAwait(true);
         var resume = await FindAsync<Button>(window, "git.operation.continue.toolbar", token).ConfigureAwait(true);
@@ -311,6 +336,15 @@ internal static class RemoteControlGitTests
         {
             await sample.GitAsync(root, token, "add", "--", path).ConfigureAwait(true);
             await sample.GitAsync(root, token, "commit", "-m", message).ConfigureAwait(true);
+        }
+
+        async Task RunButtonAsync(string id)
+        {
+            var button = await FindAsync<Button>(window, id, token).ConfigureAwait(true);
+            button.BringIntoView();
+            await WorkbenchRemoteControl.ClickAsync(window, id).ConfigureAwait(true);
+            await (((IAsyncRelayCommand)button.Command!).ExecutionTask ??
+                throw new InvalidOperationException($"The Git control did not dispatch {id}.")).WaitAsync(token).ConfigureAwait(true);
         }
 
         async Task ConfirmAsync(string id)

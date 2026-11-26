@@ -93,6 +93,8 @@ internal sealed partial class DocumentController
                 CompleteAsync(view, _features.Git.Push, push, request),
             GitRemoteOperations.PullInput pull when string.Equals(request.CommandId, _features.Git.Pull.Id, StringComparison.Ordinal) =>
                 CompleteAsync(view, _features.Git.Pull, pull, request),
+            GitOperationStart.Input start when string.Equals(request.CommandId, _features.Git.StartOperation.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.StartOperation, start, request),
             GitRemoteOperations.UpstreamInput upstream when string.Equals(request.CommandId, _features.Git.SetUpstream.Id, StringComparison.Ordinal) =>
                 CompleteAsync(view, _features.Git.SetUpstream, upstream, request),
             _ => null,

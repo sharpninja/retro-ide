@@ -168,9 +168,7 @@ internal sealed partial class GitHistoryViewModel
 
     private void SetSyncBranch(GitHistoryOperations.RefState? references)
     {
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        var tree = references is null ? null : Array.Find(references.Worktrees,
-            item => string.Equals(item.Path, Page.Repository.WorktreePath, comparison));
+        var tree = references is null ? null : GitHistoryOperations.CurrentWorktree(references);
         const string Prefix = "refs/heads/";
         SyncBranch = tree?.Branch is { } name && name.StartsWith(Prefix, StringComparison.Ordinal) &&
             GitHistoryOperations.IsObjectId(tree.Head) ? name[Prefix.Length..] : null;
@@ -189,7 +187,7 @@ internal sealed partial class GitHistoryViewModel
             (reference.Name.StartsWith("refs/heads/", StringComparison.Ordinal) ||
              reference.Name.StartsWith("refs/remotes/", StringComparison.Ordinal))).ToArray();
         if (await prompt(name, candidates, token).ConfigureAwait(true) is { } choice && !token.IsCancellationRequested)
-            await ChangeBranchAsync(_git.SetUpstream, new GitRemoteOperations.UpstreamInput(path, name, branch.ObjectId, choice.Upstream), token)
+            await RunHistoryMutationAsync(_git.SetUpstream, new GitRemoteOperations.UpstreamInput(path, name, branch.ObjectId, choice.Upstream), token)
                 .ConfigureAwait(true);
     }
 }

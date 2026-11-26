@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CommunityToolkit.Mvvm.Input;
 using RetroIde.Application;
 using RetroIde.Application.Git;
@@ -8,9 +9,28 @@ internal sealed partial class GitHistoryViewModel
 {
     private bool _changingBranch;
     internal Func<GitBranchDialog.Prompt, CancellationToken, Task<GitBranchDialog.Choice?>>? PromptBranchAsync { get; set; }
+    internal Func<GitHistoryOperations.Worktree, GitHistoryOperations.Commit, CancellationToken, Task<GitStartOperationDialog.Choice?>>? PromptStartAsync { get; set; }
 
     private bool CanCreateBranch() => !_changingBranch && Page?.Anchor is not null;
     private bool CanSwitchBranch() => !_changingBranch && SelectedReference?.Name.StartsWith("refs/heads/", StringComparison.Ordinal) == true;
+    private bool CanStartOperation() => !_changingBranch && SelectedCommit is not null;
+
+    [RelayCommand(CanExecute = nameof(CanStartOperation))]
+    private async Task StartOperationAsync(CancellationToken token)
+    {
+        if (SelectedCommit?.Commit is not { } target || PromptStartAsync is not { } prompt)
+            return;
+        var path = Page.Repository.WorktreePath;
+        var result = await RequestAsync(_git.Refs, new GitHistoryOperations.RefsInput(path), token).ConfigureAwait(true);
+        if (result is not { Code: "ok", Data: { } data } ||
+            data.Deserialize<GitHistoryOperations.RefState>(WireJson.Options) is not { } refs ||
+            GitHistoryOperations.CurrentWorktree(refs) is not { Head: { } head } checkout ||
+            await prompt(checkout, target, token).ConfigureAwait(true) is not { } choice || token.IsCancellationRequested)
+            return;
+
+        await RunHistoryMutationAsync(_git.StartOperation, new GitOperationStart.Input(path, choice.Kind, head,
+            target.Id, checkout.Branch, choice.Mainline), token).ConfigureAwait(true);
+    }
 
     [RelayCommand(CanExecute = nameof(CanCreateBranch))]
     private async Task CreateBranchAsync(CancellationToken token)
@@ -23,13 +43,13 @@ internal sealed partial class GitHistoryViewModel
         if (await prompt(new GitBranchDialog.Prompt(start), token).ConfigureAwait(true) is not { } choice || token.IsCancellationRequested)
             return;
 
-        await ChangeBranchAsync(_git.CreateBranch, new GitBranchOperations.CreateInput(checkout, choice.Name, start, choice.Switch), token)
+        await RunHistoryMutationAsync(_git.CreateBranch, new GitBranchOperations.CreateInput(checkout, choice.Name, start, choice.Switch), token)
             .ConfigureAwait(true);
     }
 
     [RelayCommand(CanExecute = nameof(CanSwitchBranch))]
     private Task SwitchBranchAsync(CancellationToken token) => SelectedReference is { } reference && CanSwitchBranch()
-        ? ChangeBranchAsync(_git.SwitchBranch, new GitBranchOperations.SwitchInput(Page.Repository.WorktreePath,
+        ? RunHistoryMutationAsync(_git.SwitchBranch, new GitBranchOperations.SwitchInput(Page.Repository.WorktreePath,
             reference.Name["refs/heads/".Length..], reference.ObjectId), token)
         : Task.CompletedTask;
 
@@ -51,13 +71,13 @@ internal sealed partial class GitHistoryViewModel
             return;
 
         if (delete)
-            await ChangeBranchAsync(_git.DeleteBranch, new GitBranchOperations.DeleteInput(worktree, name, reference.ObjectId), token).ConfigureAwait(true);
+            await RunHistoryMutationAsync(_git.DeleteBranch, new GitBranchOperations.DeleteInput(worktree, name, reference.ObjectId), token).ConfigureAwait(true);
         else
-            await ChangeBranchAsync(_git.RenameBranch, new GitBranchOperations.RenameInput(worktree, name, reference.ObjectId, choice.Name), token)
+            await RunHistoryMutationAsync(_git.RenameBranch, new GitBranchOperations.RenameInput(worktree, name, reference.ObjectId, choice.Name), token)
                 .ConfigureAwait(true);
     }
 
-    private async Task ChangeBranchAsync<T>(Feature<T> feature, T input, CancellationToken token) where T : class
+    private async Task RunHistoryMutationAsync<T>(Feature<T> feature, T input, CancellationToken token) where T : class
     {
         _changingBranch = true;
         NotifyBranchCommands();
@@ -86,5 +106,6 @@ internal sealed partial class GitHistoryViewModel
         RenameBranchCommand.NotifyCanExecuteChanged();
         DeleteBranchCommand.NotifyCanExecuteChanged();
         SetUpstreamCommand.NotifyCanExecuteChanged();
+        StartOperationCommand.NotifyCanExecuteChanged();
     }
 }

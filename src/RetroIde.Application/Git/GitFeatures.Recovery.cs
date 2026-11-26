@@ -15,4 +15,8 @@ internal sealed partial class GitFeatures
         "Abort the reviewed native Git operation. Git restores the state preceding that operation.",
         static (input, view, token) => GitOperationRecovery.RecoverAsync(input, view, abort: true, token),
         typeof(GitOperationRecovery.State), mutation: true);
+
+    public Feature<GitOperationStart.Input> StartOperation { get; } = new("git.operation.start", "git_start_operation",
+        "Start a merge, rebase, cherry-pick, or revert from the reviewed checkout and commit.",
+        GitOperationStart.StartAsync, typeof(GitOperationStart.Result), mutation: true);
 }

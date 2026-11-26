@@ -137,10 +137,12 @@ internal static class GitOperationRecovery
         arguments.AddRange(["ls-tree", "-r", "--full-tree", "--name-only", "-z", original!.Trim()]);
         var tree = await NativeGit.RunAsync(repo.WorktreePath, arguments, token).ConfigureAwait(false)
             ?? throw new InvalidDataException("Git could not inspect the restore point.");
-        return tree.Split('\0', StringSplitOptions.RemoveEmptyEntries).Any(path => local.Any(entry =>
-            string.Equals(path, entry, PathComparison) || path.StartsWith(entry + "/", PathComparison) ||
-            entry.StartsWith(path + "/", PathComparison)));
+        return Collides(tree.Split('\0', StringSplitOptions.RemoveEmptyEntries), local);
     }
+
+    internal static bool Collides(string[] paths, string[] local) => paths.Any(path => local.Any(entry =>
+        string.Equals(path, entry, PathComparison) || path.StartsWith(entry + "/", PathComparison) ||
+        entry.StartsWith(path + "/", PathComparison)));
 
     private static FeatureOutcome? Validate(State state, string revision, bool abort)
     {
@@ -152,7 +154,7 @@ internal static class GitOperationRecovery
             ? new("git_operation_conflicts", "Resolve and stage all conflicts before continuing.") : null;
     }
 
-    private static async Task<State> CaptureAsync(GitSelection selection, CancellationToken token)
+    internal static async Task<State> CaptureAsync(GitSelection selection, CancellationToken token)
     {
         var repo = selection.Repository;
         var kind = ReadKind(repo);
@@ -193,7 +195,7 @@ internal static class GitOperationRecovery
         return controls.GetHashAndReset();
     }
 
-    private static async Task<FeatureOutcome> WithSelectionAsync(string path, IWorkbenchRegistration view,
+    internal static async Task<FeatureOutcome> WithSelectionAsync(string path, IWorkbenchRegistration view,
         Func<IGitRegistration, GitSelection, Task<FeatureOutcome>> action, CancellationToken token)
     {
         if (view is not IGitRegistration { SelectedGit: { } selection } git)
@@ -201,12 +203,12 @@ internal static class GitOperationRecovery
         if (!string.Equals(path, selection.Repository.WorktreePath, PathComparison))
             return new("git_worktree_mismatch", "The requested worktree differs from the current selection.");
         if (!string.Equals(selection.ScopeRoot, selection.Repository.WorktreePath, PathComparison))
-            return new("git_operation_scope_required", "Open the worktree root before reviewing or recovering Git operations.");
+            return new("git_operation_scope_required", "Open the worktree root before managing Git operations.");
         token.ThrowIfCancellationRequested();
         return await TryAsync(() => action(git, selection)).ConfigureAwait(false);
     }
 
-    private static async Task<FeatureOutcome> TryAsync(Func<Task<FeatureOutcome>> action)
+    internal static async Task<FeatureOutcome> TryAsync(Func<Task<FeatureOutcome>> action)
     {
         try { return await action().ConfigureAwait(false); }
         catch (Win32Exception) { return new("git_unavailable", "Git could not be started."); }
@@ -216,10 +218,10 @@ internal static class GitOperationRecovery
         }
     }
 
-    private static bool SameSelection(IWorkbenchRegistration view, GitSelection selection) =>
+    internal static bool SameSelection(IWorkbenchRegistration view, GitSelection selection) =>
         view is IGitRegistration git && ReferenceEquals(git.SelectedGit, selection);
 
-    private static FeatureOutcome ChangedSelection() => new("git_selection_changed", "The selected Git worktree changed.");
+    internal static FeatureOutcome ChangedSelection() => new("git_selection_changed", "The selected Git worktree changed.");
 
     private static string? RelativeFile(GitWorktree repo, string name) => ReadFile(Path.Combine(repo.GitDirectory, name));
     private static string? ReadFile(string path) => ReadBytes(path) is { } bytes ? Encoding.UTF8.GetString(bytes) : null;

@@ -32,7 +32,9 @@ Open **Remotes** from Git History to add, rename, remove, or edit a remote. The 
 
 In **Remotes**, pick the remote and enter the destination branch. **Push** sends the displayed local branch tip. To replace divergent history, select **Force push with lease** and enter the full remote commit ID you reviewed. Git rejects the update if that remote branch moved. **Pull** integrates the selected remote branch into the displayed checked-out branch. It defaults to **Fast-forward only** and also supports **Merge** and **Rebase**. Save or discard affected unsaved editor changes before pulling. A successful pull refreshes affected clean editor buffers. Git reports integration conflicts in the current worktree. [Git push](https://git-scm.com/docs/git-push) · [Git pull](https://git-scm.com/docs/git-pull)
 
-## Recover a paused operation
+## Start or recover an operation
+
+Select a commit in **Git History** and choose **Apply Commit**. Review the checkout, its current HEAD, and the full ID of the selected commit. Choose **Merge**, **Rebase onto commit**, **Cherry-pick**, or **Revert**. When cherry-picking or reverting a merge commit, choose which parent Git should treat as the mainline. Retro IDE checks the reviewed HEAD and branch before starting. If Git pauses, open **Source Control** to resolve or abort the operation.
 
 Source Control shows when the selected worktree has a paused merge, rebase, cherry-pick, or revert. Resolve the paths under **Conflicts** and stage the resolutions to enable **Continue Git Operation**. Git uses the operation’s prepared commit message and runs its configured hooks. **Abort Git Operation** asks you to confirm the affected worktree before Git restores its earlier state. Save or discard open editor changes in that worktree before either action. Retro IDE rechecks the operation’s reviewed index and working changes before invoking Git. [Git merge](https://git-scm.com/docs/git-merge) · [Git rebase](https://git-scm.com/docs/git-rebase) · [Git cherry-pick](https://git-scm.com/docs/git-cherry-pick) · [Git revert](https://git-scm.com/docs/git-revert)
 
