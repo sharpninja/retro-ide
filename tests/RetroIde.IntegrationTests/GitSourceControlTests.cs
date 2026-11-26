@@ -19,9 +19,9 @@ public sealed partial class GitSourceControlTests
     [InlineData("merged-index")]
     public async Task Reference_detects_source_control_projection_faults(string fault)
     {
-        using var sample = await CreateSourceControlSampleAsync(TestContext.Current.CancellationToken).ConfigureAwait(false);
-        await VerifySurfaceAsync(new ReferenceSurface(sample), sample).ConfigureAwait(false);
-        await Assert.ThrowsAnyAsync<XunitException>(() => VerifySurfaceAsync(new ReferenceSurface(sample, fault), sample)).ConfigureAwait(false);
+        using var sample = await CreateSourceControlSampleAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await VerifySurfaceAsync(new ReferenceSurface(sample), sample).ConfigureAwait(true);
+        await Assert.ThrowsAnyAsync<XunitException>(() => VerifySurfaceAsync(new ReferenceSurface(sample, fault), sample)).ConfigureAwait(true);
     }
 
     /// <summary>Proves the expected migrated layout catches a reset and a missing addition.</summary>
@@ -88,9 +88,9 @@ public sealed partial class GitSourceControlTests
         Assert.Equal("problems", state.ActiveTool);
         Assert.Equal("document-tabs", state.Main.Content.Kind);
         Assert.Equal("emulation", state.Main.Content.Active);
-        Assert.Contains(state.Main.Pinned, pin => pin.Tool == "explorer" && pin.Alignment == "Left");
-        Assert.Contains(state.Main.Pinned, pin => pin.Tool == "call-stack" && pin.Alignment == "Right");
-        Assert.Single(state.Main.Pinned, pin => pin.Tool == Pane && pin.Alignment == "Left");
+        Assert.Contains(state.Main.Pinned, pin => pin is { Tool: "explorer", Alignment: "Left" });
+        Assert.Contains(state.Main.Pinned, pin => pin is { Tool: "call-stack", Alignment: "Right" });
+        Assert.Single(state.Main.Pinned, pin => pin is { Tool: Pane, Alignment: "Left" });
         var floating = Assert.Single(state.Floating);
         Assert.Equal("previously-floating", floating.Content.Id);
         Assert.Equal("problems", floating.Content.Active);
@@ -126,9 +126,11 @@ public sealed partial class GitSourceControlTests
 
         public Task<PaneSnapshot> ReadAsync()
         {
-            if (_linked && fault != "stale-pane")
+            if (_linked && !string.Equals(fault, "stale-pane", StringComparison.Ordinal))
                 return Task.FromResult(new PaneSnapshot(sample.Linked, "fixture-linked", [], [GitWorktreeFixture.ConflictPath]));
-            string[] state = fault == "merged-index" ? [GitWorktreeFixture.ChangedPath, GitWorktreeFixture.HunkPath] : [GitWorktreeFixture.HunkPath];
+            string[] state = string.Equals(fault, "merged-index", StringComparison.Ordinal)
+                ? [GitWorktreeFixture.ChangedPath, GitWorktreeFixture.HunkPath]
+                : [GitWorktreeFixture.HunkPath];
             return Task.FromResult(new PaneSnapshot(sample.Primary, "main", [GitWorktreeFixture.ChangedPath], state));
         }
 

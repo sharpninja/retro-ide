@@ -93,7 +93,12 @@ public sealed partial class GitSourceControlTests
             var command = Assert.IsAssignableFrom<IAsyncRelayCommand>(focus.Command);
             Assert.True(command.CanExecute(null), "The Git menu cannot focus a restored floating Source Control pane.");
             await command.ExecuteAsync(null);
-            Assert.True(session.Layout.IsFocused(Pane));
+            Assert.Equal("ok", session.SourceControl.LastResult?.Code);
+            var pane = session.Layout.Tool(Pane);
+            var group = Assert.IsAssignableFrom<Dock.Model.Core.IDock>(pane.Owner);
+            var root = Assert.IsAssignableFrom<Dock.Model.Controls.IRootDock>(session.Layout.Factory.FindRoot(pane));
+            Assert.Same(pane, group.ActiveDockable);
+            Assert.Same(pane, root.FocusedDockable);
         }
         finally { window.Close(); }
     }
@@ -113,18 +118,18 @@ public sealed partial class GitSourceControlTests
 
         public async Task SelectFromExplorerAsync()
         {
-            var worktree = await AddRootAsync(sample.Primary);
-            _linkedRoot = await AddRootAsync(sample.Linked);
-            await WriteAsync("workspace_select_entry", Address(worktree));
-            await ClickAsync("git.repository.select.pane");
-            Assert.Equal(sample.Primary, await ReadMcpSelectionAsync(), Paths);
-            await ClickAsync("git.status.read.pane");
+            var worktree = await AddRootAsync(sample.Primary).ConfigureAwait(true);
+            _linkedRoot = await AddRootAsync(sample.Linked).ConfigureAwait(true);
+            await WriteAsync("workspace_select_entry", Address(worktree)).ConfigureAwait(true);
+            await ClickAsync("git.repository.select.pane").ConfigureAwait(true);
+            Assert.Equal(sample.Primary, await ReadMcpSelectionAsync().ConfigureAwait(true), Paths);
+            await ClickAsync("git.status.read.pane").ConfigureAwait(true);
         }
 
         public async Task SelectOverMcpAsync()
         {
-            await WriteAsync("git_select_repository", Address(_linkedRoot));
-            await ReadMcpSelectionAsync();
+            await WriteAsync("git_select_repository", Address(_linkedRoot)).ConfigureAwait(false);
+            await ReadMcpSelectionAsync().ConfigureAwait(false);
         }
 
         public Task<PaneSnapshot> ReadAsync()
@@ -138,7 +143,7 @@ public sealed partial class GitSourceControlTests
 
         public async Task<string> ReadMcpSelectionAsync()
         {
-            var status = await InvokeAsync("git_get_status");
+            var status = await InvokeAsync("git_get_status").ConfigureAwait(false);
             var path = status.GetProperty("data").GetProperty("repository").GetProperty("worktreePath").GetString();
             return Assert.IsType<string>(path);
         }
@@ -149,10 +154,10 @@ public sealed partial class GitSourceControlTests
             var button = Find<Button>(window, id);
             var command = Assert.IsAssignableFrom<IAsyncRelayCommand>(button.Command);
             var previous = command.ExecutionTask;
-            await WorkbenchRemoteControl.ClickAsync(window, id);
+            await WorkbenchRemoteControl.ClickAsync(window, id).ConfigureAwait(true);
             var execution = Assert.IsAssignableFrom<Task>(command.ExecutionTask);
             Assert.NotSame(previous, execution);
-            await execution.WaitAsync(token);
+            await execution.WaitAsync(token).ConfigureAwait(false);
         }
 
         private string[] ReadPaths(string id) => Assert.IsAssignableFrom<IEnumerable<GitStatusEntry>>(Find<ItemsControl>(window, id).ItemsSource)
@@ -160,19 +165,19 @@ public sealed partial class GitSourceControlTests
 
         private async Task<Guid> AddRootAsync(string path)
         {
-            var result = await WriteAsync("workspace_open_root", new(StringComparer.Ordinal) { ["path"] = path, ["kind"] = "folder" });
+            var result = await WriteAsync("workspace_open_root", new(StringComparer.Ordinal) { ["path"] = path, ["kind"] = "folder" }).ConfigureAwait(false);
             return result.GetProperty("data").GetProperty("id").GetGuid();
         }
 
         private async Task<JsonElement> WriteAsync(string name, Dictionary<string, object?> args)
         {
-            args.Add("context", (await InvokeAsync("workbench_get_context")).GetProperty("context"));
-            return await InvokeAsync(name, args);
+            args.Add("context", (await InvokeAsync("workbench_get_context").ConfigureAwait(false)).GetProperty("context"));
+            return await InvokeAsync(name, args).ConfigureAwait(false);
         }
 
         private async Task<JsonElement> InvokeAsync(string name, IReadOnlyDictionary<string, object?>? args = null)
         {
-            var response = await client.CallToolAsync(name, args, cancellationToken: token);
+            var response = await client.CallToolAsync(name, args, cancellationToken: token).ConfigureAwait(false);
             Assert.NotNull(response.StructuredContent);
             var result = response.StructuredContent.Value;
             Assert.Equal("ok", result.GetProperty("code").GetString());

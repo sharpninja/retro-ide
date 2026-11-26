@@ -202,7 +202,7 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
     }
 
     private void RefreshSourceControl() =>
-        _sourceControlView?.SetAvailability(_explorerSelection, CanFocus(SourceControlViewModel.PaneId));
+        _sourceControlView?.SetAvailability(_explorerSelection, !_interaction.IsBlocked(SourceControlViewModel.PaneId));
 
     private Registration? Resolve(Guid viewKey)
     {
