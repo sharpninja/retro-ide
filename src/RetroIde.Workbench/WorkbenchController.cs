@@ -433,6 +433,15 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         public IGitBranchSwitch? BeginBranchSwitch(GitWorktree repository, string[] paths) =>
             Controller._documents?.BeginBranchSwitch(repository, paths);
 
+        public Task<GitIntegrationLease> BeginIntegrationAsync(GitSelection selection, string[] paths, CancellationToken token) =>
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                token.ThrowIfCancellationRequested();
+                if (!ReferenceEquals(Controller.Resolve(View.ViewKey), this) || !ReferenceEquals(SelectedGit, selection))
+                    return new GitIntegrationLease(null, "git_selection_changed");
+                return new GitIntegrationLease(BeginBranchSwitch(selection.Repository, paths));
+            }).GetTask();
+
         public bool HasExplorer => Controller._explorerView?.ParentViewKey == View.ViewKey;
         public bool CanChangeExplorer => Controller.CanChangeExplorer();
         public bool HasOpenDocument(WorkspaceExplorer.Address address) => Controller._documents?.HasDocument(address) == true;

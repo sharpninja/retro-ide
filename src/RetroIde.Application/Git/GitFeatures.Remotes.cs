@@ -26,6 +26,14 @@ internal sealed partial class GitFeatures
         "Set or clear a reviewed local branch's upstream. Use the full ref name.",
         GitRemoteOperations.SetUpstreamAsync, typeof(GitRemoteOperations.UpstreamResult), mutation: true);
 
+    public Feature<GitRemoteOperations.PushInput> Push { get; } = new("git.remote.push", "git_push",
+        "Push a reviewed local commit to the named remote branch with an optional explicit lease.",
+        GitRemoteOperations.PushAsync, typeof(GitRemoteOperations.SyncResult), mutation: true);
+
+    public Feature<GitRemoteOperations.PullInput> Pull { get; } = new("git.remote.pull", "git_pull",
+        "Fetch and integrate a reviewed remote branch using the selected strategy.",
+        GitRemoteOperations.PullAsync, typeof(GitRemoteOperations.SyncResult), mutation: true);
+
     private static Feature<GitRemoteOperations.ConfigureInput> Configure(string id, string tool, string summary, GitRemoteOperations.Change change) =>
         new(id, tool, summary, (input, view, token) => GitRemoteOperations.ConfigureAsync(input, view, change, token),
             typeof(GitRemoteOperations.RemoteList), mutation: true);

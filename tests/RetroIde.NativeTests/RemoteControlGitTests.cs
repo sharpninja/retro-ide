@@ -18,7 +18,7 @@ internal static class RemoteControlGitTests
     /// <remarks>TEST-RETRO-013#ac-test-git-stage-and-push; TEST-RETRO-015#ac-test-mcp-same-instance.</remarks>
     internal static async Task RunAsync()
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(35));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(50));
         var token = timeout.Token;
         using var sample = await GitWorktreeFixture.CreateAsync("git", token).ConfigureAwait(true);
         const string Change = "native Source Control change";
@@ -78,7 +78,7 @@ internal static class RemoteControlGitTests
             await VerifyHistoryAsync(window, session, token).ConfigureAwait(true);
             await VerifyBranchAsync(window, sample, token).ConfigureAwait(true);
             await VerifyBranchMaintenanceAsync(window, sample, token).ConfigureAwait(true);
-            await VerifyFetchAsync(window, sample, token).ConfigureAwait(true);
+            await VerifyRemoteSyncAsync(window, sample, token).ConfigureAwait(true);
 
             async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments)
             {
@@ -220,7 +220,7 @@ internal static class RemoteControlGitTests
         }
     }
 
-    private static async Task VerifyFetchAsync(Window window, GitWorktreeFixture sample, CancellationToken token)
+    private static async Task VerifyRemoteSyncAsync(Window window, GitWorktreeFixture sample, CancellationToken token)
     {
         await sample.GitAsync(sample.Peer, token, "commit", "--allow-empty", "-m", "Native remote-only update").ConfigureAwait(true);
         await sample.GitAsync(sample.Peer, token, "push", "origin", "main").ConfigureAwait(true);
@@ -235,17 +235,43 @@ internal static class RemoteControlGitTests
         var list = await FindAsync<ListBox>(dialog, "git.remotes.list", token).ConfigureAwait(true);
         list.SelectedItem = ((IEnumerable<GitRemoteOperations.Remote>)list.ItemsSource!).Single(remote =>
             string.Equals(remote.Name, "origin", StringComparison.Ordinal));
-        const string Fetch = "git.remote.fetch.toolbar";
-        var fetch = await FindAsync<Button>(dialog, Fetch, token).ConfigureAwait(true);
-        await WorkbenchRemoteControl.ClickAsync(dialog, Fetch).ConfigureAwait(true);
-        await ((IAsyncRelayCommand)fetch.Command!).ExecutionTask!.WaitAsync(token).ConfigureAwait(true);
-        await WorkbenchRemoteControl.ClickAsync(dialog, "git.remotes.close").ConfigureAwait(true);
-        await ((IAsyncRelayCommand)open.Command!).ExecutionTask!.WaitAsync(token).ConfigureAwait(true);
+        await ClickAsync("git.remote.fetch.toolbar").ConfigureAwait(true);
         var available = await sample.GitAsync(sample.Primary, token, "rev-parse", "refs/remotes/origin/main").ConfigureAwait(true);
         var after = await sample.GitAsync(sample.Primary, token, "rev-parse", "HEAD").ConfigureAwait(true);
         if (!string.Equals(tip, available, StringComparison.Ordinal) || !string.Equals(before, after, StringComparison.Ordinal))
             throw new InvalidOperationException("The Git Remotes dialog did not fetch or unexpectedly changed local HEAD.");
         Console.WriteLine("RemoteControl fetched a native tracking update without moving the local branch.");
+        var branch = await FindAsync<TextBox>(dialog, "git.remotes.branch", token).ConfigureAwait(true);
+        branch.Text = "native-push";
+        await ClickAsync("git.remote.push.toolbar").ConfigureAwait(true);
+        var pushed = await sample.GitAsync(sample.Remote, token, "rev-parse", "refs/heads/native-push").ConfigureAwait(true);
+        if (!string.Equals(before, pushed, StringComparison.Ordinal))
+            throw new InvalidOperationException("The Git Remotes dialog did not push the reviewed tip to the requested branch.");
+        Console.WriteLine("RemoteControl pushed the checked-out branch to the requested remote ref.");
+
+        await sample.GitAsync(sample.Peer, token, "fetch", "origin", "native-push").ConfigureAwait(true);
+        await sample.GitAsync(sample.Peer, token, "switch", "-c", "native-pull", "origin/native-push").ConfigureAwait(true);
+        await sample.GitAsync(sample.Peer, token, "commit", "--allow-empty", "-m", "Native pull update").ConfigureAwait(true);
+        await sample.GitAsync(sample.Peer, token, "push", "origin", "native-pull").ConfigureAwait(true);
+        var incoming = await sample.GitAsync(sample.Remote, token, "rev-parse", "refs/heads/native-pull").ConfigureAwait(true);
+        branch.Text = "native-pull";
+        await ClickAsync("git.remote.pull.toolbar").ConfigureAwait(true);
+        var pulled = await sample.GitAsync(sample.Primary, token, "rev-parse", "HEAD").ConfigureAwait(true);
+        if (!string.Equals(incoming, pulled, StringComparison.Ordinal))
+            throw new InvalidOperationException("The Git Remotes dialog did not fast-forward the checked-out branch.");
+        Console.WriteLine("RemoteControl pulled and fast-forwarded the checked-out branch.");
+
+        await WorkbenchRemoteControl.ClickAsync(dialog, "git.remotes.close").ConfigureAwait(true);
+        await ((IAsyncRelayCommand)open.Command!).ExecutionTask!.WaitAsync(token).ConfigureAwait(true);
+
+        async Task ClickAsync(string id)
+        {
+            var button = await FindAsync<Button>(dialog, id, token).ConfigureAwait(true);
+            button.BringIntoView();
+            await WorkbenchRemoteControl.ClickAsync(dialog, id).ConfigureAwait(true);
+            await (((IAsyncRelayCommand)button.Command!).ExecutionTask ??
+                throw new InvalidOperationException($"The Git Remotes dialog did not dispatch {id}.")).WaitAsync(token).ConfigureAwait(true);
+        }
     }
 
     private static async Task<T> FindAsync<T>(Window window, string id, CancellationToken token) where T : Control

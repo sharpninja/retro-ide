@@ -30,6 +30,8 @@ Choose **Rename Branch** to move the local branch and keep its tracking configur
 
 Open **Remotes** from Git History to add, rename, remove, or edit a remote. The URL field accepts a Git URL or local repository path. Select **Set push URL** to edit the push endpoint. Retro IDE masks embedded credentials in existing URLs. Use Git’s credential helpers or SSH credentials for authentication. Choose a remote and **Fetch** to update its tracking refs and Git’s ahead and behind counts. The checked-out branch and its files stay in place. Use **Set Upstream** on a local branch to choose or clear tracking. [Git remote](https://git-scm.com/docs/git-remote) · [Git fetch](https://git-scm.com/docs/git-fetch) · [Git credentials](https://git-scm.com/docs/gitcredentials)
 
+In **Remotes**, pick the remote and enter the destination branch. **Push** sends the displayed local branch tip. To replace divergent history, select **Force push with lease** and enter the full remote commit ID you reviewed. Git rejects the update if that remote branch moved. **Pull** integrates the selected remote branch into the displayed checked-out branch. It defaults to **Fast-forward only** and also supports **Merge** and **Rebase**. Save or discard affected unsaved editor changes before pulling. A successful pull refreshes affected clean editor buffers. Git reports integration conflicts in the current worktree. [Git push](https://git-scm.com/docs/git-push) · [Git pull](https://git-scm.com/docs/git-pull)
+
 ## Workflows
 
 | Area | IDE commands and views |

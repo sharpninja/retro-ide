@@ -40,6 +40,9 @@ internal interface IGitRegistration
     /// <summary>Protects open source buffers affected by a native branch switch.</summary>
     IGitBranchSwitch? BeginBranchSwitch(GitWorktree repository, string[] paths);
 
+    /// <summary>Revalidates the captured worktree on the dispatcher before modifying it after a fetch.</summary>
+    Task<GitIntegrationLease> BeginIntegrationAsync(GitSelection selection, string[] paths, CancellationToken token);
+
     /// <summary>Registers the installed checkout as a workspace root and makes it the selected Git worktree.</summary>
     /// <param name="repository">The installed native checkout.</param>
     /// <returns>The registered root and worktree identity.</returns>
@@ -50,3 +53,5 @@ internal interface IGitBranchSwitch
 {
     Task CompleteAsync(bool switched);
 }
+
+internal readonly record struct GitIntegrationLease(IGitBranchSwitch? Guard, string? ErrorCode = null);

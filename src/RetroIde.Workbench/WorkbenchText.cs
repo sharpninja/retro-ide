@@ -43,6 +43,14 @@ internal static class WorkbenchText
     internal const string GitRemoteUrl = "git.remotes.url";
     internal const string GitRemotePush = "git.remotes.push-url";
     internal const string GitRemoteClose = "git.remotes.close";
+    internal const string GitSyncLocalBranch = "git.remotes.local-branch";
+    internal const string GitSyncRemoteBranch = "git.remotes.remote-branch";
+    internal const string GitSyncStrategy = "git.remotes.strategy";
+    internal const string GitSyncFastForward = "git.remotes.fast-forward";
+    internal const string GitSyncMerge = "git.remotes.merge";
+    internal const string GitSyncRebase = "git.remotes.rebase";
+    internal const string GitSyncForceWithLease = "git.remotes.force-with-lease";
+    internal const string GitSyncExpectedRemoteHead = "git.remotes.expected-remote-head";
     internal const string GitUpstreamClear = "git.upstream.clear";
     private const string GitDivergence = "git.remotes.divergence";
     internal const string SearchQuery = "editor.search.query";
@@ -65,6 +73,8 @@ internal static class WorkbenchText
             GitHistoryTitle, GitHistoryRefs, GitHistoryGraph, GitHistoryWorktrees,
             GitBranchName, GitBranchCheckout,
             GitRemoteTitle, GitRemoteName, GitRemoteUrl, GitRemotePush, GitRemoteClose, GitUpstreamClear,
+            GitSyncLocalBranch, GitSyncRemoteBranch, GitSyncStrategy, GitSyncFastForward, GitSyncMerge, GitSyncRebase,
+            GitSyncForceWithLease, GitSyncExpectedRemoteHead,
             GitBadgeTracked, GitBadgeUntracked, GitBadgeIgnored, GitBadgeModified, GitBadgeStaged, GitBadgeStagedModified, GitBadgeConflicted];
 
     internal static string ExplorerRoot(WorkbenchLocalization localization, WorkspaceExplorer.RootKind kind, string path, bool unavailable)

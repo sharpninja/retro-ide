@@ -77,6 +77,8 @@ internal sealed partial class DocumentController
                 CompleteAsync(view, _features.Git.DeleteBranch, delete, request),
             GitRemoteOperations.ListInput remotes when string.Equals(request.CommandId, _features.Git.Remotes.Id, StringComparison.Ordinal) =>
                 CompleteAsync(view, _features.Git.Remotes, remotes, request),
+            GitHistoryOperations.RefsInput refs when string.Equals(request.CommandId, _features.Git.Refs.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.Refs, refs, request),
             GitRemoteOperations.ConfigureInput add when string.Equals(request.CommandId, _features.Git.AddRemote.Id, StringComparison.Ordinal) =>
                 CompleteAsync(view, _features.Git.AddRemote, add, request),
             GitRemoteOperations.ConfigureInput url when string.Equals(request.CommandId, _features.Git.SetRemoteUrl.Id, StringComparison.Ordinal) =>
@@ -87,6 +89,10 @@ internal sealed partial class DocumentController
                 CompleteAsync(view, _features.Git.RemoveRemote, remove, request),
             GitRemoteOperations.FetchInput fetch when string.Equals(request.CommandId, _features.Git.Fetch.Id, StringComparison.Ordinal) =>
                 CompleteAsync(view, _features.Git.Fetch, fetch, request),
+            GitRemoteOperations.PushInput push when string.Equals(request.CommandId, _features.Git.Push.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.Push, push, request),
+            GitRemoteOperations.PullInput pull when string.Equals(request.CommandId, _features.Git.Pull.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.Pull, pull, request),
             GitRemoteOperations.UpstreamInput upstream when string.Equals(request.CommandId, _features.Git.SetUpstream.Id, StringComparison.Ordinal) =>
                 CompleteAsync(view, _features.Git.SetUpstream, upstream, request),
             _ => null,

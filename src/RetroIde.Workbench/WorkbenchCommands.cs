@@ -52,6 +52,8 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor RenameGitRemote = Create("git.remote.rename", "Ctrl+Alt+N");
     public static readonly CommandDescriptor RemoveGitRemote = Create("git.remote.remove", "Ctrl+Alt+Shift+Delete");
     public static readonly CommandDescriptor FetchGitRemote = Create("git.remote.fetch", "Ctrl+Alt+F");
+    public static readonly CommandDescriptor PushGitRemote = Create("git.remote.push", "Ctrl+Alt+P");
+    public static readonly CommandDescriptor PullGitRemote = Create("git.remote.pull", "Ctrl+Alt+Shift+P");
     public static readonly CommandDescriptor SetGitUpstream = Create("git.branch.upstream", "Ctrl+Alt+U");
 
     // A document key binding can be active inside a main or floating workbench window.
@@ -62,7 +64,7 @@ internal static class WorkbenchCommands
             RefreshGitDiff, StageGitHunks, UnstageGitHunks, CreateCommit, AmendCommit, OpenGitHistory, CurrentGitHistory,
             ShowGitRefHistory, PreviousGitHistoryPage, NextGitHistoryPage, InspectGitCommit, CreateGitBranch, SwitchGitBranch,
             RenameGitBranch, DeleteGitBranch, ShowGitRemotes, RefreshGitRemotes, AddGitRemote, EditGitRemote,
-            RenameGitRemote, RemoveGitRemote, FetchGitRemote, SetGitUpstream];
+            RenameGitRemote, RemoveGitRemote, FetchGitRemote, PushGitRemote, PullGitRemote, SetGitUpstream];
 
     internal static void ValidateBundledResources()
     {
