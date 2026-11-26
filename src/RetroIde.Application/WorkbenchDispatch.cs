@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
+using RetroIde.Application.Git;
 using RetroIde.Application.Workspaces;
 using RetroIde.Application.Localization;
 
@@ -206,6 +207,8 @@ public sealed class FeatureRegistry
     {
     }
 
+    /// <summary>Registers the common workbench, workspace and scoped Git operations.</summary>
+    /// <remarks>2026-11-26 · TEST-RETRO-015#ac-test-mcp-inventory. Use one discovery list for Git and the other workbench features.</remarks>
     internal FeatureRegistry(ViewContextContract context, ViewContextContract? documentContext,
         Func<DocumentSaveSnapshot, CancellationToken, Task<PreparedDocumentSave>>? stageSave = null)
     {
@@ -220,15 +223,19 @@ public sealed class FeatureRegistry
         Explorer = new ExplorerFeatures(stageSave);
         Documents = new DocumentFeatures();
         Localization = new LocalizationFeatures();
+        Git = new GitFeatures();
         Features = ImmutableArray.Create<FeatureRegistration>(GetContext, FocusTool, Explorer.OpenRoot, Explorer.ReadRoots,
             Explorer.ReadChildren, Explorer.SetExpansion, Explorer.SelectEntry, Explorer.OpenEntry, Explorer.RevealEntry,
             Explorer.SaveDocument, Documents.GetContext, Documents.Find, Documents.Replace, Documents.Close,
-            Documents.Edit, Documents.Undo, Documents.Redo, Localization.GetLanguage, Localization.SetLanguage);
+            Documents.Edit, Documents.Undo, Documents.Redo, Localization.GetLanguage, Localization.SetLanguage,
+            Git.Discover, Git.Select, Git.Status);
     }
 
     internal ExplorerFeatures Explorer { get; }
     internal DocumentFeatures Documents { get; }
     internal LocalizationFeatures Localization { get; }
+    /// <summary>Gets the Git operations used by the shared controller and MCP registry.</summary>
+    internal GitFeatures Git { get; }
     internal ViewContextContract? DocumentContextContract { get; }
 
     /// <summary>Gets the public workbench context contract shared by its tools.</summary>

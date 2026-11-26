@@ -1,6 +1,7 @@
 using Avalonia.Threading;
 using GPS.SimpleMVC.Controllers;
 using RetroIde.Application;
+using RetroIde.Application.Git;
 using RetroIde.Application.Workspaces;
 using RetroIde.Application.Localization;
 
@@ -251,12 +252,26 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         return DispatchAsync(feature, input, request.Context, registration.Grant, request.RequestId, request.CancellationToken);
     }
 
-    private sealed record Registration(WorkbenchViewModel View, ActorGrant Grant, WorkbenchController Controller) : IWorkbenchRegistration, IExplorerRegistration, ILocalizationRegistration
+    /// <summary>Represents the live workbench registration and its own native Git selection.</summary>
+    /// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-multiple-repos; TEST-RETRO-015#ac-test-mcp-same-instance. Publish selection revisions through the existing workbench layout.</remarks>
+    private sealed record Registration(WorkbenchViewModel View, ActorGrant Grant, WorkbenchController Controller) : IWorkbenchRegistration,
+        IExplorerRegistration, ILocalizationRegistration, IGitRegistration
     {
         public WorkbenchAddress Address => View.Address;
         public object ContextSource => View;
         public bool TryFocus(string toolId) => Controller.CanFocus(toolId) && Controller._layout.Focus(toolId);
         public WorkspaceExplorer Explorer => Controller._workspaceExplorer;
+
+        /// <inheritdoc />
+        public GitSelection? SelectedGit { get; private set; }
+
+        /// <inheritdoc />
+        public void SelectGit(GitSelection selection)
+        {
+            SelectedGit = selection;
+            Controller._layout.AdvanceWorkspaceRevision();
+        }
+
         public bool HasExplorer => Controller._explorerView?.ParentViewKey == View.ViewKey;
         public bool CanChangeExplorer => Controller.CanChangeExplorer();
         public bool HasOpenDocument(WorkspaceExplorer.Address address) => Controller._documents?.HasDocument(address) == true;

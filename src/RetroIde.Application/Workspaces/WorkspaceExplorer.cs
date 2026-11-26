@@ -101,13 +101,26 @@ internal sealed class WorkspaceExplorer
         return explorer;
     }
 
+    /// <summary>Resolves a file address below its registered workspace root.</summary>
+    /// <remarks>2026-11-26 · TEST-RETRO-012#ac-test-explorer-mixed-roots. Preserve the source-only constraint while reusing open-root resolution.</remarks>
     public SourceAddress ResolveSource(Address address)
+    {
+        var resolved = ResolvePath(address);
+        if (resolved.Entry.RelativePath.Length == 0)
+            throw new ArgumentException("A source file must be below its workspace root.", nameof(address));
+        return resolved;
+    }
+
+    /// <summary>Resolves an open-root address, including an address that identifies the root itself.</summary>
+    /// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-multiple-repos. Reuse the Explorer boundary for Git discovery.</remarks>
+    /// <param name="address">The root identifier and native relative path.</param>
+    /// <returns>The normalized address and its registered root directory.</returns>
+    /// <exception cref="ArgumentException">The root is unknown or the relative path escapes it.</exception>
+    internal SourceAddress ResolvePath(Address address)
     {
         lock (_gate)
         {
             var normalized = NormalizeAddress(address);
-            if (normalized.RelativePath.Length == 0)
-                throw new ArgumentException("A source file must be below its workspace root.", nameof(address));
             return new SourceAddress(normalized, _roots[normalized.RootId].Path);
         }
     }
