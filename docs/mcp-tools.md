@@ -6,9 +6,9 @@ Every supported Retro IDE feature has a Model Context Protocol (MCP) tool. CLI a
 
 Phase 01 exposes `workbench_get_context` and `workbench_focus_tool`. They share one local IDE instance through Streamable HTTP or its stdio bridge. The four public context members are `viewKey`, `workspaceId`, `activeToolId`, and `workbenchRevision`. A missing selection is an explicit null. Mutations require a live registration, the current context and a write-enabled attachment. The rest of this page describes the broader implementation contract. [Cross-platform verification](receipts/phase-01-workbench-mcp.md)
 
-## Phase 02 candidate tools
+## Phase 02 tool inventory
 
-The display language, Project Explorer, and source editor operations below passed local verification on Windows and Linux. Their Phase 02 acceptance is open. [Verification status](plans/PLAN-RETROIDE-001.md#phase-02-verification-status)
+The display language, Project Explorer, and source editor operations below passed cross-platform verification and independent Phase 02 review. [Phase 02 verification](receipts/phase-02-workbench-explorer-editor.md)
 
 ### Display language
 
@@ -36,6 +36,18 @@ The Phase 02 implementation currently exposes these Project Explorer operations 
 | `editor_close_document` | `document`, optional `discardChanges`, workbench `context` | Closes the tab. A dirty tab remains open unless discard is explicit. |
 
 Read-only attachments can list workspace roots and children and read a live document context. Root, expansion, selection, and editor mutations require a write-enabled attachment and the current public workbench context. Each branch read is scoped to an open root. Refresh the context after a successful mutation before sending the next write.
+
+## Phase 03 Git tools in development
+
+The Phase 03 candidate exposes native Git discovery, selection, and status through the same attached workbench over stdio and Streamable HTTP. Discovery takes a literal path within an open Project Explorer root. Use an empty `relativePath` to inspect the root itself.
+
+| Tool | Arguments | Result |
+| --- | --- | --- |
+| `git_discover_repository` | `rootId`, `relativePath` | The native worktree, its Git directory, and its common Git directory. |
+| `git_select_repository` | `rootId`, `relativePath`, current workbench `context` | The selected worktree and advanced workbench context. Requires a write-enabled attachment. |
+| `git_get_status` | None | The selected worktree's branch, HEAD, upstream and divergence when available, and entries with independent index and working-tree status. Rename and copy entries also give the original path. |
+
+Selection is scoped to the attached workbench. Select a worktree before reading status. If its selection changes while status is being prepared, refresh the context and read again. The Git menu, Source Control pane, and remaining workflows are in development. [Git integration](git-integration.md)
 
 ## One feature registry
 
