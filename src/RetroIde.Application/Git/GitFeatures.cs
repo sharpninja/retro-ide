@@ -83,9 +83,14 @@ internal sealed class GitFeatures
 
         return new FeatureOutcome("ok", "Git status read.")
         {
-            Commit = current => current is IGitRegistration git && ReferenceEquals(git.SelectedGit, selection)
-                ? FeatureOutcome.Success("Git status read.", status)
-                : new("git_selection_changed", "The selected Git worktree changed while status was read."),
+            Commit = current =>
+            {
+                if (current is not IGitRegistration git || !ReferenceEquals(git.SelectedGit, selection))
+                    return new("git_selection_changed", "The selected Git worktree changed while status was read.");
+
+                git.DisplayGitStatus(status);
+                return FeatureOutcome.Success("Git status read.", status);
+            },
         };
     }
 

@@ -42,6 +42,21 @@ internal sealed record CommandPresentation(string Label, Geometry IconGeometry, 
         ? new Image { Width = size, Height = size, Source = source }
         : new PathIcon { Width = size, Height = size, Data = IconGeometry };
 
+    public static MenuItem CreateMenuItem(CommandDescriptor descriptor, ICommand command, WorkbenchLocalization localization)
+    {
+        var item = new MenuItem { Command = command };
+        AutomationProperties.SetAutomationId(item, descriptor.Id + ".menu");
+        localization.Observe(item, () =>
+        {
+            var presentation = Create(descriptor, localization);
+            item.Header = presentation.Label;
+            item.Icon = presentation.CreateIcon();
+            item.InputGesture = presentation.Gesture;
+            AutomationProperties.SetName(item, presentation.Label);
+        });
+        return item;
+    }
+
     public static Button CreateButton(CommandDescriptor descriptor, ICommand command, WorkbenchLocalization localization)
     {
         var button = new Button { Command = command };

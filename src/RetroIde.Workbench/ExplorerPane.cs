@@ -1,4 +1,3 @@
-using System.Windows.Input;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -89,8 +88,8 @@ internal static class ExplorerPane
     {
         var menu = new MenuItem
         {
-            ItemsSource = new[] { CreateMenuItem(WorkbenchCommands.OpenFolder, view.OpenFolderCommand, view.Localization),
-                CreateMenuItem(WorkbenchCommands.OpenProject, view.OpenProjectCommand, view.Localization) },
+            ItemsSource = new[] { CommandPresentation.CreateMenuItem(WorkbenchCommands.OpenFolder, view.OpenFolderCommand, view.Localization),
+                CommandPresentation.CreateMenuItem(WorkbenchCommands.OpenProject, view.OpenProjectCommand, view.Localization) },
         };
         view.Localization.Observe(menu, () => menu.Header = view.Localization.Text(WorkbenchText.FileMenu));
         return menu;
@@ -100,20 +99,5 @@ internal static class ExplorerPane
     {
         WorkbenchWindow.RegisterShortcut(window, view.OpenFolderCommand, CommandPresentation.Create(WorkbenchCommands.OpenFolder).Gesture);
         WorkbenchWindow.RegisterShortcut(window, view.OpenProjectCommand, CommandPresentation.Create(WorkbenchCommands.OpenProject).Gesture);
-    }
-
-    private static MenuItem CreateMenuItem(CommandDescriptor descriptor, ICommand command, WorkbenchLocalization localization)
-    {
-        var item = new MenuItem { Command = command };
-        AutomationProperties.SetAutomationId(item, descriptor.Id + ".menu");
-        localization.Observe(item, () =>
-        {
-            var presentation = CommandPresentation.Create(descriptor, localization);
-            item.Header = presentation.Label;
-            item.Icon = presentation.CreateIcon();
-            item.InputGesture = presentation.Gesture;
-            AutomationProperties.SetName(item, presentation.Label);
-        });
-        return item;
     }
 }

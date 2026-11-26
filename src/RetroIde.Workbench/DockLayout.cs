@@ -21,7 +21,8 @@ public sealed class DockLayout : IDisposable
     private bool _shown;
     private bool _disposed;
 
-    internal DockLayout(IWorkbenchWorkspaceContext workspace, WorkbenchLayoutState? state, InteractionBlocks interaction, ExplorerViewModel explorer, WorkbenchLocalization localization)
+    internal DockLayout(IWorkbenchWorkspaceContext workspace, WorkbenchLayoutState? state, InteractionBlocks interaction,
+        ExplorerViewModel explorer, SourceControlViewModel sourceControl, WorkbenchLocalization localization)
     {
         _workspace = workspace;
         _localization = localization;
@@ -32,6 +33,7 @@ public sealed class DockLayout : IDisposable
         _tools = new[]
         {
             new ShellTool("explorer", "Project Explorer", "Open a project or folder to browse files.", "left", interaction) { Explorer = explorer },
+            new ShellTool(SourceControlViewModel.PaneId, "Source Control", "No Git worktree selected.", "left", interaction) { SourceControl = sourceControl },
             new ShellTool("registers", "Registers", "No debugger session connected.", "right", interaction),
             new ShellTool("call-stack", "Call Stack", "No debugger session connected.", "right", interaction),
             new ShellTool("output", "Output", "Workbench ready.", "bottom", interaction),
@@ -55,7 +57,7 @@ public sealed class DockLayout : IDisposable
         RefreshLocale(null, EventArgs.Empty);
         localization.Changed += RefreshLocale;
 
-        state = Compatible(state) ? state : null;
+        state = RestoreCompatibleLayout(state);
         _floating = state?.Floating ?? [];
         Root = CreateRoot(Build(state?.Main.Content ?? DefaultTopology()), state?.Main.Pinned ?? []);
         Factory.InitLayout(Root);
@@ -258,14 +260,25 @@ public sealed class DockLayout : IDisposable
             document.Title = _localization.Text(WorkbenchText.PaneTitle(document.Id));
     }
 
-    private bool Compatible(WorkbenchLayoutState? layout)
+    private WorkbenchLayoutState? RestoreCompatibleLayout(WorkbenchLayoutState? layout)
     {
         if (layout is not { Version: 1, Main: not null, Floating.Length: <= 12 } || layout.Main.Content is null)
-            return false;
+            return null;
 
         var ids = new HashSet<string>(StringComparer.Ordinal);
-        return VisitBranch(layout.Main) && layout.Floating.All(VisitBranch) && ids.SetEquals(_tools.Keys.Concat(_documents.Keys)) &&
-            (layout.ActiveTool is null || _tools.ContainsKey(layout.ActiveTool));
+        if (!VisitBranch(layout.Main) || !layout.Floating.All(VisitBranch) ||
+            (layout.ActiveTool is { } tool && (!_tools.ContainsKey(tool) || !ids.Contains(tool))))
+            return null;
+
+        var paneCount = _tools.Count + _documents.Count;
+        if (ids.Count == paneCount)
+            return layout;
+
+        // Existing layouts predate Source Control. Keep their topology and add one auto-hidden pane.
+        if (ids.Count == paneCount - 1 && !ids.Contains(SourceControlViewModel.PaneId))
+            return layout with { Main = layout.Main with { Pinned = [.. layout.Main.Pinned, new(SourceControlViewModel.PaneId, "Left", "left")] } };
+
+        return null;
 
         bool VisitBranch(DockBranch branch) =>
             branch is { Pinned: not null, Content.Kind: "vertical" or "horizontal" or "tool-tabs" or "document-tabs" } &&
@@ -552,7 +565,7 @@ public sealed class DockLayout : IDisposable
     [
         new("horizontal", "columns", 0.73, Children:
         [
-            new("tool-tabs", "left", 0.20, Children: [new("tool", "explorer")], Alignment: "Left"),
+            new("tool-tabs", "left", 0.20, "explorer", [new("tool", "explorer"), new("tool", SourceControlViewModel.PaneId)], "Left"),
             new("splitter"),
             new("document-tabs", "documents", 0.56, "start",
                 [new("document", "start"), new("document", "emulation"), new("document", "disassembly"), new("document", "test-results")]),
@@ -580,6 +593,7 @@ internal sealed class ShellTool : Tool
     }
 
     internal ExplorerViewModel? Explorer { get; init; }
+    internal SourceControlViewModel? SourceControl { get; init; }
     internal WorkbenchLocalization Localization { get; set; } = WorkbenchLocalization.English;
     public string Message { get; }
     public string DefaultGroup { get; }

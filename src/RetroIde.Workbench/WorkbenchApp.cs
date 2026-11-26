@@ -42,9 +42,7 @@ public sealed class WorkbenchApp : Avalonia.Application
             Setters = { new Setter(Visual.IsVisibleProperty, true) },
         });
         DataTemplates.Add(new FuncDataTemplate<ShellTool>((tool, _) =>
-            tool?.Interaction.Wrap(tool.Id, tool.Explorer is { } explorer
-                ? ExplorerPane.Create(explorer)
-                : PaneContent(tool.Localization, tool.Id, document: false))));
+            tool?.Interaction.Wrap(tool.Id, CreateToolContent(tool))));
         DataTemplates.Add(new FuncDataTemplate<ShellDocument>((document, _) =>
             document?.Interaction.Wrap(document.Id, document.Source is { } source
                 ? DocumentSurface.Create(source)
@@ -138,6 +136,13 @@ public sealed class WorkbenchApp : Avalonia.Application
     }
 
     private sealed record RunningMcp(LoopbackMcpHost Host, string Path);
+
+    private static Control CreateToolContent(ShellTool tool) => tool switch
+    {
+        { Explorer: { } explorer } => ExplorerPane.Create(explorer),
+        { SourceControl: { } sourceControl } => SourceControlPane.Create(sourceControl),
+        _ => PaneContent(tool.Localization, tool.Id, document: false),
+    };
 
     private static Control PaneContent(WorkbenchLocalization localization, string id, bool document)
     {

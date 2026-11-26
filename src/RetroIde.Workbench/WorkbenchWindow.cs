@@ -53,7 +53,10 @@ public sealed class WorkbenchWindow : Window
         Closed += (_, _) => focusCommand.CanExecuteChanged -= UpdateFocusEligibility;
         var viewMenu = new MenuItem { ItemsSource = new[] { FocusMenu, CreateLanguageMenu(session) } };
         localization.Observe(viewMenu, () => viewMenu.Header = localization.Text(WorkbenchText.ViewMenu));
-        var menu = new Menu { ItemsSource = new[] { ExplorerPane.CreateFileMenu(session.ExplorerView), viewMenu } };
+        var menu = new Menu
+        {
+            ItemsSource = new[] { ExplorerPane.CreateFileMenu(session.ExplorerView), viewMenu, SourceControlPane.CreateMenu(session.SourceControl) },
+        };
 
         FocusButtonLabel = new TextBlock { Text = CommandPresentation.Label };
         FocusButtonShortcut = new TextBlock { Text = CommandPresentation.Shortcut, Opacity = 0.62 };
@@ -92,6 +95,7 @@ public sealed class WorkbenchWindow : Window
         ApplyLanguageDirection(this, localization);
         FocusShortcut = AddFocusShortcut(this);
         ExplorerPane.RegisterShortcuts(this, session.ExplorerView);
+        SourceControlPane.RegisterShortcuts(this, session.SourceControl);
         session.ExplorerView.PickDirectoryAsync = PickWorkspaceDirectoryAsync;
         session.Layout.Factory.DefaultHostWindowLocator = () =>
         {
@@ -99,6 +103,7 @@ public sealed class WorkbenchWindow : Window
             ApplyLanguageDirection(floating, localization);
             AddFocusShortcut(floating);
             ExplorerPane.RegisterShortcuts(floating, session.ExplorerView);
+            SourceControlPane.RegisterShortcuts(floating, session.SourceControl);
             TrackFloatingInteraction(floating);
             return floating;
         };

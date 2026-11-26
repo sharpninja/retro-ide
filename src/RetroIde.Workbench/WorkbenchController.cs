@@ -18,6 +18,8 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
     private readonly WorkspaceExplorer _workspaceExplorer;
     private readonly WorkbenchLocalization _localization;
     private ExplorerViewModel? _explorerView;
+    private SourceControlViewModel? _sourceControlView;
+    private WorkspaceExplorer.Address? _explorerSelection;
     private WorkspaceWatchSet? _explorerWatch;
     private DocumentController? _documents;
     private readonly WorkbenchUnitOfWork _unitOfWork;
@@ -89,6 +91,14 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
             explorer.SetRootEligibility(false);
             RemoveView(explorer);
         }
+        if (_sourceControlView is { } git && git.ParentViewKey == view.ViewKey)
+        {
+            _sourceControlView = null;
+            git.CommandRequested -= OnCommandRequested;
+            git.ParentViewKey = null;
+            git.SetAvailability(null, available: false);
+            RemoveView(git);
+        }
         view.CommandRequested -= OnCommandRequested;
         RemoveView(view);
         view.SetFocusRoute(null, null);
@@ -116,6 +126,22 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                 view.RefreshBranches(changes);
         }, DispatcherPriority.Background));
         PublishExplorerState();
+    }
+
+    internal void RegisterSourceControl(SourceControlViewModel view, WorkbenchViewModel workbench)
+    {
+        Dispatcher.UIThread.VerifyAccess();
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_sourceControlView is not null || Resolve(workbench.ViewKey)?.View != workbench || view.WorkspaceId != _workspaceId)
+            throw new InvalidOperationException("Source Control must register once in its live workbench.");
+
+        if (!AddOrUpdateView(view))
+            throw new InvalidOperationException("Could not register the Source Control view.");
+
+        _sourceControlView = view;
+        view.ParentViewKey = workbench.ViewKey;
+        view.CommandRequested += OnCommandRequested;
+        RefreshSourceControl();
     }
 
     /// <inheritdoc />
@@ -169,9 +195,14 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
     private void PublishExplorerState()
     {
         var state = _workspaceExplorer.Snapshot();
+        _explorerSelection = state.Selection;
         _explorerView?.ReplaceState(state);
         _explorerWatch?.UpdateRoots(state.Roots);
+        RefreshSourceControl();
     }
+
+    private void RefreshSourceControl() =>
+        _sourceControlView?.SetAvailability(_explorerSelection, CanFocus(SourceControlViewModel.PaneId));
 
     private Registration? Resolve(Guid viewKey)
     {
@@ -184,6 +215,7 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         foreach (var registration in _views.Values.ToArray())
             registration.View.Update(_layout.ActiveToolId, _layout.Revision);
         _explorerView?.SetRootEligibility(CanChangeExplorer());
+        RefreshSourceControl();
     }
 
     private void OnCommandRequested(object? sender, ViewCommandRequested request)
@@ -201,6 +233,21 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                     // A local language choice targets the workbench and survives popup or Dock focus churn.
                     DispatchToViewAsync(registration.View, registration, _registry.Localization.SetLanguage, language, request,
                         refreshOrigin: registration),
+                _ => null,
+            };
+        }
+        else if (_sourceControlView is { } git && ReferenceEquals(sender, git) &&
+            request.OriginViewKey == git.ViewKey && git.ParentViewKey == registration.View.ViewKey &&
+            ReferenceEquals(GetView<IView>(git.ViewKey), git))
+        {
+            request.Completion = request.Payload switch
+            {
+                FocusToolInput { ToolId: SourceControlViewModel.PaneId } focus when string.Equals(request.CommandId, _registry.FocusTool.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.FocusTool, focus, request),
+                GitFeatures.LocateInput locate when string.Equals(request.CommandId, _registry.Git.Select.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.Select, locate, request),
+                GitFeatures.StatusInput status when string.Equals(request.CommandId, _registry.Git.Status.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.Status, status, request),
                 _ => null,
             };
         }
@@ -270,6 +317,15 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         {
             SelectedGit = selection;
             Controller._layout.AdvanceWorkspaceRevision();
+            if (Controller._sourceControlView is { } pane && pane.ParentViewKey == View.ViewKey)
+                pane.SetScope(selection.Repository);
+        }
+
+        /// <inheritdoc />
+        public void DisplayGitStatus(GitStatus status)
+        {
+            if (Controller._sourceControlView is { } pane && pane.ParentViewKey == View.ViewKey)
+                pane.DisplayStatus(status);
         }
 
         public bool HasExplorer => Controller._explorerView?.ParentViewKey == View.ViewKey;

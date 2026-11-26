@@ -39,16 +39,19 @@ public sealed class WorkbenchSession : IDisposable
         Registry = new FeatureRegistry(new ViewContextContract(typeof(WorkbenchViewModel)), DocumentViewModel.ContextContract, stageSave);
         View = new WorkbenchViewModel(workspace.WorkspaceId) { FocusTarget = "registers", Localization = Localization };
         ExplorerView = new ExplorerViewModel(View, Registry.Explorer);
-        Layout = new DockLayout(workspace, savedLayout, Interaction, ExplorerView, Localization);
+        SourceControl = new SourceControlViewModel(View, Registry);
+        Layout = new DockLayout(workspace, savedLayout, Interaction, ExplorerView, SourceControl, Localization);
         Controller = new WorkbenchController(Explorer, Layout, Interaction, Registry, Localization);
         Documents = new DocumentController(View, Layout, Interaction, Registry, Controller);
         Controller.Register(View);
         Controller.RegisterExplorer(ExplorerView, View, Documents);
+        Controller.RegisterSourceControl(SourceControl, View);
     }
 
     internal WorkspaceExplorer Explorer { get; }
     internal WorkbenchLocalization Localization { get; }
     internal ExplorerViewModel ExplorerView { get; }
+    internal SourceControlViewModel SourceControl { get; }
     internal DocumentController Documents { get; }
     internal WorkspaceExplorerStore? ExplorerStore { get; }
 
