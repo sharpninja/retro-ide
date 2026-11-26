@@ -12,6 +12,7 @@ public sealed partial class GitWorktreeIntegrationTests
 {
     /// <summary>Runs the shared Git assertions through direct HTTP and stdio attachments to one workbench.</summary>
     /// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-multiple-repos; TEST-RETRO-015#ac-test-mcp-same-instance. Verify both transports observe the same selected worktree state.</remarks>
+    /// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-multiple-repos. Read the optional original path from the workbench's wire projection.</remarks>
     [AvaloniaFact]
     public async Task Live_discovery_and_status_use_the_selected_workspace_worktree()
     {
@@ -90,7 +91,8 @@ public sealed partial class GitWorktreeIntegrationTests
             Assert.Equal(data.GetRawText(), relayed.GetRawText());
             return new GitView(ReadRepository(data.GetProperty("repository")), Text(data, "branch"),
                 data.GetProperty("entries").EnumerateArray().Select(entry => new GitEntry(Text(entry, "path"),
-                    entry.GetProperty("originalPath").GetString(), Text(entry, "index"), Text(entry, "worktree"))).ToArray());
+                    entry.TryGetProperty("originalPath", out var original) ? original.GetString() : null,
+                    Text(entry, "index"), Text(entry, "worktree"))).ToArray());
         }
 
         private async Task<JsonElement> ContextAsync(McpClient client) => (await InvokeAsync(client, "workbench_get_context")).GetProperty("context");
