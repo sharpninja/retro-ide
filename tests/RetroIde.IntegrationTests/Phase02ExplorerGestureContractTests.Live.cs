@@ -21,6 +21,7 @@ public sealed partial class Phase02ExplorerGestureContractTests
 {
     /// <summary>Uses the rendered tree, scoped workbench and Reveal command with application-only input.</summary>
     /// <remarks>2026-11-26 · TEST-RETRO-012#ac-test-explorer-mixed-roots. Run the same identity assertions used by the reference model.</remarks>
+    /// <remarks>2026-11-26 · TEST-RETRO-012#ac-test-explorer-mixed-roots. Check the live MCP route, then wait for rows to render after the roots load.</remarks>
     [AvaloniaFact]
     public async Task Explorer_tree_gestures_and_reveal_preserve_source_identity()
     {
@@ -32,12 +33,6 @@ public sealed partial class Phase02ExplorerGestureContractTests
         window.Show();
         try
         {
-            session.Layout.Focus("explorer");
-            await Dispatcher.Yield(DispatcherPriority.Loaded);
-            window.UpdateLayout();
-            Assert.True(window.GetVisualDescendants().OfType<TreeView>().Any(IsExplorerTree),
-                "The live workbench did not expose the Explorer tree for source gestures.");
-
             await using var host = await LoopbackMcpHost.StartAsync(session.Registry, session.Controller, session.View.Address, token);
             var descriptor = host.CreateAttachment("explorer-gesture-contract", canMutate: true);
             using var http = descriptor.CreateHttpClient();
@@ -46,6 +41,9 @@ public sealed partial class Phase02ExplorerGestureContractTests
                 Endpoint = descriptor.Endpoint,
                 TransportMode = HttpTransportMode.StreamableHttp,
             }, http), cancellationToken: token);
+            var tools = await client.ListToolsAsync(cancellationToken: token);
+            Assert.True(tools.Any(tool => string.Equals(tool.Name, "workspace_open_root", StringComparison.Ordinal)),
+                "The live workbench did not advertise workspace_open_root for Explorer source gestures.");
             await VerifyGesturesAsync(new LiveGestures(client, window, session, token), files);
         }
         finally
@@ -137,7 +135,8 @@ public sealed partial class Phase02ExplorerGestureContractTests
             {
                 token.ThrowIfCancellationRequested();
                 window.UpdateLayout();
-                var row = window.GetVisualDescendants().OfType<TreeView>().Where(IsExplorerTree)
+                var row = window.GetVisualDescendants().OfType<TreeView>().Where(tree => IsExplorerTree(tree) ||
+                        ReferenceEquals(tree.ItemsSource, Read(Explorer, "TreeRoots")))
                     .SelectMany(tree => tree.GetVisualDescendants().OfType<TreeViewItem>())
                     .SingleOrDefault(item => item.DataContext is { } node && Read(node, "Address") is { } address && ReadFile(address) == expected);
                 if (row is not null)
