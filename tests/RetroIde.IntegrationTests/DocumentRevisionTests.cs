@@ -11,6 +11,7 @@ using Avalonia.Threading;
 using AvaloniaEdit;
 using AvaloniaEdit.TextMate;
 using Dock.Model.Core;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using RetroIde.Application;
 using RetroIde.Application.Workspaces;
@@ -261,6 +262,45 @@ public sealed class DocumentRevisionTests
             try { await release.Task.WaitAsync(timeout.Token).ConfigureAwait(false); }
             catch { staged.Dispose(); throw; }
             return staged;
+        }
+    }
+
+    /// <summary>Unexpected handler errors preserve the draft and can be retried from the owning view.</summary>
+    [AvaloniaFact]
+    public async Task Unexpected_save_failure_logs_the_exception_and_allows_an_explicit_retry()
+    {
+        using var fixture = new DocumentFixture();
+        var path = fixture.Source("runtime-recovery", "on disk");
+        var appData = Path.Combine(Path.GetDirectoryName(path)!, ".diagnostics");
+        using var logs = LoggerFactory.Create(builder => builder.AddProvider(new DesktopErrorLog(appData)));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var attempts = 0;
+        using var session = new WorkbenchSession(new TestWorkspace(Guid.NewGuid()), savedLayout: null, stageSave: StageAsync, logs: logs);
+        var document = await OpenThroughExplorerAsync(session, path, timeout.Token);
+        document.Buffer.Text = "retained draft";
+
+        await document.SaveCommand.ExecuteAsync(null);
+        var failure = Assert.IsType<OperationResult>(document.LastResult);
+        Assert.Equal("internal_error", failure.Code);
+        Assert.Equal("on disk", File.ReadAllText(path));
+        Assert.True(document.IsDirty);
+        var log = File.ReadAllText(Assert.Single(Directory.GetFiles(Path.Combine(appData, "logs"), "*.log")));
+        Assert.Contains(failure.OperationId.ToString(), log, StringComparison.Ordinal);
+        Assert.Contains("InvalidOperationException: injected save failure", log, StringComparison.Ordinal);
+        Assert.DoesNotContain("injected save failure", failure.Summary, StringComparison.Ordinal);
+        Assert.Equal(1, attempts);
+
+        await document.SaveCommand.ExecuteAsync(null);
+        Assert.Equal("ok", document.LastResult?.Code);
+        Assert.Equal("retained draft", File.ReadAllText(path));
+        Assert.False(document.IsDirty);
+
+        async Task<PreparedDocumentSave> StageAsync(DocumentSaveSnapshot snapshot, CancellationToken token)
+        {
+            await Task.Yield();
+            if (Interlocked.Increment(ref attempts) == 1)
+                throw new InvalidOperationException("injected save failure");
+            return await PreparedDocumentSave.WriteAsync(snapshot, token).ConfigureAwait(false);
         }
     }
 

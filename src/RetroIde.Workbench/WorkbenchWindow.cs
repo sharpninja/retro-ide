@@ -9,6 +9,7 @@ using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Dock.Avalonia.Controls;
+using Microsoft.Extensions.Logging;
 using RetroIde.Application;
 using RetroIde.Application.Git;
 
@@ -20,6 +21,7 @@ public sealed class WorkbenchWindow : Window
 {
     private readonly WorkbenchSession _session;
     private readonly LayoutStore? _layouts;
+    private readonly ILogger _logger;
     private CancellationTokenSource? _closeSave;
     private bool _replayingClose;
     private bool _closed;
@@ -29,6 +31,7 @@ public sealed class WorkbenchWindow : Window
     {
         _session = session;
         _layouts = layouts;
+        _logger = session.Logs.CreateLogger<WorkbenchWindow>();
         DataContext = session.View;
         Title = "Retro IDE";
         Width = 1200;
@@ -181,7 +184,7 @@ public sealed class WorkbenchWindow : Window
         if (token.IsCancellationRequested || _closed)
             return null;
 
-        var dialog = new GitSetupDialog(_session.Localization, clone) { FlowDirection = FlowDirection };
+        var dialog = new GitSetupDialog(_session.Localization, clone, _logger) { FlowDirection = FlowDirection };
         using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
         {
             if (dialog.IsVisible)
@@ -325,11 +328,10 @@ public sealed class WorkbenchWindow : Window
     private async Task SaveStateAndCloseAsync(CancellationTokenSource closeSave)
     {
         var interaction = _session.Interaction;
-        interaction.Begin(InteractionBlocks.WorkbenchScope);
         try
         {
+            interaction.Begin(InteractionBlocks.WorkbenchScope);
             var token = closeSave.Token;
-            await _session.Controller.DrainGitRefreshAsync(_session.View).ConfigureAwait(true);
             if (_layouts is { } layouts)
             {
                 var snapshot = _session.Layout.Capture();
@@ -340,6 +342,8 @@ public sealed class WorkbenchWindow : Window
                 var snapshot = _session.Explorer.Snapshot();
                 await SaveStateAsync(() => workspace.Save(snapshot, token), "workspace state", token).ConfigureAwait(true);
             }
+            token.ThrowIfCancellationRequested();
+            await _session.Controller.DrainGitRefreshAsync(_session.View).ConfigureAwait(true);
 
             // Leave the original Closing callback before replaying it. Hold the block
             // until the replay completes so the saved dock layout cannot be edited in between.
@@ -351,21 +355,42 @@ public sealed class WorkbenchWindow : Window
             try { Close(); }
             finally { _replayingClose = false; }
         }
+        catch (OperationCanceledException) when (closeSave.IsCancellationRequested) { }
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
+        {
+            RuntimeFailures.Report(_logger, error, "desktop close preparation");
+            if (!_closed)
+            {
+                try
+                {
+                    _session.View.Receive(OperationResult.Failure(Guid.NewGuid(), "internal_error",
+                        "Retro IDE could not close. The workbench remains open. Check the application log for details."));
+                }
+                catch (Exception notificationError) when (RuntimeFailures.CanRecover(notificationError))
+                {
+                    RuntimeFailures.Report(_logger, notificationError, "desktop close failure notification");
+                }
+            }
+        }
         finally
         {
             _closeSave = null;
             closeSave.Dispose();
-            interaction.End(InteractionBlocks.WorkbenchScope);
+            try { interaction.End(InteractionBlocks.WorkbenchScope); }
+            catch (Exception error) when (RuntimeFailures.CanRecover(error))
+            {
+                RuntimeFailures.Report(_logger, error, "desktop close interaction cleanup");
+            }
         }
     }
 
-    private static async Task SaveStateAsync(Action save, string name, CancellationToken token)
+    private async Task SaveStateAsync(Action save, string name, CancellationToken token)
     {
         try { await Task.Run(save, token).ConfigureAwait(true); }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
-            Console.Error.WriteLine($"Unable to save the Retro IDE {name}.");
+            RuntimeFailures.Report(_logger, error, $"save desktop {name}", LogLevel.Warning);
         }
     }
 

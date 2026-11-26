@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace RetroIde.Application.Git;
 
 /// <summary>Coalesces native worktree and metadata changes into a serialized status refresh for one selection.</summary>
@@ -11,20 +13,21 @@ internal sealed class GitStatusMonitor : IDisposable
     private int _pending = 1;
     private int _disposed;
 
-    internal GitStatusMonitor(GitSelection selection, Func<CancellationToken, Task> refresh)
+    internal GitStatusMonitor(GitSelection selection, Func<CancellationToken, Task> refresh, ILogger logger)
     {
         var token = _lifetime.Token;
-        Completion = Task.Run(() => MonitorAsync(selection, refresh, token));
+        Completion = Task.Run(() => MonitorAsync(selection, refresh, logger, token));
     }
 
     /// <summary>Completes after cancellation and release of the watcher and native read resources.</summary>
     internal Task Completion { get; }
 
-    private async Task MonitorAsync(GitSelection selection, Func<CancellationToken, Task> refresh, CancellationToken token)
+    private async Task MonitorAsync(GitSelection selection, Func<CancellationToken, Task> refresh, ILogger logger, CancellationToken token)
     {
         var targets = GetTargets(selection).ToArray();
         using var timer = new PeriodicTimer(RefreshInterval);
         var nextProbe = long.MinValue;
+        var failedRefresh = false;
         try
         {
             while (await timer.WaitForNextTickAsync(token).ConfigureAwait(false))
@@ -33,14 +36,32 @@ internal sealed class GitStatusMonitor : IDisposable
                 if (now >= nextProbe)
                 {
                     foreach (var target in targets)
-                        target.Probe(MarkPending);
+                        target.Probe(MarkPending, logger);
                     nextProbe = now + (long)ProbeInterval.TotalMilliseconds;
                 }
                 if (Interlocked.Exchange(ref _pending, 0) != 0)
-                    await refresh(token).ConfigureAwait(false);
+                {
+                    try
+                    {
+                        await refresh(token).ConfigureAwait(false);
+                        failedRefresh = false;
+                    }
+                    catch (Exception error) when ((error is not OperationCanceledException || !token.IsCancellationRequested) &&
+                        RuntimeFailures.CanRecover(error))
+                    {
+                        if (!failedRefresh)
+                            RuntimeFailures.Report(logger, error, "Git status refresh; retrying", LogLevel.Warning);
+                        failedRefresh = true;
+                        MarkPending();
+                    }
+                }
             }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
+        {
+            RuntimeFailures.Report(logger, error, "Git status watcher loop");
+        }
         finally
         {
             foreach (var target in targets)
@@ -85,8 +106,9 @@ internal sealed class GitStatusMonitor : IDisposable
         private FileSystemWatcher? _watcher;
         private bool? _available;
         private int _restart;
+        private bool _startFailed;
 
-        internal void Probe(Action changed)
+        internal void Probe(Action changed, ILogger logger)
         {
             var available = Directory.Exists(directory);
             if (_available != available)
@@ -116,18 +138,24 @@ internal sealed class GitStatusMonitor : IDisposable
                     if (matches(args.Name ?? "") || matches(args.OldName ?? ""))
                         changed();
                 };
-                watcher.Error += (_, _) =>
+                watcher.Error += (_, args) =>
                 {
+                    if (args.GetException() is { } error)
+                        RuntimeFailures.Report(logger, error, "Git status watcher; requesting a restart", LogLevel.Warning);
                     Interlocked.Exchange(ref _restart, 1);
                     changed();
                 };
                 watcher.EnableRaisingEvents = true;
                 _watcher = watcher;
+                _startFailed = false;
                 changed();
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
             {
                 watcher?.Dispose();
+                if (!_startFailed)
+                    RuntimeFailures.Report(logger, error, "start Git status watcher; rechecking availability", LogLevel.Warning);
+                _startFailed = true;
             }
 
             void OnChange(object sender, FileSystemEventArgs args)

@@ -54,17 +54,22 @@ public sealed partial class LoopbackMcpHost : IAsyncDisposable
         ConfigureTools(builder.Services, registry, dispatcher);
 
         var app = builder.Build();
+        var logger = app.Services.GetRequiredService<ILogger<LoopbackMcpHost>>();
         var host = new LoopbackMcpHost(app, scope);
-        app.Use(host.AuthenticateAsync);
-        app.MapMcp("/mcp");
         try
         {
+            app.Use(host.AuthenticateAsync);
+            app.MapMcp("/mcp");
             await app.StartAsync(cancellationToken).ConfigureAwait(false);
             return host;
         }
         catch
         {
-            await host.DisposeAsync().ConfigureAwait(false);
+            try { await host.DisposeAsync().ConfigureAwait(false); }
+            catch (Exception error) when (RuntimeFailures.CanRecover(error))
+            {
+                RuntimeFailures.Report(logger, error, "MCP host startup cleanup");
+            }
             throw;
         }
     }
@@ -101,14 +106,28 @@ public sealed partial class LoopbackMcpHost : IAsyncDisposable
                 if (http?.Items[GrantKey] is not ActorGrant grant)
                     return ToWire(OperationResult.Failure(operation, "unauthorized", "Authentication is required."));
 
-                var args = request.Params;
-                var feature = args is not null && features.TryGetValue(args.Name, out var found) ? found : null;
-                var result = feature is null
-                    ? OperationResult.Failure(operation, "tool_unavailable", "The requested tool is unavailable.")
-                    : await feature.InvokeAsync(dispatcher, registry.Context, args!.Arguments, grant, operation, token).ConfigureAwait(false);
-                Audit(provider.GetRequiredService<ILogger<LoopbackMcpHost>>(), feature?.ToolName ?? "<unknown>",
-                    grant.Actor, grant.WorkspaceId, grant.ViewKey, operation, result.Code);
-                return ToWire(result);
+                var logger = provider.GetRequiredService<ILogger<LoopbackMcpHost>>();
+                var tool = "<unknown>";
+                try
+                {
+                    var args = request.Params;
+                    var feature = args is not null && features.TryGetValue(args.Name, out var found) ? found : null;
+                    tool = feature?.ToolName ?? tool;
+                    var result = feature is null
+                        ? OperationResult.Failure(operation, "tool_unavailable", "The requested tool is unavailable.")
+                        : await feature.InvokeAsync(dispatcher, registry.Context, args!.Arguments, grant, operation, token).ConfigureAwait(false);
+                    Audit(logger, tool, grant.Actor, grant.WorkspaceId, grant.ViewKey, operation, result.Code);
+                    return ToWire(result);
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+                catch (Exception error)
+                {
+                    var recoverable = RuntimeFailures.CanRecover(error);
+                    RuntimeFailures.Report(logger, error, $"MCP tool {tool} ({operation})", recoverable ? LogLevel.Error : LogLevel.Critical);
+                    if (!recoverable)
+                        throw;
+                    return ToWire(OperationResult.Failure(operation, "internal_error", "The selected operation failed."));
+                }
             });
     }
 

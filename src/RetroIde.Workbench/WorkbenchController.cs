@@ -1,5 +1,6 @@
 using Avalonia.Threading;
 using GPS.SimpleMVC.Controllers;
+using Microsoft.Extensions.Logging;
 using RetroIde.Application;
 using RetroIde.Application.Git;
 using RetroIde.Application.Workspaces;
@@ -17,6 +18,7 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
     private readonly FeatureRegistry _registry;
     private readonly WorkspaceExplorer _workspaceExplorer;
     private readonly WorkbenchLocalization _localization;
+    private readonly ILogger _logger;
     private ExplorerViewModel? _explorerView;
     private SourceControlViewModel? _sourceControlView;
     private WorkspaceExplorer.Address? _explorerSelection;
@@ -28,10 +30,12 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
     private Task _retiredGitReads = Task.CompletedTask;
     private bool _disposed;
 
-    internal WorkbenchController(WorkspaceExplorer explorer, DockLayout layout, InteractionBlocks interaction, FeatureRegistry registry, WorkbenchLocalization localization)
+    internal WorkbenchController(WorkspaceExplorer explorer, DockLayout layout, InteractionBlocks interaction, FeatureRegistry registry,
+        WorkbenchLocalization localization, ILogger logger)
     {
         _workspaceExplorer = explorer;
         _localization = localization;
+        _logger = logger;
         _workspaceId = explorer.WorkspaceId;
         _registry = registry;
         _layout = layout;
@@ -125,8 +129,14 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         _explorerWatch = new WorkspaceWatchSet(changes => Dispatcher.UIThread.Post(() =>
         {
             if (ReferenceEquals(_explorerView, view))
-                view.RefreshBranches(changes);
-        }, DispatcherPriority.Background));
+            {
+                try { view.RefreshBranches(changes); }
+                catch (Exception error) when (RuntimeFailures.CanRecover(error))
+                {
+                    RuntimeFailures.Report(_logger, error, "Explorer watch projection", LogLevel.Warning);
+                }
+            }
+        }, DispatcherPriority.Background), _logger);
         PublishExplorerState();
     }
 
@@ -160,6 +170,10 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                 origin.SelectGit(restored, saved.Address);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
+        {
+            RuntimeFailures.Report(_logger, error, "saved Git selection restore", LogLevel.Warning);
+        }
     }
 
     internal Task DrainGitRefreshAsync(WorkbenchViewModel view) =>
@@ -188,6 +202,18 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException && _disposed)
         {
             return OperationResult.Failure(operationId, "view_closed", "The workbench has closed.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return OperationResult.Failure(operationId, "cancelled", "The operation was cancelled.");
+        }
+        catch (Exception error)
+        {
+            var recoverable = RuntimeFailures.CanRecover(error);
+            RuntimeFailures.Report(_logger, error, $"workbench command {feature.Id} ({operationId})", recoverable ? LogLevel.Error : LogLevel.Critical);
+            if (!recoverable)
+                throw;
+            return OperationResult.Failure(operationId, "internal_error", "The operation failed. Check the application log for details.");
         }
     }
 
@@ -346,15 +372,28 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         var result = await DispatchAsync(feature, input, feature.IsMutation ? request.Context : null, authorization.Grant, request.RequestId,
             request.CancellationToken, refreshOrigin).ConfigureAwait(false);
 
-        await Dispatcher.UIThread.InvokeAsync(() =>
+        await DeliverResultAsync(origin, request, result, () => ReferenceEquals(Resolve(authorization.View.ViewKey), authorization) &&
+            ReferenceEquals(GetView<IView>(request.OriginViewKey), origin)).ConfigureAwait(false);
+    }
+
+    internal async Task DeliverResultAsync(IView origin, ViewCommandRequested request, OperationResult result, Func<bool> stillRegistered)
+    {
+        try
         {
-            if (ReferenceEquals(Resolve(authorization.View.ViewKey), authorization) &&
-                ReferenceEquals(GetView<IView>(request.OriginViewKey), origin))
+            await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                request.Result = result;
-                origin.Receive(result);
-            }
-        }, DispatcherPriority.Background).GetTask().ConfigureAwait(false);
+                if (stillRegistered())
+                {
+                    request.Result = result;
+                    origin.Receive(result);
+                }
+            }, DispatcherPriority.Background).GetTask().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (_disposed) { }
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
+        {
+            RuntimeFailures.Report(_logger, error, $"result delivery {request.CommandId} ({request.RequestId})");
+        }
     }
 
     internal Task<OperationResult> DispatchDocumentAsync<TInput>(Feature<TInput> feature, TInput input, ViewCommandRequested request)
@@ -401,7 +440,7 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                 {
                     _gitMonitor = new GitStatusMonitor(selection, token =>
                         Controller.DispatchAsync(Controller._registry.Git.Status, new GitFeatures.StatusInput { DisplayOnly = true },
-                            null, Grant, Guid.NewGuid(), token));
+                            null, Grant, Guid.NewGuid(), token), Controller._logger);
                 }
             }
         }

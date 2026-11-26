@@ -145,6 +145,7 @@
     "git.setup.source": "Git URL or local repository path",
     "git.setup.destination": "Destination folder",
     "git.setup.browse": "Browse…",
+    "git.setup.browse-error": "The folder picker failed. Enter a destination path to continue.",
     "git.setup.cancel": "Cancel",
     "editor.search.query": "Find text",
     "editor.search.replacement": "Replacement text",

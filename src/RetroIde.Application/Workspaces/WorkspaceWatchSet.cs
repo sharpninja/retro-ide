@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Logging;
+
 namespace RetroIde.Application.Workspaces;
 
-internal sealed class WorkspaceWatchSet(Action<IReadOnlyList<WorkspaceWatchSet.Change>> publish) : IDisposable
+internal sealed class WorkspaceWatchSet(Action<IReadOnlyList<WorkspaceWatchSet.Change>> publish, ILogger logger) : IDisposable
 {
     internal sealed record Change(WorkspaceExplorer.Address Directory, bool Subtree = false, bool? RootAvailable = null);
 
@@ -17,10 +19,8 @@ internal sealed class WorkspaceWatchSet(Action<IReadOnlyList<WorkspaceWatchSet.C
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            if (_requested.SequenceEqual(roots))
-                return;
-
-            _requested = roots;
+            if (!_requested.SequenceEqual(roots))
+                _requested = roots;
             if (_timer is null && roots.Length > 0)
             {
                 var timer = new PeriodicTimer(FlushInterval);
@@ -47,6 +47,7 @@ internal sealed class WorkspaceWatchSet(Action<IReadOnlyList<WorkspaceWatchSet.C
         var watches = new Dictionary<Guid, RootWatch>();
         WorkspaceExplorer.Root[]? active = null;
         var nextProbe = 0L;
+        var failedPublish = false;
         try
         {
             while (await timer.WaitForNextTickAsync().ConfigureAwait(false))
@@ -77,7 +78,29 @@ internal sealed class WorkspaceWatchSet(Action<IReadOnlyList<WorkspaceWatchSet.C
                     _pending.Clear();
                 }
                 if (changes.Length > 0)
-                    publish(changes);
+                {
+                    try
+                    {
+                        publish(changes);
+                        failedPublish = false;
+                    }
+                    catch (Exception error) when (RuntimeFailures.CanRecover(error))
+                    {
+                        if (!failedPublish)
+                            RuntimeFailures.Report(logger, error, "Explorer watch delivery", LogLevel.Warning);
+                        failedPublish = true;
+                        Requeue(changes);
+                    }
+                }
+            }
+        }
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
+        {
+            RuntimeFailures.Report(logger, error, "Explorer watcher loop");
+            lock (_gate)
+            {
+                timer.Dispose();
+                _timer = null;
             }
         }
         finally
@@ -101,7 +124,7 @@ internal sealed class WorkspaceWatchSet(Action<IReadOnlyList<WorkspaceWatchSet.C
         foreach (var root in roots)
         {
             if (!watches.ContainsKey(root.Id))
-                watches.Add(root.Id, new RootWatch(root, Enqueue));
+                watches.Add(root.Id, new RootWatch(root, Enqueue, logger));
         }
     }
 
@@ -113,12 +136,28 @@ internal sealed class WorkspaceWatchSet(Action<IReadOnlyList<WorkspaceWatchSet.C
                 return;
 
             if (_pending.TryGetValue(next.Directory, out var previous))
-                next = next with { Subtree = previous.Subtree || next.Subtree, RootAvailable = next.RootAvailable ?? previous.RootAvailable };
+                next = Merge(previous, next);
             _pending[next.Directory] = next;
         }
     }
 
-    private sealed class RootWatch(WorkspaceExplorer.Root root, Action<Change> enqueue) : IDisposable
+    private void Requeue(Change[] changes)
+    {
+        lock (_gate)
+        {
+            if (_disposed)
+                return;
+            foreach (var earlier in changes)
+                _pending[earlier.Directory] = _pending.TryGetValue(earlier.Directory, out var newer) ? Merge(earlier, newer) : earlier;
+        }
+    }
+
+    private static Change Merge(Change previous, Change next) => next with
+    {
+        Subtree = previous.Subtree || next.Subtree, RootAvailable = next.RootAvailable ?? previous.RootAvailable,
+    };
+
+    private sealed class RootWatch(WorkspaceExplorer.Root root, Action<Change> enqueue, ILogger logger) : IDisposable
     {
         private readonly WorkspaceExplorer.Address _address = new(root.Id, "");
         private readonly string? _parent = Path.GetDirectoryName(root.Path);
@@ -127,6 +166,8 @@ internal sealed class WorkspaceWatchSet(Action<IReadOnlyList<WorkspaceWatchSet.C
         private bool? _available;
         private int _restartRequested;
         private int _restartParentRequested;
+        private bool _watchStartFailed;
+        private bool _parentStartFailed;
 
         public WorkspaceExplorer.Root Root => root;
 
@@ -181,11 +222,15 @@ internal sealed class WorkspaceWatchSet(Action<IReadOnlyList<WorkspaceWatchSet.C
                 watcher.Error += OnError;
                 watcher.EnableRaisingEvents = true;
                 _watcher = watcher;
+                _watchStartFailed = false;
                 enqueue(new Change(_address, Subtree: true));
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
             {
                 watcher?.Dispose();
+                if (!_watchStartFailed)
+                    RuntimeFailures.Report(logger, error, "start Explorer root watcher; rechecking availability", LogLevel.Warning);
+                _watchStartFailed = true;
             }
         }
 
@@ -202,13 +247,22 @@ internal sealed class WorkspaceWatchSet(Action<IReadOnlyList<WorkspaceWatchSet.C
                     OnRootEntryChanged(args.OldFullPath);
                     OnRootEntryChanged(args.FullPath);
                 };
-                watcher.Error += (_, _) => Interlocked.Exchange(ref _restartParentRequested, 1);
+                watcher.Error += (_, error) =>
+                {
+                    if (error.GetException() is { } exception)
+                        RuntimeFailures.Report(logger, exception, "Explorer parent watcher; requesting a restart", LogLevel.Warning);
+                    Interlocked.Exchange(ref _restartParentRequested, 1);
+                };
                 watcher.EnableRaisingEvents = true;
                 _parentWatcher = watcher;
+                _parentStartFailed = false;
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
             {
                 watcher?.Dispose();
+                if (!_parentStartFailed)
+                    RuntimeFailures.Report(logger, error, "start Explorer parent watcher; rechecking availability", LogLevel.Warning);
+                _parentStartFailed = true;
             }
         }
 
@@ -232,6 +286,8 @@ internal sealed class WorkspaceWatchSet(Action<IReadOnlyList<WorkspaceWatchSet.C
 
         private void OnError(object sender, ErrorEventArgs args)
         {
+            if (args.GetException() is { } error)
+                RuntimeFailures.Report(logger, error, "Explorer root watcher; requesting a rescan", LogLevel.Warning);
             Interlocked.Exchange(ref _restartRequested, 1);
             enqueue(new Change(_address, Subtree: true));
         }

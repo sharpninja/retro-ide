@@ -1,11 +1,15 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace RetroIde.Application.Workspaces;
 
-internal sealed class WorkspaceExplorerStore(string path)
+internal sealed class WorkspaceExplorerStore(string path, ILogger logger)
 {
     private const int MaximumBytes = 1024 * 1024;
     private readonly string _path = Path.GetFullPath(path);
+
+    public WorkspaceExplorerStore(string path) : this(path, NullLogger.Instance) { }
 
     public WorkspaceExplorer? Load()
     {
@@ -18,8 +22,10 @@ internal sealed class WorkspaceExplorerStore(string path)
             var state = JsonSerializer.Deserialize<WorkspaceExplorer.State>(stream, WireJson.Options);
             return state is null ? null : WorkspaceExplorer.Restore(state);
         }
+        catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException) { return null; }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or ArgumentException or NotSupportedException)
         {
+            RuntimeFailures.Report(logger, error, "saved workspace load; using an empty workspace", LogLevel.Warning);
             return null;
         }
     }

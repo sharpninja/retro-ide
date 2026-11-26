@@ -3,6 +3,8 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
+using Microsoft.Extensions.Logging;
+using RetroIde.Application;
 
 namespace RetroIde.Workbench;
 
@@ -12,7 +14,7 @@ internal sealed class GitSetupDialog : Window
 {
     internal sealed record Choice(string Destination, string? Source);
 
-    internal GitSetupDialog(WorkbenchLocalization localization, bool clone)
+    internal GitSetupDialog(WorkbenchLocalization localization, bool clone, ILogger logger)
     {
         var action = clone ? WorkbenchText.GitCloneAction : WorkbenchText.GitInitAction;
         localization.Observe(this, () => Title = localization.Text(action));
@@ -25,16 +27,31 @@ internal sealed class GitSetupDialog : Window
         var source = clone ? AddField(fields, localization, "git.setup.source", WorkbenchText.GitSetupSource) : null;
         var destination = AddField(fields, localization, "git.setup.destination", WorkbenchText.GitSetupDestination);
         var browse = CreateButton(localization, "git.setup.browse", WorkbenchText.GitSetupBrowse);
+        var browseError = new TextBlock { IsVisible = false };
+        localization.Observe(browseError, () => browseError.Text = localization.Text(WorkbenchText.GitSetupBrowseError));
         browse.Click += async (_, _) =>
         {
-            if (!StorageProvider.CanPickFolder)
-                return;
-
-            var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions()).ConfigureAwait(true);
-            if (folders.FirstOrDefault()?.TryGetLocalPath() is { } path)
-                destination.Text = path;
+            browseError.IsVisible = false;
+            try
+            {
+                if (!StorageProvider.CanPickFolder)
+                    return;
+                var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions()).ConfigureAwait(true);
+                foreach (var folder in folders)
+                {
+                    using (folder)
+                        destination.Text = folder.TryGetLocalPath() ?? destination.Text;
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception error) when (RuntimeFailures.CanRecover(error))
+            {
+                RuntimeFailures.Report(logger, error, "Git destination folder picker", LogLevel.Warning);
+                browseError.IsVisible = true;
+            }
         };
         fields.Children.Add(browse);
+        fields.Children.Add(browseError);
 
         var submit = CreateButton(localization, "git.setup.submit", action);
         submit.IsDefault = true;

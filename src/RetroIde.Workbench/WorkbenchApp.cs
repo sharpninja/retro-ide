@@ -8,8 +8,12 @@ using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Themes.Fluent;
+using Avalonia.Threading;
 using Dock.Avalonia.Controls;
 using Dock.Avalonia.Themes.Fluent;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using RetroIde.Application;
 using RetroIde.Application.Workspaces;
 using RetroIde.Mcp;
 
@@ -19,14 +23,34 @@ namespace RetroIde.Workbench;
 /// <remarks>TEST-RETRO-001#verify-ac-contract-desktop-1</remarks>
 public sealed class WorkbenchApp : Avalonia.Application
 {
+    private readonly ILoggerFactory _logs;
+    private readonly ILogger _logger;
     private Task<RunningMcp?>? _attachmentStartup;
-
+    private Action? _stopDesktop;
+    private Dispatcher? _dispatcher;
     internal static WorkbenchApp? Instance { get; private set; }
+
+    /// <summary>Creates a workbench for Avalonia's application loader.</summary>
+    public WorkbenchApp() : this(NullLoggerFactory.Instance) { }
+
+    internal WorkbenchApp(ILoggerFactory logs)
+    {
+        _logs = logs;
+        _logger = logs.CreateLogger<WorkbenchApp>();
+    }
+
+    internal static string DefaultDataFolder => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), "RetroIde");
 
     /// <inheritdoc />
     public override void Initialize()
     {
         Instance = this;
+        if (!ReferenceEquals(_logs, NullLoggerFactory.Instance))
+        {
+            _dispatcher = Dispatcher.UIThread;
+            _dispatcher.UnhandledException += OnDispatcherException;
+        }
         Name = "Retro IDE";
         RequestedThemeVariant = ThemeVariant.Dark;
         Styles.Add(new FluentTheme());
@@ -59,29 +83,55 @@ public sealed class WorkbenchApp : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
-            var folder = Environment.GetEnvironmentVariable("RETROIDE_APP_DATA_DIR") ??
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), "RetroIde");
+            var folder = Environment.GetEnvironmentVariable("RETROIDE_APP_DATA_DIR") ?? DefaultDataFolder;
             if (!Path.IsPathFullyQualified(folder))
                 throw new InvalidOperationException("The Retro IDE application data directory must be an absolute path.");
-            var layouts = new LayoutStore(Path.Combine(folder, "layout.json"));
-            var explorerStore = new WorkspaceExplorerStore(Path.Combine(folder, "workspace.json"));
-            var session = new WorkbenchSession(explorerStore, layouts.Load(), new WorkbenchLocalization(folder));
+            var layouts = new LayoutStore(Path.Combine(folder, "layout.json"), _logs.CreateLogger<LayoutStore>());
+            var explorerStore = new WorkspaceExplorerStore(Path.Combine(folder, "workspace.json"), _logs.CreateLogger<WorkspaceExplorerStore>());
+            var session = new WorkbenchSession(explorerStore, layouts.Load(), new WorkbenchLocalization(folder), _logs);
+            var lifetimeCancellation = new CancellationTokenSource();
+            _stopDesktop = () =>
+            {
+                Cleanup(lifetimeCancellation.Cancel, "desktop cancellation");
+                Cleanup(session.Dispose, "workbench session shutdown");
+                lifetimeCancellation.Dispose();
+            };
+            desktop.Exit += (_, _) => StopDesktop();
             var window = new WorkbenchWindow(session, layouts);
             desktop.MainWindow = window;
             var monitor = desktop.Args?.Contains("--mcp", StringComparer.Ordinal) == true;
             var mutate = desktop.Args?.Contains("--mcp-mutate", StringComparer.Ordinal) == true;
-            var lifetimeCancellation = new CancellationTokenSource();
             if (monitor || mutate)
                 window.Opened += (_, _) => _attachmentStartup = StartMcpAsync(session, window, folder, mutate, lifetimeCancellation.Token);
-            desktop.Exit += (_, _) =>
-            {
-                lifetimeCancellation.Cancel();
-                session.Dispose();
-                lifetimeCancellation.Dispose();
-            };
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    internal void StopDesktop() => Interlocked.Exchange(ref _stopDesktop, null)?.Invoke();
+
+    internal void DetachDispatcherExceptionHandler()
+    {
+        if (_dispatcher is { } dispatcher)
+            dispatcher.UnhandledException -= OnDispatcherException;
+        _dispatcher = null;
+    }
+
+    private void OnDispatcherException(object sender, DispatcherUnhandledExceptionEventArgs args)
+    {
+        var cancelled = args.Exception is OperationCanceledException { CancellationToken.IsCancellationRequested: true };
+        RuntimeFailures.Report(_logger, args.Exception, "Avalonia dispatcher", cancelled ? LogLevel.Warning : LogLevel.Critical);
+        if (cancelled)
+            args.Handled = true;
+    }
+
+    private void Cleanup(Action action, string boundary)
+    {
+        try { action(); }
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
+        {
+            RuntimeFailures.Report(_logger, error, boundary);
+        }
     }
 
     internal async Task StopMcpAsync()
@@ -93,7 +143,7 @@ public sealed class WorkbenchApp : Avalonia.Application
         }
     }
 
-    private static async Task<RunningMcp?> StartMcpAsync(WorkbenchSession session, WorkbenchWindow window, string folder, bool mutate, CancellationToken token)
+    private async Task<RunningMcp?> StartMcpAsync(WorkbenchSession session, WorkbenchWindow window, string folder, bool mutate, CancellationToken token)
     {
         LoopbackMcpHost? host = null;
         string? writtenPath = null;
@@ -114,8 +164,9 @@ public sealed class WorkbenchApp : Avalonia.Application
             return running;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Net.Sockets.SocketException)
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
         {
+            RuntimeFailures.Report(_logger, error, "optional MCP attachment startup");
             Avalonia.Threading.Dispatcher.UIThread.Post(() => window.ShowAttachmentPaths("Unable to start the local MCP attachment."));
         }
         finally
@@ -123,6 +174,10 @@ public sealed class WorkbenchApp : Avalonia.Application
             if (host is not null)
             {
                 try { await host.DisposeAsync().ConfigureAwait(false); }
+                catch (Exception error) when (RuntimeFailures.CanRecover(error))
+                {
+                    RuntimeFailures.Report(_logger, error, "incomplete MCP attachment cleanup");
+                }
                 finally
                 {
                     if (writtenPath is not null)
@@ -133,11 +188,13 @@ public sealed class WorkbenchApp : Avalonia.Application
         return null;
     }
 
-    private static void DeleteAttachment(string path)
+    private void DeleteAttachment(string path)
     {
         try { File.Delete(path); }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            RuntimeFailures.Report(_logger, error, "MCP attachment file cleanup", LogLevel.Warning);
+        }
     }
 
     private sealed record RunningMcp(LoopbackMcpHost Host, string Path);

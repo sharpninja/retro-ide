@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="MessageFormat" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <InternalsVisibleTo Include="RetroIde.Mcp" />
+    <InternalsVisibleTo Include="RetroIde.Mcp.Stdio" />
     <InternalsVisibleTo Include="RetroIde.Workbench" />
     <InternalsVisibleTo Include="RetroIde.IntegrationTests" />
     <InternalsVisibleTo Include="RetroIde.NativeTests" />

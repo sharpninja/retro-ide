@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol;
+using RetroIde.Application;
 using RetroIde.Mcp;
 
 namespace RetroIde.Mcp.Stdio;
@@ -15,14 +16,17 @@ public static class BridgeEntryPoint
     /// <summary>Accepts the path of a private per-launch descriptor.</summary>
     public static async Task<int> Main(string[] args)
     {
-        if (args.Length != 1)
-        {
-            await Console.Error.WriteLineAsync("Usage: RetroIde.Mcp.Stdio <attachment-file>").ConfigureAwait(false);
-            return 2;
-        }
-
+        using var logs = LoggerFactory.Create(builder => ConfigureLogging(builder));
+        var logger = logs.CreateLogger("RetroIde.Mcp.Stdio");
+        using var exceptions = new ProcessExceptionHandlers(logger);
         try
         {
+            if (args.Length != 1)
+            {
+                await Console.Error.WriteLineAsync("Usage: RetroIde.Mcp.Stdio <attachment-file>").ConfigureAwait(false);
+                return 2;
+            }
+
             var descriptor = AttachmentDescriptor.Read(args[0]);
             using var http = descriptor.CreateHttpClient();
             using var connectTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -31,23 +35,36 @@ public static class BridgeEntryPoint
                 Endpoint = descriptor.Endpoint,
                 TransportMode = HttpTransportMode.StreamableHttp,
                 EnableStandaloneGetStream = false,
-            }, http), cancellationToken: connectTimeout.Token).ConfigureAwait(false);
+            }, http), loggerFactory: logs, cancellationToken: connectTimeout.Token).ConfigureAwait(false);
 
             await using var attachment = client.ConfigureAwait(false);
 
             var builder = Host.CreateApplicationBuilder();
-            builder.Logging.ClearProviders();
+            ConfigureLogging(builder.Logging);
             builder.Services.AddMcpServer(options => options.ServerInfo = new Implementation { Name = "retro-ide", Version = "0.1" })
                 .WithStdioServerTransport()
-                .WithListToolsHandler((request, token) => client.ListToolsAsync(request.Params ?? new ListToolsRequestParams(), token))
+                .WithListToolsHandler(async (request, token) =>
+                {
+                    try { return await client.ListToolsAsync(request.Params ?? new ListToolsRequestParams(), token).ConfigureAwait(false); }
+                    catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+                    catch (Exception error)
+                    {
+                        ReportRequestFailure(logger, error, "stdio tool discovery");
+                        throw new McpProtocolException("The selected Retro IDE attachment is unavailable.", McpErrorCode.InternalError);
+                    }
+                })
                 .WithCallToolHandler(async (request, token) =>
                 {
+                    if (request.Params is not { } args)
+                        throw new McpProtocolException("Tool arguments are required.", McpErrorCode.InvalidParams);
                     try
                     {
-                        return await client.CallToolAsync(request.Params!, token).ConfigureAwait(false);
+                        return await client.CallToolAsync(args, token).ConfigureAwait(false);
                     }
-                    catch (Exception ex) when (ex is McpException or HttpRequestException)
+                    catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+                    catch (Exception error)
                     {
+                        ReportRequestFailure(logger, error, "stdio tool forwarding");
                         return new CallToolResult
                         {
                             IsError = true,
@@ -58,11 +75,22 @@ public static class BridgeEntryPoint
             await builder.Build().RunAsync().ConfigureAwait(false);
             return 0;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException
-            or McpException or HttpRequestException or OperationCanceledException)
+        catch (Exception error)
         {
-            await Console.Error.WriteLineAsync("Unable to attach to the selected Retro IDE.").ConfigureAwait(false);
+            RuntimeFailures.Report(logger, error, "Unable to attach to the selected Retro IDE", LogLevel.Critical);
             return 1;
         }
+    }
+
+    private static void ConfigureLogging(ILoggingBuilder logging) => logging.ClearProviders()
+        .SetMinimumLevel(LogLevel.Warning)
+        .AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
+
+    private static void ReportRequestFailure(ILogger logger, Exception error, string boundary)
+    {
+        var recoverable = RuntimeFailures.CanRecover(error);
+        RuntimeFailures.Report(logger, error, boundary, recoverable ? LogLevel.Error : LogLevel.Critical);
+        if (!recoverable)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(error);
     }
 }

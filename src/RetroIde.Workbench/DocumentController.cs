@@ -370,13 +370,7 @@ internal sealed partial class DocumentController : SimpleControllerBase
         ViewCommandRequested request) where TInput : class
     {
         var result = await _dispatch.DispatchDocumentAsync(feature, input, request).ConfigureAwait(false);
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            if (ReferenceEquals(GetView<IView>(origin.ViewKey), origin))
-            {
-                request.Result = result;
-                origin.Receive(result);
-            }
-        });
+        await _dispatch.DeliverResultAsync(origin, request, result,
+            () => ReferenceEquals(GetView<IView>(origin.ViewKey), origin)).ConfigureAwait(false);
     }
 }

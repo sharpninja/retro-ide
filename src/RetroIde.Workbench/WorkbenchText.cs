@@ -66,6 +66,7 @@ internal static class WorkbenchText
     internal const string GitSetupSource = "git.setup.source";
     internal const string GitSetupDestination = "git.setup.destination";
     internal const string GitSetupBrowse = "git.setup.browse";
+    internal const string GitSetupBrowseError = "git.setup.browse-error";
     internal const string GitSetupCancel = "git.setup.cancel";
     internal const string GitCommitMessage = "git.commit.message";
     internal const string GitAmendNotice = "git.commit.amend-notice";
@@ -114,7 +115,7 @@ internal static class WorkbenchText
             GitResetIndexPaths, GitResetTrackedPaths, GitResetBlockedPaths, GitResetApply,
             GitStashTitle, GitStashMessage, GitStashUntracked, GitStashIndex,
             GitPatchTitle, GitPatchIndex, GitPatchWorktree, GitPatchLayer, GitPatchPaths, GitPatchEmpty, GitPatchFileError,
-            GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel,
+            GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupBrowseError, GitSetupCancel,
             GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,
             GitHistoryTitle, GitHistoryRefs, GitHistoryGraph, GitHistoryWorktrees,
             GitBranchName, GitBranchCheckout,

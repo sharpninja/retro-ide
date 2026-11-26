@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using RetroIde.Application;
 
 namespace RetroIde.Workbench;
@@ -24,6 +26,10 @@ public sealed record PinnedTool(string Tool, string Alignment, string? Group = n
 /// <remarks>TEST-RETRO-001#verify-ac-behavior-desktop-2</remarks>
 public sealed class LayoutStore(string path)
 {
+    private readonly ILogger _logger = NullLogger.Instance;
+
+    internal LayoutStore(string path, ILogger logger) : this(path) => _logger = logger;
+
     /// <summary>Gets the path selected for layout preferences.</summary>
     public string Path { get; } = path;
 
@@ -37,9 +43,12 @@ public sealed class LayoutStore(string path)
                 return null;
             return JsonSerializer.Deserialize<WorkbenchLayoutState>(stream, WireJson.Options) is { Version: 1 } state ? state : null;
         }
-        catch (IOException) { return null; }
-        catch (UnauthorizedAccessException) { return null; }
-        catch (JsonException) { return null; }
+        catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException) { return null; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
+        {
+            RuntimeFailures.Report(_logger, error, "saved layout load; using the default layout", LogLevel.Warning);
+            return null;
+        }
     }
 
     /// <summary>Replaces the preferences only after a complete write and a final cancellation check.</summary>

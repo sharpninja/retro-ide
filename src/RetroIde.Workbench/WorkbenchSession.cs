@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using RetroIde.Application;
 using RetroIde.Application.Workspaces;
 
@@ -18,20 +20,29 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
     {
     }
 
-    internal WorkbenchSession(WorkspaceExplorerStore explorerStore, WorkbenchLayoutState? savedLayout, WorkbenchLocalization? localization = null)
-        : this(explorerStore.Load() ?? new WorkspaceExplorer(Guid.NewGuid()), explorerStore, savedLayout, localization)
+    internal WorkbenchSession(WorkspaceExplorerStore explorerStore, WorkbenchLayoutState? savedLayout,
+        WorkbenchLocalization? localization = null)
+        : this(explorerStore, savedLayout, localization, logs: null)
     {
     }
 
-    private WorkbenchSession(WorkspaceExplorer explorer, WorkspaceExplorerStore store, WorkbenchLayoutState? savedLayout, WorkbenchLocalization? localization)
-        : this(new StandaloneWorkspace(explorer.WorkspaceId), savedLayout, explorer, store, localization)
+    internal WorkbenchSession(WorkspaceExplorerStore explorerStore, WorkbenchLayoutState? savedLayout,
+        WorkbenchLocalization? localization, ILoggerFactory? logs)
+        : this(explorerStore.Load() ?? new WorkspaceExplorer(Guid.NewGuid()), explorerStore, savedLayout, localization, logs)
+    {
+    }
+
+    private WorkbenchSession(WorkspaceExplorer explorer, WorkspaceExplorerStore store, WorkbenchLayoutState? savedLayout,
+        WorkbenchLocalization? localization, ILoggerFactory? logs)
+        : this(new StandaloneWorkspace(explorer.WorkspaceId), savedLayout, explorer, store, localization, logs: logs)
     {
     }
 
     internal WorkbenchSession(IWorkbenchWorkspaceContext workspace, WorkbenchLayoutState? savedLayout,
         WorkspaceExplorer? explorer = null, WorkspaceExplorerStore? store = null, WorkbenchLocalization? localization = null,
-        Func<DocumentSaveSnapshot, CancellationToken, Task<PreparedDocumentSave>>? stageSave = null)
+        Func<DocumentSaveSnapshot, CancellationToken, Task<PreparedDocumentSave>>? stageSave = null, ILoggerFactory? logs = null)
     {
+        Logs = logs ?? NullLoggerFactory.Instance;
         Explorer = explorer ?? new WorkspaceExplorer(workspace.WorkspaceId);
         ExplorerStore = store;
         Localization = localization ?? new WorkbenchLocalization();
@@ -41,7 +52,7 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
         ExplorerView = new ExplorerViewModel(View, Registry.Explorer);
         SourceControl = new SourceControlViewModel(View, Registry, Interaction);
         Layout = new DockLayout(workspace, savedLayout, Interaction, ExplorerView, SourceControl, Localization);
-        Controller = new WorkbenchController(Explorer, Layout, Interaction, Registry, Localization);
+        Controller = new WorkbenchController(Explorer, Layout, Interaction, Registry, Localization, Logs.CreateLogger<WorkbenchController>());
         Documents = new DocumentController(View, Layout, Interaction, Registry, Controller);
         Controller.Register(View);
         Controller.RegisterExplorer(ExplorerView, View, Documents);
@@ -50,6 +61,7 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
     }
 
     internal WorkspaceExplorer Explorer { get; }
+    internal ILoggerFactory Logs { get; }
     internal WorkbenchLocalization Localization { get; }
     internal ExplorerViewModel ExplorerView { get; }
     internal SourceControlViewModel SourceControl { get; }
