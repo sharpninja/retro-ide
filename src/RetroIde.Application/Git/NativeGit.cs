@@ -114,12 +114,20 @@ internal static class NativeGit
 
     /// <summary>Runs Git asynchronously and decodes output without replacing invalid path bytes.</summary>
     internal static async Task<string?> RunAsync(string directory, IReadOnlyList<string> arguments, CancellationToken token,
-        string? indexPath = null, bool allowDifferences = false, bool strictEncoding = true)
+        string? indexPath = null)
+    {
+        var output = await ReadBytesAsync(directory, arguments, token, indexPath).ConfigureAwait(false);
+        return output is null ? null : new UTF8Encoding(false, true).GetString(output);
+    }
+
+    /// <summary>Preserves the original patch bytes emitted by Git.</summary>
+    internal static async Task<byte[]?> ReadBytesAsync(string directory, IReadOnlyList<string> arguments, CancellationToken token,
+        string? indexPath = null, bool allowDifferences = false)
     {
         var start = new ProcessStartInfo("git")
         {
             WorkingDirectory = directory, UseShellExecute = false, CreateNoWindow = true,
-            RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = new UTF8Encoding(false, strictEncoding),
+            RedirectStandardOutput = true, RedirectStandardError = true,
         };
         foreach (var name in WorkspaceOverrides)
             start.Environment.Remove(name);
@@ -130,20 +138,23 @@ internal static class NativeGit
 
         token.ThrowIfCancellationRequested();
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Git did not start.");
-        var output = process.StandardOutput.ReadToEndAsync(token);
+        using var buffer = new MemoryStream();
+        var output = process.StandardOutput.BaseStream.CopyToAsync(buffer, token);
         var error = process.StandardError.BaseStream.CopyToAsync(Stream.Null, token);
         try
         {
             await process.WaitForExitAsync(token).ConfigureAwait(false);
-            var text = await output.ConfigureAwait(false);
+            await output.ConfigureAwait(false);
             await error.ConfigureAwait(false);
-            return process.ExitCode == 0 || (allowDifferences && process.ExitCode == 1) ? text : null;
+            return process.ExitCode == 0 || (allowDifferences && process.ExitCode == 1) ? buffer.ToArray() : null;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
             try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
             catch (InvalidOperationException) when (process.HasExited) { }
             await process.WaitForExitAsync().ConfigureAwait(false);
+            try { await Task.WhenAll(output, error).ConfigureAwait(false); }
+            catch (OperationCanceledException) { }
             throw;
         }
     }

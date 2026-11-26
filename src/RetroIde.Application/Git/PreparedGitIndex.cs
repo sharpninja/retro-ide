@@ -1,6 +1,6 @@
 namespace RetroIde.Application.Git;
 
-/// <summary>Prepares a whole-file update against a private Git index until CQRS authorizes publication.</summary>
+/// <summary>Prepares an update against a private Git index until CQRS authorizes publication.</summary>
 /// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-stage-and-push. Compare and replace only the selected worktree's native index.</remarks>
 internal sealed class PreparedGitIndex : IDisposable
 {
@@ -16,7 +16,16 @@ internal sealed class PreparedGitIndex : IDisposable
         _temporary = Path.Combine(Path.GetDirectoryName(index)!, $"retro-ide-index-{Guid.NewGuid():N}");
     }
 
-    internal static async Task<PreparedGitIndex?> CreateAsync(GitWorktree repository, string[] paths, bool stage, CancellationToken token)
+    internal static Task<PreparedGitIndex?> CreateAsync(GitWorktree repository, string[] paths, bool stage, CancellationToken token) =>
+        PrepareAsync(repository, async indexPath =>
+        {
+            var arguments = NativeGit.WorktreeArguments(repository);
+            arguments.AddRange(stage ? ["add", "--"] : ["reset", "--quiet", "--"]);
+            arguments.AddRange(paths);
+            return await NativeGit.RunAsync(repository.WorktreePath, arguments, token, indexPath).ConfigureAwait(false) is not null;
+        }, token);
+
+    internal static async Task<PreparedGitIndex?> PrepareAsync(GitWorktree repository, Func<string, Task<bool>> update, CancellationToken token)
     {
         var index = Path.Combine(repository.GitDirectory, "index");
         var prepared = new PreparedGitIndex(index, ReadIndex(index));
@@ -24,10 +33,7 @@ internal sealed class PreparedGitIndex : IDisposable
         {
             if (prepared._original is not null)
                 await File.WriteAllBytesAsync(prepared._temporary, prepared._original, token).ConfigureAwait(false);
-            var arguments = NativeGit.WorktreeArguments(repository);
-            arguments.AddRange(stage ? ["add", "--"] : ["reset", "--quiet", "--"]);
-            arguments.AddRange(paths);
-            if (await NativeGit.RunAsync(repository.WorktreePath, arguments, token, indexPath: prepared._temporary).ConfigureAwait(false) is not null)
+            if (await update(prepared._temporary).ConfigureAwait(false))
             {
                 prepared._updated = ReadIndex(prepared._temporary);
                 return prepared;
@@ -42,7 +48,7 @@ internal sealed class PreparedGitIndex : IDisposable
         return null;
     }
 
-    internal string? Publish()
+    internal string? Publish(Func<bool>? verifyWorktree = null)
     {
         var lockPath = _index + ".lock";
         FileStream stream;
@@ -57,6 +63,8 @@ internal sealed class PreparedGitIndex : IDisposable
                 var current = ReadIndex(_index);
                 if (!ContentsEqual(current, _original))
                     return "git_index_changed";
+                if (verifyWorktree is not null && !verifyWorktree())
+                    return "git_diff_changed";
                 if (ContentsEqual(current, _updated))
                     return null;
                 if (_updated is null)
@@ -90,5 +98,6 @@ internal sealed class PreparedGitIndex : IDisposable
     {
         File.Delete(_temporary);
         File.Delete(_temporary + ".lock");
+        File.Delete(_temporary + ".patch");
     }
 }

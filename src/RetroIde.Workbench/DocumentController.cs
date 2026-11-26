@@ -79,11 +79,11 @@ internal sealed class DocumentController : SimpleControllerBase
         var key = (diff.Repository.WorktreePath, diff.Path, diff.Layer);
         if (!_diffs.TryGetValue(key, out var document))
         {
-            var view = new GitDiffViewModel(_workbench, _features.Git.CloseDiff, diff);
+            var view = new GitDiffViewModel(_workbench, _features.Git, _interaction, diff);
             if (!AddOrUpdateView(view))
                 return null;
             view.CommandRequested += OnDiffCommandRequested;
-            document = new ShellDocument($"git-diff-{view.ViewKey:N}", view.Title, "", _interaction)
+            document = new ShellDocument(view.Scope, view.Title, "", _interaction)
             {
                 GitDiff = view,
                 CanClose = true,
@@ -93,7 +93,7 @@ internal sealed class DocumentController : SimpleControllerBase
             _layout.AddTransientDocument(document);
         }
         var active = document.GitDiff!;
-        active.DisplayPatch(diff.Patch);
+        active.DisplayPatch(diff);
         _layout.ActivateDocument(document);
         return active.Capture();
     }
@@ -336,11 +336,23 @@ internal sealed class DocumentController : SimpleControllerBase
 
     private void OnDiffCommandRequested(object? sender, ViewCommandRequested request)
     {
-        if (request.Completion is null && sender is GitDiffViewModel view && request.OriginViewKey == view.ViewKey &&
-            ReferenceEquals(GetView<IView>(view.ViewKey), view) &&
-            string.Equals(request.CommandId, _features.Git.CloseDiff.Id, StringComparison.Ordinal) &&
-            request.Payload is GitFileOperations.CloseDiffInput close && close.ViewKey == view.ViewKey)
-            request.Completion = CompleteAsync(view, _features.Git.CloseDiff, close, request);
+        if (request.Completion is not null || sender is not GitDiffViewModel view || request.OriginViewKey != view.ViewKey ||
+            !ReferenceEquals(GetView<IView>(view.ViewKey), view))
+            return;
+
+        request.Completion = request.Payload switch
+        {
+            GitFileOperations.CloseDiffInput close when close.ViewKey == view.ViewKey &&
+                string.Equals(request.CommandId, _features.Git.CloseDiff.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.CloseDiff, close, request),
+            GitFileOperations.DiffInput refresh when string.Equals(request.CommandId, _features.Git.OpenDiff.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.OpenDiff, refresh, request),
+            GitFileOperations.HunksInput stage when string.Equals(request.CommandId, _features.Git.StageHunks.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.StageHunks, stage, request),
+            GitFileOperations.HunksInput unstage when string.Equals(request.CommandId, _features.Git.UnstageHunks.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Git.UnstageHunks, unstage, request),
+            _ => null,
+        };
     }
 
     private async Task CompleteAsync<TInput>(IView origin, Feature<TInput> feature, TInput input,
@@ -350,7 +362,10 @@ internal sealed class DocumentController : SimpleControllerBase
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             if (ReferenceEquals(GetView<IView>(origin.ViewKey), origin))
+            {
+                request.Result = result;
                 origin.Receive(result);
+            }
         });
     }
 }

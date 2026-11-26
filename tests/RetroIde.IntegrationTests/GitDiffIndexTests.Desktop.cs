@@ -75,8 +75,26 @@ public sealed partial class GitDiffIndexTests
             await ClickAsync("git.file.unstage.pane");
             Assert.Empty(await mcp.DiffAsync(GitWorktreeFixture.HunkPath, true));
             Assert.Contains("+" + WorkingMark, await mcp.DiffAsync(GitWorktreeFixture.HunkPath, false), StringComparison.Ordinal);
+
+            await connection.ChangeAsync("git_open_diff", new(StringComparer.Ordinal)
+            {
+                ["worktreePath"] = sample.Primary, ["path"] = GitWorktreeFixture.HunkPath, ["layer"] = "working",
+            });
+            await ReadPatchAsync(StagedMark);
+            var hunks = Find<ListBox>("git.diff.hunks");
+            hunks.SelectedItem = Assert.IsAssignableFrom<IEnumerable<GitHunkPatch.Hunk>>(hunks.ItemsSource).Last();
+            await ClickAsync("git.hunks.stage.toolbar");
+            var selectedPatch = await mcp.DiffAsync(GitWorktreeFixture.HunkPath, true);
+            Assert.Contains("+" + WorkingMark, selectedPatch, StringComparison.Ordinal);
+            Assert.DoesNotContain(StagedMark, selectedPatch, StringComparison.Ordinal);
         }
-        finally { window.Close(); }
+        finally
+        {
+            var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            window.Closed += (_, _) => closed.TrySetResult();
+            window.Close();
+            await closed.Task.WaitAsync(token);
+        }
 
         void Select(string id)
         {

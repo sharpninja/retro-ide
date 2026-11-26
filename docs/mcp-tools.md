@@ -48,15 +48,19 @@ The Phase 03 candidate exposes native Git discovery, selection, status, file dif
 | `git_get_status` | None | The selected worktree's branch, HEAD, upstream and divergence when available, and entries with independent index and working-tree status. Rename and copy entries also give the original path. `trackedPaths` lists index paths within the captured scope. |
 | `git_initialize_repository` | Absolute `destination`, current workbench `context` | The registered workspace `root` and `repository` in `data`. The IDE selects both after setup. Requires a write-enabled attachment. |
 | `git_clone_repository` | Git `source`, absolute `destination`, current workbench `context` | The installed workspace `root` and selected `repository` in `data`. Requires a write-enabled attachment and a new or empty destination. |
-| `git_get_diff` | Selected `worktreePath`, literal `path`, `layer` of `staged` or `working` | A Git patch and its layer, path, and repository identity. An unchanged layer returns an empty patch. |
-| `git_open_diff` | Selected `worktreePath`, literal `path`, `layer` of `staged` or `working`, current workbench `context` | The view key, workspace, repository, path, and layer of the displayed tab. Reuses the tab for an already-open worktree, path, and layer. Requires a write-enabled attachment. |
+| `git_get_diff` | Selected `worktreePath`, literal `path`, `layer` of `staged` or `working` | The Git patch and its layer, path, and repository identity. A selectable patch also returns its `preimage` and `hunks`. |
+| `git_open_diff` | Selected `worktreePath`, literal `path`, `layer` of `staged` or `working`, current workbench `context` | The displayed tab’s view key, workspace, repository, path, layer, and current hunk selection metadata. Reuses the tab for an already-open worktree, path, and layer. Requires a write-enabled attachment. |
 | `git_close_diff` | The tab's `viewKey`, current workbench `context` | Closes the registered tab in the attached workbench. Requires a write-enabled attachment. |
 | `git_stage_file` | Selected `worktreePath`, literal `path`, current workbench `context` | The path and repository with `staged: true`. Requires a write-enabled attachment. |
 | `git_unstage_file` | Selected `worktreePath`, literal `path`, current workbench `context` | The path and repository with `staged: false`. Requires a write-enabled attachment. |
+| `git_stage_hunks` | Selected `worktreePath`, literal `path`, `preimage` from a working diff, selected `hunkIds`, current workbench `context` | Stages only the selected hunks. Requires a write-enabled attachment. |
+| `git_unstage_hunks` | Selected `worktreePath`, literal `path`, `preimage` from a staged diff, selected `hunkIds`, current workbench `context` | Unstages only the selected hunks and preserves working files. Requires a write-enabled attachment. |
 
 Selection is scoped to the attached workbench. Desktop commands and attached clients share the selection and status shown in Source Control and Project Explorer. On desktop restart, the workspace revalidates the saved checkout before issuing a new attachment. Select a worktree before reading status. If its selection changes while status is being prepared, refresh the context and read again. [Git integration](git-integration.md)
 
 Pass the exact checkout-relative `path` returned by status, including spaces, Unicode, and other literal characters. If the index is locked or changed during preparation, the mutation returns `git_index_busy` or `git_index_changed`. Read the current status and retry after the other Git operation finishes.
+
+Hunk IDs are local to one diff preimage. When a hunk action returns `git_diff_changed`, read or reopen the diff and choose IDs from the new result before retrying.
 
 ## One feature registry
 

@@ -16,6 +16,8 @@ Project Explorer shows tracked, untracked, ignored, modified, staged, and confli
 
 Select a file under **Working tree changes** or **Staged changes**, then choose **Open Diff**. Double-clicking a file opens the same view. Each layer has its own read-only editor tab, which shows the full path and checkout. Reopening a layer refreshes its existing tab. The Git menu and Source Control command bar also offer **Stage File** and **Unstage File** for the current selection.
 
+In a text diff, select one or more hunks and choose **Stage Selected Hunks** or **Unstage Selected Hunks**. The tab refreshes after a successful operation. If the file or index changed since you opened the patch, choose **Refresh Diff** and select the hunks again. Use the whole-file commands for binary changes, file additions and deletions, renames, and mode changes. [Git apply](https://git-scm.com/docs/git-apply)
+
 The working-tree diff compares files against the index and the staged diff compares the index against HEAD. Unstaging preserves the working copy. Each index update is prepared privately and published only while holding Git’s index lock and after verifying the index still matches its starting state. [Git diff](https://git-scm.com/docs/git-diff) · [Path-specific Git reset](https://git-scm.com/docs/git-reset) · [MCP tools](mcp-tools.md#phase-03-git-tools-in-development)
 
 ## Workflows

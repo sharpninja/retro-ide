@@ -3,6 +3,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
 using AvaloniaEdit;
+using CommunityToolkit.Mvvm.Input;
 using ModelContextProtocol.Client;
 using RetroIde.Application.Git;
 using RetroIde.Mcp;
@@ -67,6 +68,7 @@ internal static class RemoteControlGitTests
             if (!editor.IsReadOnly || !editor.Text.Contains("+" + Change, StringComparison.Ordinal))
                 throw new InvalidOperationException("Source Control did not present the staged patch in a read-only native tab.");
             Console.WriteLine($"RemoteControl staged an exact Git path and opened its read-only diff on {platform.HandleDescriptor} without physical input.");
+            await VerifyHunkAsync(window, sample, token).ConfigureAwait(true);
 
             async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments)
             {
@@ -85,6 +87,20 @@ internal static class RemoteControlGitTests
             }
         }
         finally { window.Close(); }
+    }
+
+    private static async Task VerifyHunkAsync(Window window, GitWorktreeFixture sample, CancellationToken token)
+    {
+        var list = await FindAsync<ListBox>(window, "git.diff.hunks", token).ConfigureAwait(true);
+        list.SelectedItem = ((IEnumerable<GitHunkPatch.Hunk>)list.ItemsSource!).Single();
+        const string ButtonId = "git.hunks.unstage.toolbar";
+        var button = await FindAsync<Button>(window, ButtonId, token).ConfigureAwait(true);
+        await WorkbenchRemoteControl.ClickAsync(window, ButtonId).ConfigureAwait(true);
+        await ((IAsyncRelayCommand)button.Command!).ExecutionTask!.WaitAsync(token).ConfigureAwait(true);
+        var diff = await sample.GitAsync(sample.Primary, token, "diff", "--cached", "--", GitWorktreeFixture.ChangedPath).ConfigureAwait(true);
+        if (diff.Length != 0)
+            throw new InvalidOperationException("Native Unstage Selected Hunks did not update the expected index.");
+        Console.WriteLine("RemoteControl unstaged a selected text hunk from the native diff tab.");
     }
 
     private static async Task<T> FindAsync<T>(Window window, string id, CancellationToken token) where T : Control

@@ -62,6 +62,16 @@ internal sealed class GitFeatures
         static (input, view, token) => GitFileOperations.UpdateIndexAsync(input, view, stage: false, token),
         typeof(GitFileOperations.FileResult), mutation: true);
 
+    public Feature<GitFileOperations.HunksInput> StageHunks { get; } = new("git.hunks.stage", "git_stage_hunks",
+        "Stage selected hunks from a current working diff. Use the preimage and hunk IDs returned by the diff.",
+        static (input, view, token) => GitFileOperations.UpdateHunksAsync(input, view, stage: true, token),
+        typeof(GitFileOperations.HunksResult), mutation: true);
+
+    public Feature<GitFileOperations.HunksInput> UnstageHunks { get; } = new("git.hunks.unstage", "git_unstage_hunks",
+        "Unstage selected hunks from a current staged diff without changing working files.",
+        static (input, view, token) => GitFileOperations.UpdateHunksAsync(input, view, stage: false, token),
+        typeof(GitFileOperations.HunksResult), mutation: true);
+
     internal GitFeatures(Func<GitSelection, CancellationToken, Task<GitStatus?>>? readStatus = null)
     {
         Status = new("git.status.read", "git_get_status", "Read the selected worktree's staged and working status.",

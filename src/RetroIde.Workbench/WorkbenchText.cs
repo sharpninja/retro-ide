@@ -14,6 +14,7 @@ internal static class WorkbenchText
     internal const string GitDiffTitle = "git.diff.title";
     internal const string GitDiffStaged = "git.diff.layer.staged";
     internal const string GitDiffWorking = "git.diff.layer.working";
+    internal const string GitDiffHunks = "git.diff.hunks";
     internal const string GitBadgeTracked = "explorer.git.tracked";
     internal const string GitBadgeUntracked = "explorer.git.untracked";
     internal const string GitBadgeIgnored = "explorer.git.ignored";
@@ -41,7 +42,7 @@ internal static class WorkbenchText
 
     internal static IReadOnlyList<string> Required { get; } =
         [FileMenu, ViewMenu, LanguageMenu, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
-            ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts, GitDiffStaged, GitDiffWorking,
+            ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts, GitDiffStaged, GitDiffWorking, GitDiffHunks,
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel,
             GitBadgeTracked, GitBadgeUntracked, GitBadgeIgnored, GitBadgeModified, GitBadgeStaged, GitBadgeStagedModified, GitBadgeConflicted];
 

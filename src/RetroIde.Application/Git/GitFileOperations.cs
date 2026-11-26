@@ -3,15 +3,16 @@ using System.Text;
 
 namespace RetroIde.Application.Git;
 
-/// <summary>Handles literal file diffs and whole-file index changes for the captured checkout.</summary>
+/// <summary>Handles literal file diffs and index changes for the captured checkout.</summary>
 /// <remarks>2026-11-26 · FR-RETRO-013; TEST-RETRO-013#ac-test-git-stage-and-push.</remarks>
-internal static class GitFileOperations
+internal static partial class GitFileOperations
 {
     internal sealed record DiffInput(string WorktreePath, string Path, string Layer);
     internal sealed record FileInput(string WorktreePath, string Path);
     internal sealed record CloseDiffInput(Guid ViewKey);
-    internal sealed record DiffResult(GitWorktree Repository, string Path, string Layer, string Patch);
-    internal sealed record DiffTab(Guid ViewKey, Guid WorkspaceId, GitWorktree Repository, string Path, string Layer);
+    internal sealed record DiffResult(GitWorktree Repository, string Path, string Layer, string Patch, string? Preimage, GitHunkPatch.Hunk[] Hunks);
+    internal sealed record DiffTab(Guid ViewKey, Guid WorkspaceId, GitWorktree Repository, string Path, string Layer,
+        string? Preimage, GitHunkPatch.Hunk[] Hunks);
     internal sealed record FileResult(GitWorktree Repository, string Path, bool Staged);
 
     internal static async Task<FeatureOutcome> DiffAsync(DiffInput input, IWorkbenchRegistration view, bool openTab, CancellationToken token)
@@ -22,25 +23,12 @@ internal static class GitFileOperations
         return await WithFileAsync(input.WorktreePath, input.Path, view, async (selection, entry, scopedPath) =>
         {
             var repository = selection.Repository;
-            var arguments = NativeGit.WorktreeArguments(repository);
-            var staged = string.Equals(input.Layer, "staged", StringComparison.Ordinal);
-            var untracked = !staged && string.Equals(entry?.Worktree, "?", StringComparison.Ordinal);
-            arguments.AddRange(["diff", "--no-ext-diff", "--no-textconv", "--no-color"]);
-            if (untracked)
-                arguments.Add("--no-index");
-            else if (staged)
-                arguments.Add("--cached");
-
-            arguments.Add("--");
-            if (untracked)
-                arguments.Add("/dev/null");
-            arguments.AddRange(FilePaths(selection, entry, scopedPath, indexLayer: staged));
-            var patch = await NativeGit.RunAsync(repository.WorktreePath, arguments, token,
-                allowDifferences: untracked, strictEncoding: false).ConfigureAwait(false);
+            var patch = await ReadPatchAsync(selection, entry, scopedPath, input.Layer, token).ConfigureAwait(false);
             if (patch is null)
                 return new("git_diff_failed", "Git could not return a file diff.");
 
-            var diff = new DiffResult(repository, scopedPath, input.Layer, patch);
+            var review = IdentifyHunks(patch, repository, entry, scopedPath, input.Layer);
+            var diff = new DiffResult(repository, scopedPath, input.Layer, Encoding.UTF8.GetString(patch), review?.Preimage, review?.Hunks ?? []);
             return new FeatureOutcome("ok", "Git file diff read.")
             {
                 Commit = current =>
@@ -57,6 +45,27 @@ internal static class GitFileOperations
         }, token).ConfigureAwait(false);
     }
 
+    private static Task<byte[]?> ReadPatchAsync(GitSelection selection, GitStatusEntry? entry, string path, string layer,
+        CancellationToken token, string? indexPath = null)
+    {
+        var repository = selection.Repository;
+        var arguments = NativeGit.WorktreeArguments(repository);
+        var staged = string.Equals(layer, "staged", StringComparison.Ordinal);
+        var untracked = !staged && string.Equals(entry?.Worktree, "?", StringComparison.Ordinal);
+        arguments.AddRange(["-c", "diff.suppressBlankEmpty=false", "diff", "--patch", "--no-ext-diff", "--no-textconv",
+            "--no-color", "--full-index", "--unified=3", "--inter-hunk-context=0", "--src-prefix=a/", "--dst-prefix=b/", "--no-relative",
+            "--output-indicator-new=+", "--output-indicator-old=-", "--output-indicator-context= "]);
+        if (untracked)
+            arguments.Add("--no-index");
+        else if (staged)
+            arguments.Add("--cached");
+        arguments.Add("--");
+        if (untracked)
+            arguments.Add("/dev/null");
+        arguments.AddRange(FilePaths(selection, entry, path, indexLayer: staged));
+        return NativeGit.ReadBytesAsync(repository.WorktreePath, arguments, token, indexPath, allowDifferences: untracked);
+    }
+
     internal static Task<FeatureOutcome> UpdateIndexAsync(FileInput input, IWorkbenchRegistration view, bool stage, CancellationToken token) =>
         WithFileAsync(input.WorktreePath, input.Path, view, async (selection, entry, scopedPath) =>
         {
@@ -67,30 +76,34 @@ internal static class GitFileOperations
             if (prepared is null)
                 return new("git_index_update_failed", "Git could not prepare the index change.");
 
-            return new FeatureOutcome("ok", "Git index change prepared.")
-            {
-                PreparedResource = prepared,
-                Commit = current =>
-                {
-                    if (!HasSameSelection(current, selection))
-                        return SelectionChanged();
-
-                    string? failure;
-                    try { failure = prepared.Publish(); }
-                    catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-                    {
-                        return new("git_index_update_failed", "Git could not publish the index change.");
-                    }
-                    return failure switch
-                    {
-                        "git_index_busy" => new(failure, "Another process owns the index lock. Retry after it finishes."),
-                        "git_index_changed" => new(failure, "The Git index changed. Refresh the diff and retry."),
-                        _ => FeatureOutcome.Success(stage ? "Git file staged." : "Git file unstaged.",
-                            new FileResult(selection.Repository, scopedPath, stage)),
-                    };
-                },
-            };
+            return CommitIndex(prepared, selection, FeatureOutcome.Success(stage ? "Git file staged." : "Git file unstaged.",
+                new FileResult(selection.Repository, scopedPath, stage)));
         }, token);
+
+    private static FeatureOutcome CommitIndex(PreparedGitIndex prepared, GitSelection selection, FeatureOutcome success, Func<bool>? verifyWorktree = null) =>
+        new("ok", "Git index change prepared.")
+        {
+            PreparedResource = prepared,
+            Commit = current =>
+            {
+                if (!HasSameSelection(current, selection))
+                    return SelectionChanged();
+
+                string? failure;
+                try { failure = prepared.Publish(verifyWorktree); }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                {
+                    return new("git_index_update_failed", "Git could not publish the index change.");
+                }
+                return failure switch
+                {
+                    "git_index_busy" => new(failure, "Another process owns the index lock. Retry after it finishes."),
+                    "git_index_changed" => new(failure, "The Git index changed. Refresh the diff and retry."),
+                    "git_diff_changed" => ChangedDiff(),
+                    _ => success,
+                };
+            },
+        };
 
     private static async Task<FeatureOutcome> WithFileAsync(string worktreePath, string path, IWorkbenchRegistration view,
         Func<GitSelection, GitStatusEntry?, string, Task<FeatureOutcome>> operation, CancellationToken token)
