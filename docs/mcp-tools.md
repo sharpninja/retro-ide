@@ -45,11 +45,11 @@ The Phase 03 candidate exposes native Git discovery, selection, and status throu
 | --- | --- | --- |
 | `git_discover_repository` | `rootId`, `relativePath` | The native worktree, its Git directory, and its common Git directory. |
 | `git_select_repository` | `rootId`, `relativePath`, current workbench `context` | The selected worktree and advanced workbench context. Requires a write-enabled attachment. |
-| `git_get_status` | None | The selected worktree's branch, HEAD, upstream and divergence when available, and entries with independent index and working-tree status. Rename and copy entries also give the original path. |
+| `git_get_status` | None | The selected worktree's branch, HEAD, upstream and divergence when available, and entries with independent index and working-tree status. Rename and copy entries also give the original path. `trackedPaths` lists index paths within the captured scope. |
 | `git_initialize_repository` | Absolute `destination`, current workbench `context` | The registered workspace `root` and `repository` in `data`. The IDE selects both after setup. Requires a write-enabled attachment. |
 | `git_clone_repository` | Git `source`, absolute `destination`, current workbench `context` | The installed workspace `root` and selected `repository` in `data`. Requires a write-enabled attachment and a new or empty destination. |
 
-Selection is scoped to the attached workbench. Desktop commands and attached clients share the selection and status shown in Source Control. Select a worktree before reading status. If its selection changes while status is being prepared, refresh the context and read again. [Git integration](git-integration.md)
+Selection is scoped to the attached workbench. Desktop commands and attached clients share the selection and status shown in Source Control and Project Explorer. On desktop restart, the workspace revalidates the saved checkout before issuing a new attachment. Select a worktree before reading status. If its selection changes while status is being prepared, refresh the context and read again. [Git integration](git-integration.md)
 
 ## One feature registry
 

@@ -10,9 +10,9 @@ Setup leaves the current root and checkout selection in place when Git fails. Cl
 
 ## Workspace and worktree context
 
-Discover repositories for project and folder roots. Opening a nested repository or a submodule gives it its own context. A linked worktree has its own working files, index, and checked-out state and shares repository data with its sibling worktrees. Persist the selected context with the workspace. Clone and Init can add their resulting folders as workspace roots. A folder without a repository remains browsable in Project Explorer. [Git worktrees](https://git-scm.com/docs/git-worktree)
+Discover repositories for project and folder roots. Opening a nested repository or a submodule gives it its own context. A linked worktree has its own working files, index, and checked-out state and shares repository data with its sibling worktrees. The IDE saves the selected Git checkout with the workspace. It verifies the checkout again when reopening. If the saved checkout is unavailable, Git opens without a selection and the remaining roots stay browsable. [Git worktrees](https://git-scm.com/docs/git-worktree)
 
-Project Explorer decorates tracked, untracked, ignored, modified, staged, and conflicted files. The Source Control pane groups changes by worktree, index, and conflict state. Selecting a change opens the relevant diff tab. The editor can show inline changes and navigate to blame or the file's history.
+Project Explorer shows tracked, untracked, ignored, modified, staged, and conflicted badges for the selected worktree’s authorized directory. **Refresh Status** and the attached MCP status tool update Explorer and Source Control from the same result. Selecting another checkout clears the previous badges. A file with both staged and working-tree changes shows both labels. [Git status](https://git-scm.com/docs/git-status#_porcelain_format_version_2) · [Git index paths](https://git-scm.com/docs/git-ls-files)
 
 ## Workflows
 
