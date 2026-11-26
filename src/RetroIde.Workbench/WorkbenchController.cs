@@ -249,9 +249,9 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                 GitFeatures.StatusInput status when string.Equals(request.CommandId, _registry.Git.Status.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.Status, status, request),
                 GitFeatures.InitializeInput initialize when string.Equals(request.CommandId, _registry.Git.Initialize.Id, StringComparison.Ordinal) =>
-                    DispatchToViewAsync(git, registration, _registry.Git.Initialize, initialize, request),
+                    DispatchToViewAsync(git, registration, _registry.Git.Initialize, initialize, request, refreshOrigin: registration),
                 GitFeatures.CloneInput clone when string.Equals(request.CommandId, _registry.Git.Clone.Id, StringComparison.Ordinal) =>
-                    DispatchToViewAsync(git, registration, _registry.Git.Clone, clone, request),
+                    DispatchToViewAsync(git, registration, _registry.Git.Clone, clone, request, refreshOrigin: registration),
                 _ => null,
             };
         }

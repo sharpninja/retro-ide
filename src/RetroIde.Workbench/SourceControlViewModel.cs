@@ -117,6 +117,10 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
             cancellationToken.IsCancellationRequested || ParentViewKey is null)
             return;
 
+        await OpenPaneAsync(cancellationToken).ConfigureAwait(true);
+        if (cancellationToken.IsCancellationRequested || ParentViewKey is null)
+            return;
+
         interaction.Begin(PaneId);
         try
         {

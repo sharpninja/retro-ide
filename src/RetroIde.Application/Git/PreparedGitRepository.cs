@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Security.AccessControl;
 
 namespace RetroIde.Application.Git;
 
@@ -38,7 +39,7 @@ internal sealed class PreparedGitRepository : IDisposable
         var gitDirectory = Path.Combine(path, ".git");
         if (source is null && exists && EntryAttributes(gitDirectory) is { } metadata)
         {
-            if ((metadata & FileAttributes.ReparsePoint) != 0 ||
+            if (metadata.HasFlag(FileAttributes.ReparsePoint) ||
                 await NativeGit.DiscoverAsync(path, "", token).ConfigureAwait(false) is not { } existing ||
                 !PathEquals(existing.Repository.WorktreePath, path))
                 throw new Failure("git_invalid_destination", "The destination has Git metadata that cannot be reopened.");
@@ -81,7 +82,7 @@ internal sealed class PreparedGitRepository : IDisposable
         {
             case InstallKind.Reopen:
                 if (!IsPlainDirectory(Destination) || EntryAttributes(Path.Combine(Destination, ".git")) is not { } metadata ||
-                    (metadata & FileAttributes.ReparsePoint) != 0)
+                    metadata.HasFlag(FileAttributes.ReparsePoint))
                     throw new Failure("git_destination_changed", "Git metadata changed while the repository was being reopened.");
                 break;
             case InstallKind.NewDirectory:
@@ -114,6 +115,7 @@ internal sealed class PreparedGitRepository : IDisposable
         {
             // A file created during the rename may now be in the backup. Never discard it.
             RequireEmpty(backup);
+            PreservePermissions(backup, StagedWorktree);
             Directory.Move(StagedWorktree, Destination);
         }
         catch
@@ -132,6 +134,19 @@ internal sealed class PreparedGitRepository : IDisposable
             throw;
         }
         RemoveDirectory(backup, recursive: false);
+    }
+
+    private static void PreservePermissions(string original, string staged)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var permissions = new DirectoryInfo(original).GetAccessControl(AccessControlSections.Access);
+            new DirectoryInfo(staged).SetAccessControl(permissions);
+        }
+        else
+        {
+            File.SetUnixFileMode(staged, File.GetUnixFileMode(original));
+        }
     }
 
     private static void RequireEmpty(string path)

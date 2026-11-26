@@ -47,8 +47,9 @@ internal sealed class GitFeatures
 
     private static async Task<FeatureOutcome> ProvisionAsync(string destination, string? source, IWorkbenchRegistration view, CancellationToken token)
     {
-        if (view is not (IGitRegistration and IExplorerRegistration { HasExplorer: true, CanChangeExplorer: true }))
+        if (view is not IGitRegistration origin || view is not IExplorerRegistration { HasExplorer: true, CanChangeExplorer: true })
             return new("explorer_unavailable", "The workspace cannot accept a new Git root.");
+        var selectedBeforeSetup = origin.SelectedGit;
 
         PreparedGitRepository prepared;
         try
@@ -69,10 +70,13 @@ internal sealed class GitFeatures
         return new FeatureOutcome("ok", "Git workspace prepared.")
         {
             PreparedResource = prepared,
+            KeepCapturedTarget = true,
             Commit = current =>
             {
                 if (current is not IGitRegistration git || current is not IExplorerRegistration { HasExplorer: true, CanChangeExplorer: true })
                     return new("explorer_unavailable", "The workspace cannot accept a new Git root.");
+                if (!ReferenceEquals(git.SelectedGit, selectedBeforeSetup))
+                    return new("git_selection_changed", "The selected Git worktree changed during setup. Run the operation again with the current selection.");
                 try
                 {
                     prepared.Install();
