@@ -1,3 +1,4 @@
+using RetroIde.Application.Git;
 using RetroIde.Testing;
 using Xunit;
 using Xunit.Sdk;
@@ -10,6 +11,26 @@ public sealed partial class GitDiffIndexTests
 {
     private const string StagedMark = "staged line two";
     private const string WorkingMark = "working line nineteen";
+
+    /// <summary>Preserves an unrelated Git process's index edit between preparation and publication.</summary>
+    [Fact]
+    public async Task Prepared_index_rejects_a_concurrent_native_update()
+    {
+        var token = TestContext.Current.CancellationToken;
+        using var sample = await CreateDiffSampleAsync(token);
+        var selection = await NativeGit.DiscoverAsync(sample.Primary, "", token).ConfigureAwait(true);
+        Assert.NotNull(selection);
+        var indexPath = Path.Combine(selection.Repository.GitDirectory, "index");
+        using var prepared = await PreparedGitIndex.CreateAsync(selection.Repository,
+            [GitWorktreeFixture.ChangedPath], stage: true, token).ConfigureAwait(true);
+        Assert.NotNull(prepared);
+
+        await sample.GitAsync(sample.Primary, token, "add", "--", GitWorktreeFixture.HunkPath).ConfigureAwait(true);
+        var current = await File.ReadAllBytesAsync(indexPath, token).ConfigureAwait(true);
+        Assert.Equal("git_index_changed", prepared.Publish());
+        Assert.Equal(current, await File.ReadAllBytesAsync(indexPath, token).ConfigureAwait(true));
+        Assert.False(File.Exists(indexPath + ".lock"));
+    }
 
     /// <summary>Proves the native fixtures distinguish index layers and detect an operation on the wrong checkout.</summary>
     [Theory]

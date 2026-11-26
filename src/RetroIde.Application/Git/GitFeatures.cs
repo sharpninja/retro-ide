@@ -36,6 +36,20 @@ internal sealed class GitFeatures
     /// <summary>Returns current machine-readable status for the selected worktree.</summary>
     public Feature<StatusInput> Status { get; }
 
+    public Feature<GitFileOperations.DiffInput> Diff { get; } = new("git.diff.read", "git_get_diff",
+        "Read a literal file's staged or working diff in the selected worktree.",
+        GitFileOperations.DiffAsync, typeof(GitFileOperations.DiffResult));
+
+    public Feature<GitFileOperations.FileInput> Stage { get; } = new("git.file.stage", "git_stage_file",
+        "Stage a whole file in the selected worktree's index.",
+        static (input, view, token) => GitFileOperations.UpdateIndexAsync(input, view, stage: true, token),
+        typeof(GitFileOperations.FileResult), mutation: true);
+
+    public Feature<GitFileOperations.FileInput> Unstage { get; } = new("git.file.unstage", "git_unstage_file",
+        "Unstage a whole file while preserving its working-tree changes.",
+        static (input, view, token) => GitFileOperations.UpdateIndexAsync(input, view, stage: false, token),
+        typeof(GitFileOperations.FileResult), mutation: true);
+
     internal GitFeatures(Func<GitSelection, CancellationToken, Task<GitStatus?>>? readStatus = null)
     {
         Status = new("git.status.read", "git_get_status", "Read the selected worktree's staged and working status.",

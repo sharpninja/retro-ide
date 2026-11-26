@@ -71,8 +71,7 @@ internal static class NativeGit
 
         Task<string?> ReadAsync(string[] command)
         {
-            var arguments = new List<string> { "--no-optional-locks", "--literal-pathspecs", "--git-dir", repo.GitDirectory,
-                "--work-tree", repo.WorktreePath, "-c", "core.fsmonitor=false" };
+            var arguments = WorktreeArguments(repo);
             arguments.AddRange(command);
             if (!PathComparer.Equals(repo.WorktreePath, selection.ScopeRoot))
             {
@@ -82,6 +81,10 @@ internal static class NativeGit
             return RunAsync(repo.WorktreePath, arguments, token);
         }
     }
+
+    internal static List<string> WorktreeArguments(GitWorktree repo) =>
+        ["--no-optional-locks", "--literal-pathspecs", "--git-dir", repo.GitDirectory,
+            "--work-tree", repo.WorktreePath, "-c", "core.fsmonitor=false"];
 
     /// <summary>Compares a worktree and both administrative directories using native path rules.</summary>
     internal static bool IsSameWorktree(GitWorktree left, GitWorktree right) =>
@@ -110,15 +113,18 @@ internal static class NativeGit
     }
 
     /// <summary>Runs Git asynchronously and decodes output without replacing invalid path bytes.</summary>
-    internal static async Task<string?> RunAsync(string directory, IReadOnlyList<string> arguments, CancellationToken token)
+    internal static async Task<string?> RunAsync(string directory, IReadOnlyList<string> arguments, CancellationToken token,
+        string? indexPath = null, bool allowDifferences = false, bool strictEncoding = true)
     {
         var start = new ProcessStartInfo("git")
         {
             WorkingDirectory = directory, UseShellExecute = false, CreateNoWindow = true,
-            RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = new UTF8Encoding(false, true),
+            RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = new UTF8Encoding(false, strictEncoding),
         };
         foreach (var name in WorkspaceOverrides)
             start.Environment.Remove(name);
+        if (indexPath is not null)
+            start.Environment["GIT_INDEX_FILE"] = indexPath;
         foreach (var argument in arguments)
             start.ArgumentList.Add(argument);
 
@@ -131,7 +137,7 @@ internal static class NativeGit
             await process.WaitForExitAsync(token).ConfigureAwait(false);
             var text = await output.ConfigureAwait(false);
             await error.ConfigureAwait(false);
-            return process.ExitCode == 0 ? text : null;
+            return process.ExitCode == 0 || (allowDifferences && process.ExitCode == 1) ? text : null;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {

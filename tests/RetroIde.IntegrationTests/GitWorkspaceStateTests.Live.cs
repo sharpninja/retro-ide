@@ -177,7 +177,7 @@ public sealed partial class GitWorkspaceStateTests
     private static Dictionary<string, object?> Address(Guid root, string path) =>
         new(StringComparer.Ordinal) { ["rootId"] = root, ["relativePath"] = path };
 
-    private sealed class WorkspaceConnection(LoopbackMcpHost host, McpClient client, HttpClient http, CancellationToken token) : IAsyncDisposable
+    internal sealed class WorkspaceConnection(LoopbackMcpHost host, McpClient client, HttpClient http, CancellationToken token) : IAsyncDisposable
     {
         internal static async Task<WorkspaceConnection> ConnectAsync(WorkbenchSession session, CancellationToken token)
         {
