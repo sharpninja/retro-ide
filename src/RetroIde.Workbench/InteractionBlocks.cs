@@ -100,15 +100,17 @@ public sealed class InteractionBlocks : IDisposable
         _wait?.Dispose();
     }
 
-    private void Begin(string scope)
+    internal void Begin(string scope)
     {
+        Dispatcher.UIThread.VerifyAccess();
         ObjectDisposedException.ThrowIf(_disposed, this);
         _operations[scope] = _operations.GetValueOrDefault(scope) + 1;
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    private void End(string scope)
+    internal void End(string scope)
     {
+        Dispatcher.UIThread.VerifyAccess();
         if (!_operations.TryGetValue(scope, out var count))
             return;
         if (count == 1)

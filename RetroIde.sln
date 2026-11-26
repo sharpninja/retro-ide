@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RetroIde.UnitTests", "tests
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RetroIde.NativeTests", "tests\RetroIde.NativeTests\RetroIde.NativeTests.csproj", "{49F2882E-AD8E-44BF-87C1-80C8505691BD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RetroIde.AdapterFixture", "tests\RetroIde.AdapterFixture\RetroIde.AdapterFixture.csproj", "{83C8163B-F2F4-4155-B316-24C28DEF2736}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -115,6 +117,18 @@ Global
 		{49F2882E-AD8E-44BF-87C1-80C8505691BD}.Release|x64.Build.0 = Release|Any CPU
 		{49F2882E-AD8E-44BF-87C1-80C8505691BD}.Release|x86.ActiveCfg = Release|Any CPU
 		{49F2882E-AD8E-44BF-87C1-80C8505691BD}.Release|x86.Build.0 = Release|Any CPU
+		{83C8163B-F2F4-4155-B316-24C28DEF2736}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83C8163B-F2F4-4155-B316-24C28DEF2736}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83C8163B-F2F4-4155-B316-24C28DEF2736}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{83C8163B-F2F4-4155-B316-24C28DEF2736}.Debug|x64.Build.0 = Debug|Any CPU
+		{83C8163B-F2F4-4155-B316-24C28DEF2736}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{83C8163B-F2F4-4155-B316-24C28DEF2736}.Debug|x86.Build.0 = Debug|Any CPU
+		{83C8163B-F2F4-4155-B316-24C28DEF2736}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83C8163B-F2F4-4155-B316-24C28DEF2736}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83C8163B-F2F4-4155-B316-24C28DEF2736}.Release|x64.ActiveCfg = Release|Any CPU
+		{83C8163B-F2F4-4155-B316-24C28DEF2736}.Release|x64.Build.0 = Release|Any CPU
+		{83C8163B-F2F4-4155-B316-24C28DEF2736}.Release|x86.ActiveCfg = Release|Any CPU
+		{83C8163B-F2F4-4155-B316-24C28DEF2736}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -127,5 +141,6 @@ Global
 		{72219DEE-46AE-4475-9D7C-9B1494D394FF} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{DA3961FA-DF03-4C5C-900B-ADBA33BA9FF2} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{49F2882E-AD8E-44BF-87C1-80C8505691BD} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{83C8163B-F2F4-4155-B316-24C28DEF2736} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

@@ -207,8 +207,10 @@ public sealed class WorkbenchDispatchTests
     }
 
     /// <summary>TEST-RETRO-007#ac-test-cqrs-unit-of-work; TEST-RETRO-015#ac-test-mcp-viewmodel-context</summary>
-    [AvaloniaFact]
-    public async Task Reentrant_focus_change_cannot_publish_an_older_context()
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Reentrant_focus_change_cannot_publish_an_older_context(bool returnToOriginalTarget)
     {
         using var session = new WorkbenchSession(Guid.NewGuid());
         var changed = false;
@@ -219,18 +221,21 @@ public sealed class WorkbenchDispatchTests
 
             changed = true;
             Assert.True(session.Layout.Focus("output"));
+            if (returnToOriginalTarget)
+                Assert.True(session.Layout.Focus("registers"));
         };
 
         session.View.FocusTarget = "registers";
         await session.View.FocusCommand.ExecuteAsync(null);
         Assert.True(changed);
-        Assert.Equal(2, session.View.WorkbenchRevision);
+        Assert.Equal(returnToOriginalTarget ? 3 : 2, session.View.WorkbenchRevision);
         var result = Assert.IsType<OperationResult>(session.View.LastResult);
         Assert.Equal("tool_unavailable", result.Code);
         Assert.Null(result.Context);
         Assert.Equal(session.Layout.Revision, session.View.Address.WorkbenchRevision);
-        Assert.Equal("output", session.View.Address.ActiveToolId);
-        Assert.True(session.Layout.IsFocused("output"));
+        var currentTool = returnToOriginalTarget ? "registers" : "output";
+        Assert.Equal(currentTool, session.View.Address.ActiveToolId);
+        Assert.True(session.Layout.IsFocused(currentTool));
     }
 
     /// <summary>TEST-RETRO-015#ac-test-mcp-viewmodel-context</summary>

@@ -58,7 +58,12 @@ public sealed class DockLayout : IDisposable
         Revision = 0;
         Factory.FocusedDockableChanged += (_, args) =>
         {
-            if (!_suppress && args.Dockable is ShellTool tool && !string.Equals(ActiveToolId, tool.Id, StringComparison.Ordinal))
+            if (_suppress)
+                return;
+
+            if (args.Dockable is ShellDocument document)
+                ActivateDocumentBranch(document);
+            else if (args.Dockable is ShellTool tool && !string.Equals(ActiveToolId, tool.Id, StringComparison.Ordinal))
                 Publish(tool.Id);
         };
         Factory.DockableMoved += (_, _) =>
@@ -82,7 +87,7 @@ public sealed class DockLayout : IDisposable
     public long Revision { get; private set; }
 
     /// <summary>Gets the selected document in the main host.</summary>
-    public string? SelectedDocumentId => Descendants(Root).OfType<IDocumentDock>().FirstOrDefault()?.ActiveDockable?.Id;
+    public string? SelectedDocumentId => FindSelectedDocument(Root)?.Id;
 
     internal IEnumerable<ShellTool> Tools => _tools.Values;
 
@@ -119,8 +124,8 @@ public sealed class DockLayout : IDisposable
         }
         finally { _suppress = wasSuppressed; }
 
-        Publish(id);
-        return string.Equals(ActiveToolId, id, StringComparison.Ordinal) && IsFocused(id);
+        var publishedRevision = Publish(id);
+        return Revision == publishedRevision && string.Equals(ActiveToolId, id, StringComparison.Ordinal) && IsFocused(id);
     }
 
     /// <summary>Checks the selected tab and focus state in the Dock model.</summary>
@@ -271,7 +276,7 @@ public sealed class DockLayout : IDisposable
 
     private static DockBranch CaptureBranch(IRootDock root)
     {
-        var groupIds = CaptureToolGroupIds(root);
+        var groupIds = CaptureDockGroupIds(root);
         var pinned = PinList(root.LeftPinnedDockables, Alignment.Left)
             .Concat(PinList(root.RightPinnedDockables, Alignment.Right))
             .Concat(PinList(root.TopPinnedDockables, Alignment.Top))
@@ -284,7 +289,7 @@ public sealed class DockLayout : IDisposable
                 (tool.OriginalOwner as IToolDock ?? tool.Owner as IToolDock) is { } owner ? groupIds.GetValueOrDefault(owner) : null));
 
         string? CapturedId(IDockable? item) =>
-            item is IToolDock tools ? groupIds.GetValueOrDefault(tools) : GroupId(item?.Id);
+            item is IDock dock ? groupIds.GetValueOrDefault(dock) : GroupId(item?.Id);
 
         DockNode CaptureNode(IDockable item) => item switch
         {
@@ -303,22 +308,22 @@ public sealed class DockLayout : IDisposable
                 CapturedId(dock.ActiveDockable), dock.VisibleDockables?.Select(CaptureNode).ToArray() ?? [], alignment);
     }
 
-    private static Dictionary<IToolDock, string> CaptureToolGroupIds(IRootDock root)
+    private static Dictionary<IDock, string> CaptureDockGroupIds(IRootDock root)
     {
         var docks = Descendants(root).OfType<IDock>().ToArray();
         var existingIds = docks.Select(dock => dock.Id).ToHashSet(StringComparer.Ordinal);
-        var assignedIds = docks.Where(dock => dock is not IToolDock).Select(dock => dock.Id).ToHashSet(StringComparer.Ordinal);
-        var groupIds = new Dictionary<IToolDock, string>(ReferenceEqualityComparer.Instance);
+        var assignedIds = new HashSet<string>(StringComparer.Ordinal);
+        var groupIds = new Dictionary<IDock, string>(ReferenceEqualityComparer.Instance);
         var suffix = 0;
 
         // Dock can leave newly split groups unnamed or copy an existing ID. Give
-        // each group a unique saved ID so pins can reference it by identity.
-        foreach (var group in docks.OfType<IToolDock>())
+        // each group a unique saved ID for pins and persisted active selections.
+        foreach (var group in docks)
         {
             var id = GroupId(group.Id);
             if (id is null || !assignedIds.Add(id))
             {
-                do { id = FormattableString.Invariant($"tool-group-{++suffix}"); }
+                do { id = FormattableString.Invariant($"dock-group-{++suffix}"); }
                 while (!existingIds.Add(id));
             }
             groupIds.Add(group, id);
@@ -401,14 +406,15 @@ public sealed class DockLayout : IDisposable
         return owner;
     }
 
-    private void Publish(string? id)
+    private long Publish(string? id)
     {
         ActiveToolId = id;
-        if (!_suppress)
-        {
-            Revision++;
-            Changed?.Invoke(this, EventArgs.Empty);
-        }
+        if (_suppress)
+            return Revision;
+
+        var publishedRevision = ++Revision;
+        Changed?.Invoke(this, EventArgs.Empty);
+        return publishedRevision;
     }
 
     private static double? Size(double size) => double.IsFinite(size) && size > 0 ? size : null;
@@ -424,6 +430,36 @@ public sealed class DockLayout : IDisposable
         "Bottom" => Alignment.Bottom,
         _ => Alignment.Right,
     };
+
+    private static void ActivateDocumentBranch(ShellDocument document)
+    {
+        // Dock updates the focused document without necessarily selecting its containing split.
+        for (IDockable child = document; child.Owner is IDock owner; child = owner)
+        {
+            if (!ReferenceEquals(owner.ActiveDockable, child))
+                owner.ActiveDockable = child;
+            if (owner is IRootDock)
+                break;
+        }
+    }
+
+    private static ShellDocument? FindSelectedDocument(IDock dock)
+    {
+        var active = dock.ActiveDockable;
+        if (active is ShellDocument document)
+            return document;
+        if (active is IDock activeGroup && FindSelectedDocument(activeGroup) is { } selected)
+            return selected;
+
+        // A tool can take focus while the document groups retain their selected tabs.
+        foreach (var group in (dock.VisibleDockables ?? []).OfType<IDock>())
+        {
+            if (!ReferenceEquals(group, active) && FindSelectedDocument(group) is { } fallback)
+                return fallback;
+        }
+
+        return null;
+    }
 
     private static IEnumerable<IDockable> Descendants(IDock dock)
     {

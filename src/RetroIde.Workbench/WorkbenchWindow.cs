@@ -96,7 +96,8 @@ public sealed class WorkbenchWindow : Window
     {
         floating.Closing += (_, args) =>
         {
-            if (_closeSave is not null && args.CloseReason is not (WindowCloseReason.ApplicationShutdown or WindowCloseReason.OSShutdown))
+            if (_closeSave is not null && args.CloseReason is not
+                (WindowCloseReason.OwnerWindowClosing or WindowCloseReason.ApplicationShutdown or WindowCloseReason.OSShutdown))
                 args.Cancel = true;
         };
         floating.Opened += (_, _) =>
@@ -154,34 +155,37 @@ public sealed class WorkbenchWindow : Window
 
     private async Task SaveLayoutAndCloseAsync(LayoutStore store, CancellationTokenSource closeSave)
     {
+        var interaction = _session.Interaction;
+        interaction.Begin(InteractionBlocks.WorkbenchScope);
         try
         {
-            var snapshot = _session.Layout.Capture();
-            await _session.Interaction.RunAsync(InteractionBlocks.WorkbenchScope, token =>
+            try
             {
-                store.Save(snapshot, token);
-                return Task.CompletedTask;
-            }, closeSave.Token).ConfigureAwait(true);
-        }
-        catch (OperationCanceledException) when (closeSave.IsCancellationRequested) { }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Console.Error.WriteLine("Unable to save the Retro IDE layout.");
+                var snapshot = _session.Layout.Capture();
+                await Task.Run(() => store.Save(snapshot, closeSave.Token), closeSave.Token).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException) when (closeSave.IsCancellationRequested) { }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Console.Error.WriteLine("Unable to save the Retro IDE layout.");
+            }
+
+            // Leave the original Closing callback before replaying it. Hold the block
+            // until the replay completes so the saved dock layout cannot be edited in between.
+            await Dispatcher.Yield(DispatcherPriority.Background);
+            if (_closed)
+                return;
+
+            _replayingClose = true;
+            try { Close(); }
+            finally { _replayingClose = false; }
         }
         finally
         {
-            // A fast save or a synchronous failure can complete inside the original close callback.
-            await Dispatcher.Yield(DispatcherPriority.Background);
             _closeSave = null;
             closeSave.Dispose();
+            interaction.End(InteractionBlocks.WorkbenchScope);
         }
-
-        if (_closed)
-            return;
-
-        _replayingClose = true;
-        try { Close(); }
-        finally { _replayingClose = false; }
     }
 
     private static DockPanel BuildSurface(WorkbenchSession session, Menu menu, Button focusButton)

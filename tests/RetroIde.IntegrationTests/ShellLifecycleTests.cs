@@ -1,7 +1,11 @@
-using Avalonia.Threading;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
+using Dock.Avalonia.Controls;
 using Dock.Model.Controls;
 using Dock.Model.Core;
 using RetroIde.Application;
@@ -65,7 +69,7 @@ public sealed class ShellLifecycleTests
         finally { folder.Delete(recursive: true); }
     }
 
-    /// <summary>TEST-RETRO-001#verify-ac-behavior-desktop-2; TEST-RETRO-001#verify-ac-contract-desktop-2; TEST-RETRO-007#ac-test-cqrs-unit-of-work</summary>
+    /// <summary>TEST-RETRO-001#verify-ac-behavior-desktop-2; TEST-RETRO-001#verify-ac-contract-desktop-1; TEST-RETRO-001#verify-ac-contract-desktop-2; TEST-RETRO-007#ac-test-cqrs-unit-of-work</summary>
     [AvaloniaFact]
     public async Task Layout_reopens_with_tool_and_document_selection_while_session_survives()
     {
@@ -73,9 +77,11 @@ public sealed class ShellLifecycleTests
         try
         {
             var store = new LayoutStore(Path.Combine(directory.FullName, "workbench.json"));
-            var adapter = new RunningAdapterFixture(Guid.NewGuid());
-            var original = adapter.Advance();
-            using (var before = adapter.OpenWorkbench())
+            await using var adapter = new RunningAdapterFixture(directory.FullName);
+            var original = await adapter.AdvanceAsync();
+            Assert.Equal("running", original.Status);
+            Assert.NotEqual(Guid.Empty, original.Id);
+            using (var before = await adapter.OpenWorkbenchAsync())
             {
                 Assert.Same(adapter, before.Layout.Root.Context);
                 Assert.Equal(adapter.WorkspaceId, before.View.WorkspaceId);
@@ -84,8 +90,9 @@ public sealed class ShellLifecycleTests
                 var read = await before.Controller.DispatchAsync(before.Registry.GetContext, new GetContextInput(),
                     null, actor, Guid.NewGuid(), default);
                 Assert.Equal("ok", read.Code);
-                Assert.Equal(original, adapter.State);
-                Assert.Equal(["launch", "advance", "attach"], adapter.Effects);
+                var attached = await adapter.InspectAsync();
+                Assert.Equal(original, attached.Session);
+                Assert.Equal(["launch", "advance", "attach"], attached.Effects);
                 Assert.Equal(address, before.View.Address);
                 var window = new WorkbenchWindow(before, store);
                 window.Show();
@@ -98,7 +105,13 @@ public sealed class ShellLifecycleTests
                 Assert.True(before.Layout.Factory.IsDockablePinned(before.Layout.Tool("call-stack")));
                 var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 var closes = 0;
-                window.Closed += (_, _) => { closes++; closed.SetResult(); };
+                var heldThroughClose = false;
+                window.Closed += (_, _) =>
+                {
+                    heldThroughClose = before.Interaction.IsBlocked("registers");
+                    closes++;
+                    closed.SetResult();
+                };
                 window.Close();
                 Assert.True(window.IsVisible);
                 Assert.True(before.Interaction.IsBlocked("registers"));
@@ -109,16 +122,17 @@ public sealed class ShellLifecycleTests
                 Assert.True(window.IsVisible);
                 await closed.Task.WaitAsync(TimeSpan.FromSeconds(5));
                 Assert.Equal(1, closes);
+                Assert.True(heldThroughClose);
                 Assert.False(before.Interaction.IsBlocked("registers"));
             }
             var persisted = await File.ReadAllTextAsync(store.Path);
-            Assert.Equal(original, adapter.State);
-            var whileClosed = adapter.Advance();
+            Assert.Equal(original, (await adapter.InspectAsync()).Session);
+            var whileClosed = await adapter.AdvanceAsync();
             Assert.DoesNotContain(original.Id.ToString(), persisted, StringComparison.Ordinal);
             Assert.DoesNotContain(adapter.WorkspaceId.ToString(), persisted, StringComparison.Ordinal);
             Assert.DoesNotContain(directory.FullName, persisted, StringComparison.Ordinal);
             var layout = Assert.IsType<WorkbenchLayoutState>(store.Load());
-            using var after = adapter.OpenWorkbench(layout);
+            using var after = await adapter.OpenWorkbenchAsync(layout);
             Assert.Equal("emulation", after.Layout.SelectedDocumentId);
             Assert.Equal("bottom", after.Layout.Tool("registers").Owner?.Id);
             Assert.Equal("registers", after.View.ActiveToolId);
@@ -129,9 +143,10 @@ public sealed class ShellLifecycleTests
             {
                 Assert.Equal(adapter.WorkspaceId, after.View.WorkspaceId);
                 Assert.Same(adapter, after.Layout.Root.Context);
-                Assert.Equal(whileClosed, adapter.State);
-                Assert.Equal(whileClosed with { Revision = whileClosed.Revision + 1 }, adapter.Advance());
-                Assert.Equal(["launch", "advance", "attach", "advance", "attach", "advance"], adapter.Effects);
+                var afterRestore = await adapter.InspectAsync();
+                Assert.Equal(whileClosed, afterRestore.Session);
+                Assert.Equal(whileClosed with { Revision = whileClosed.Revision + 1 }, await adapter.AdvanceAsync());
+                Assert.Equal(["launch", "advance", "attach", "advance", "attach", "advance"], (await adapter.InspectAsync()).Effects);
             }
             finally { reopened.Close(); }
         }
@@ -202,6 +217,66 @@ public sealed class ShellLifecycleTests
             Assert.Equal("Invalid", store.Load()!.Main.Pinned[0].Alignment);
         }
         finally { directory.Delete(recursive: true); }
+    }
+
+    /// <summary>TEST-RETRO-001#verify-ac-behavior-desktop-2</summary>
+    [AvaloniaFact]
+    public void Duplicate_document_group_ids_roundtrip_the_active_group()
+    {
+        const string documents = "document-tabs";
+        var state = new WorkbenchLayoutState(1,
+            new DockBranch(new DockNode("horizontal", "editors", Active: "second", Children:
+                [new(documents, "first", Active: "start", Children: [new("document", "start"), new("document", "disassembly")]),
+                 new(documents, "second", Active: "emulation", Children: [new("document", "emulation"), new("document", "test-results")])]),
+                [new("explorer", "Left"), new("registers", "Right"), new("call-stack", "Right"),
+                 new("output", "Bottom"), new("problems", "Bottom"), new("serial", "Bottom"),
+                 new("breakpoints", "Bottom"), new("mcp-activity", "Bottom")]), []);
+        using var before = new WorkbenchSession(Guid.NewGuid(), state);
+        var group = Assert.IsAssignableFrom<IDock>(before.Layout.Root.ActiveDockable);
+        var tabs = Assert.IsAssignableFrom<IDocumentDock>(group.ActiveDockable);
+        Assert.Equal("second", tabs.Id);
+        tabs.Id = "first";
+
+        var saved = before.Layout.Capture();
+        Assert.NotEqual(saved.Main.Content.Children![0].Id, saved.Main.Content.Children[1].Id);
+        using var after = new WorkbenchSession(Guid.NewGuid(), saved);
+        var restored = Assert.IsAssignableFrom<IDock>(after.Layout.Root.ActiveDockable);
+        var selected = Assert.IsAssignableFrom<IDocumentDock>(restored.ActiveDockable);
+        Assert.Equal("emulation", selected.ActiveDockable?.Id);
+        Assert.Equal("emulation", after.Layout.SelectedDocumentId);
+        var window = new WorkbenchWindow(after);
+        window.Show();
+        try
+        {
+            window.UpdateLayout();
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("emulation", after.Layout.SelectedDocumentId);
+            ClickDocument("disassembly", "Disassembly");
+            var first = Assert.IsAssignableFrom<IDocumentDock>(restored.VisibleDockables![0]);
+            Assert.Equal("disassembly", first.ActiveDockable?.Id);
+            Assert.Equal("disassembly", after.Layout.SelectedDocumentId);
+            using var reopenedFirst = new WorkbenchSession(Guid.NewGuid(), after.Layout.Capture());
+            Assert.Equal("disassembly", reopenedFirst.Layout.SelectedDocumentId);
+
+            ClickDocument("emulation", "Emulation");
+            Assert.Equal("emulation", after.Layout.SelectedDocumentId);
+            using var reopenedSecond = new WorkbenchSession(Guid.NewGuid(), after.Layout.Capture());
+            Assert.Equal("emulation", reopenedSecond.Layout.SelectedDocumentId);
+
+            void ClickDocument(string id, string title)
+            {
+                var document = window.GetVisualDescendants().OfType<DocumentTabStripItem>()
+                    .Where(tab => tab.DataContext is IDockable item && string.Equals(item.Id, id, StringComparison.Ordinal))
+                    .SelectMany(tab => tab.GetVisualDescendants().OfType<TextBlock>())
+                    .Single(text => string.Equals(text.Text, title, StringComparison.Ordinal));
+                var point = document.TranslatePoint(new Point(document.Bounds.Width / 2, document.Bounds.Height / 2), window);
+                Assert.NotNull(point);
+                window.MouseDown(point.Value, MouseButton.Left);
+                window.MouseUp(point.Value, MouseButton.Left);
+                Dispatcher.UIThread.RunJobs();
+            }
+        }
+        finally { window.Close(); }
     }
 
     /// <summary>TEST-RETRO-001#verify-ac-behavior-desktop-2</summary>
@@ -312,28 +387,5 @@ public sealed class ShellLifecycleTests
         Assert.Same(original, region.Cursor);
         await Assert.ThrowsAsync<InvalidOperationException>(() => session.Interaction.RunAsync("registers", _ => throw new InvalidOperationException()));
         Assert.Same(original, region.Cursor);
-    }
-
-    private sealed record SessionState(Guid Id, string Status, int Revision);
-
-    // Test composition binds a running adapter to the workspace, independent of the window lifetime.
-    private sealed class RunningAdapterFixture(Guid workspaceId) : IWorkbenchWorkspaceContext
-    {
-        public Guid WorkspaceId { get; } = workspaceId;
-        public SessionState State { get; private set; } = new(Guid.NewGuid(), "running", 42);
-        public List<string> Effects { get; } = ["launch"];
-
-        public WorkbenchSession OpenWorkbench(WorkbenchLayoutState? layout = null)
-        {
-            Effects.Add("attach");
-            return new WorkbenchSession(this, layout);
-        }
-
-        public SessionState Advance()
-        {
-            Effects.Add("advance");
-            State = State with { Revision = State.Revision + 1 };
-            return State;
-        }
     }
 }
