@@ -19,8 +19,9 @@ namespace RetroIde.IntegrationTests;
 
 public sealed partial class Phase02LiveLanguageContractTests
 {
-    /// <summary> Changes the language through rendered menus and invokes the real keyboard binding after switching.</summary>
+    /// <summary>Changes the language through rendered menus and invokes the real keyboard binding after switching.</summary>
     /// <remarks>2026-11-26 · TEST-RETRO-008#ac-test-live-language. Prove open-window refresh and compare a fresh workbench using the same preference.</remarks>
+    /// <remarks>2026-11-26 · TEST-RETRO-008#ac-test-live-language. Resolve the actual automation ID for the installed locale tag.</remarks>
     [AvaloniaFact]
     public async Task Workbench_refreshes_localized_presentation_and_reopens_in_the_selected_language()
     {
@@ -73,7 +74,10 @@ public sealed partial class Phase02LiveLanguageContractTests
             window.UpdateLayout();
             var menu = window.GetVisualDescendants().OfType<MenuItem>().Single(item => Equals(item.Header, "Display Language"));
             menu.IsSubMenuOpen = true;
-            await WorkbenchRemoteControl.ClickAsync(window, "workbench.language." + locale);
+            var entry = Assert.Single(menu.Items.OfType<MenuItem>(), item => item.CommandParameter is string tag &&
+                string.Equals(tag, locale, StringComparison.OrdinalIgnoreCase));
+            var automationId = Assert.IsType<string>(AutomationProperties.GetAutomationId(entry));
+            await WorkbenchRemoteControl.ClickAsync(window, automationId);
             var set = Assert.IsAssignableFrom<IAsyncRelayCommand>(Read(session.View, "SetDisplayLanguageCommand"));
             await Assert.IsAssignableFrom<Task>(set.ExecutionTask).WaitAsync(token);
             Assert.Equal("ok", session.View.LastResult?.Code);
