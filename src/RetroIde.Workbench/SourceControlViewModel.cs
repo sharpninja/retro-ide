@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -26,11 +27,13 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     internal WorkbenchLocalization Localization => workbench.Localization ?? WorkbenchLocalization.English;
 
     internal Func<bool, CancellationToken, Task<GitSetupDialog.Choice?>>? PromptSetupAsync { get; set; }
+    internal Func<GitCommitOperations.CommitState, bool, CancellationToken, Task<string?>>? PromptCommitAsync { get; set; }
 
     public event EventHandler<ViewCommandRequested>? CommandRequested;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RefreshStatusCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CommitCommand), nameof(AmendCommand))]
     [NotifyPropertyChangedFor(nameof(HasRepository))]
     public partial GitWorktree? Repository { get; private set; }
 
@@ -96,6 +99,8 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         RefreshStatusCommand.NotifyCanExecuteChanged();
         InitializeRepositoryCommand.NotifyCanExecuteChanged();
         CloneRepositoryCommand.NotifyCanExecuteChanged();
+        CommitCommand.NotifyCanExecuteChanged();
+        AmendCommand.NotifyCanExecuteChanged();
         NotifyFileCommands();
     }
 
@@ -164,6 +169,38 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     private Task CloneRepositoryAsync(CancellationToken cancellationToken) =>
         ProvisionAsync(clone: true, cancellationToken);
 
+    [RelayCommand(CanExecute = nameof(CanRefreshStatus))]
+    private Task CommitAsync(CancellationToken cancellationToken) => CommitOrAmendAsync(amend: false, cancellationToken);
+
+    [RelayCommand(CanExecute = nameof(CanRefreshStatus))]
+    private Task AmendAsync(CancellationToken cancellationToken) => CommitOrAmendAsync(amend: true, cancellationToken);
+
+    private async Task CommitOrAmendAsync(bool amend, CancellationToken token)
+    {
+        if (PromptCommitAsync is not { } prompt || Repository is not { } repository)
+            return;
+
+        await OpenPaneAsync(token).ConfigureAwait(true);
+        var result = await RequestAsync(registry.Git.CommitState,
+            new GitCommitOperations.StateInput(repository.WorktreePath), token).ConfigureAwait(true);
+        if (result is not { Code: "ok", Data: { } data } ||
+            data.Deserialize<GitCommitOperations.CommitState>(WireJson.Options) is not { } state ||
+            token.IsCancellationRequested || ParentViewKey is null)
+            return;
+
+        var message = await prompt(state, amend, token).ConfigureAwait(true);
+        if (string.IsNullOrWhiteSpace(message) || token.IsCancellationRequested || ParentViewKey is null)
+            return;
+
+        interaction.Begin(PaneId);
+        try
+        {
+            await RequestAsync(amend ? registry.Git.Amend : registry.Git.Commit,
+                new GitCommitOperations.CommitInput(repository.WorktreePath, state.Preimage, message), token).ConfigureAwait(true);
+        }
+        finally { interaction.End(PaneId); }
+    }
+
     private async Task ProvisionAsync(bool clone, CancellationToken cancellationToken)
     {
         if (PromptSetupAsync is not { } prompt ||
@@ -186,12 +223,13 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         finally { interaction.End(PaneId); }
     }
 
-    private async Task RequestAsync<TInput>(Feature<TInput> feature, TInput input, CancellationToken cancellationToken) where TInput : class
+    private async Task<OperationResult?> RequestAsync<TInput>(Feature<TInput> feature, TInput input, CancellationToken cancellationToken) where TInput : class
     {
         Dispatcher.UIThread.VerifyAccess();
         var request = new ViewCommandRequested(Guid.NewGuid(), feature.Id, workbench.Address, ViewKey, input, cancellationToken);
         CommandRequested?.Invoke(this, request);
         if (request.Completion is { } completion)
             await completion.ConfigureAwait(true);
+        return request.Result;
     }
 }

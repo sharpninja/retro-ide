@@ -282,6 +282,12 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                     DispatchToViewAsync(git, registration, _registry.Git.Stage, stage, request),
                 GitFileOperations.FileInput unstage when string.Equals(request.CommandId, _registry.Git.Unstage.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.Unstage, unstage, request),
+                GitCommitOperations.StateInput state when string.Equals(request.CommandId, _registry.Git.CommitState.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.CommitState, state, request),
+                GitCommitOperations.CommitInput commit when string.Equals(request.CommandId, _registry.Git.Commit.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.Commit, commit, request),
+                GitCommitOperations.CommitInput amend when string.Equals(request.CommandId, _registry.Git.Amend.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.Amend, amend, request),
                 _ => null,
             };
         }

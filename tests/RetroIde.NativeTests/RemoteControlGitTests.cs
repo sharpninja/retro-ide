@@ -69,6 +69,12 @@ internal static class RemoteControlGitTests
                 throw new InvalidOperationException("Source Control did not present the staged patch in a read-only native tab.");
             Console.WriteLine($"RemoteControl staged an exact Git path and opened its read-only diff on {platform.HandleDescriptor} without physical input.");
             await VerifyHunkAsync(window, sample, token).ConfigureAwait(true);
+            _ = await MutateAsync("git_stage_file", new(StringComparer.Ordinal)
+            {
+                ["worktreePath"] = sample.Primary,
+                ["path"] = GitWorktreeFixture.ChangedPath,
+            }).ConfigureAwait(true);
+            await VerifyCommitAsync(window, session, sample, token).ConfigureAwait(true);
 
             async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments)
             {
@@ -101,6 +107,29 @@ internal static class RemoteControlGitTests
         if (diff.Length != 0)
             throw new InvalidOperationException("Native Unstage Selected Hunks did not update the expected index.");
         Console.WriteLine("RemoteControl unstaged a selected text hunk from the native diff tab.");
+    }
+
+    private static async Task VerifyCommitAsync(Window window, WorkbenchSession session, GitWorktreeFixture sample, CancellationToken token)
+    {
+        var checkout = sample.Primary;
+        var hooks = Directory.CreateDirectory(Path.Combine(checkout, ".git", "native-test-hooks"));
+        await sample.GitAsync(checkout, token, "config", "--local", "core.hooksPath", hooks.FullName).ConfigureAwait(true);
+        await sample.GitAsync(checkout, token, "config", "--local", "user.name", "Retro Native Test").ConfigureAwait(true);
+        await sample.GitAsync(checkout, token, "config", "--local", "user.email", "native@example.invalid").ConfigureAwait(true);
+        await sample.GitAsync(checkout, token, "config", "--local", "commit.gpgsign", "false").ConfigureAwait(true);
+        await WorkbenchRemoteControl.ClickAsync(window, "git.commit.create.pane").ConfigureAwait(true);
+        while (window.OwnedWindows.Count == 0)
+            await Task.Delay(20, token).ConfigureAwait(true);
+        var dialog = window.OwnedWindows.Single();
+        const string Message = "Native workbench commit";
+        var field = await FindAsync<TextBox>(dialog, "git.commit.message", token).ConfigureAwait(true);
+        field.Text = Message;
+        await WorkbenchRemoteControl.ClickAsync(dialog, "git.commit.submit").ConfigureAwait(true);
+        await session.SourceControl.CommitCommand.ExecutionTask!.WaitAsync(token).ConfigureAwait(true);
+        var actual = await sample.GitAsync(checkout, token, "log", "-1", "--format=%s").ConfigureAwait(true);
+        if (!string.Equals(Message, actual.Trim(), StringComparison.Ordinal))
+            throw new InvalidOperationException("The native Git dialog did not commit the staged state.");
+        Console.WriteLine("RemoteControl committed the reviewed native Git index through the workbench dialog.");
     }
 
     private static async Task<T> FindAsync<T>(Window window, string id, CancellationToken token) where T : Control

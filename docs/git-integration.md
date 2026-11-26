@@ -20,6 +20,8 @@ In a text diff, select one or more hunks and choose **Stage Selected Hunks** or 
 
 The working-tree diff compares files against the index and the staged diff compares the index against HEAD. Unstaging preserves the working copy. Each index update is prepared privately and published only while holding Git’s index lock and after verifying the index still matches its starting state. [Git diff](https://git-scm.com/docs/git-diff) · [Path-specific Git reset](https://git-scm.com/docs/git-reset) · [MCP tools](mcp-tools.md#phase-03-git-tools-in-development)
 
+Open the worktree root and choose **Commit Staged Changes** or **Amend Last Commit** from the Git menu or Source Control. The dialog shows the checkout and branch. Amend preloads the last message. Git writes the reviewed index, leaves unstaged edits in the working tree, and runs the configured hooks and signing program. If HEAD or the index changed while the dialog was open, review the new staged state before retrying. [Git commit](https://git-scm.com/docs/git-commit) · [Git hooks](https://git-scm.com/docs/githooks)
+
 ## Workflows
 
 | Area | IDE commands and views |

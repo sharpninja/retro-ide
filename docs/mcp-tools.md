@@ -55,12 +55,17 @@ The Phase 03 candidate exposes native Git discovery, selection, status, file dif
 | `git_unstage_file` | Selected `worktreePath`, literal `path`, current workbench `context` | The path and repository with `staged: false`. Requires a write-enabled attachment. |
 | `git_stage_hunks` | Selected `worktreePath`, literal `path`, `preimage` from a working diff, selected `hunkIds`, current workbench `context` | Stages only the selected hunks. Requires a write-enabled attachment. |
 | `git_unstage_hunks` | Selected `worktreePath`, literal `path`, `preimage` from a staged diff, selected `hunkIds`, current workbench `context` | Unstages only the selected hunks and preserves working files. Requires a write-enabled attachment. |
+| `git_get_commit_state` | Selected `worktreePath` | The branch, HEAD, current commit message, staged change availability, and commit `preimage`. Open the entire worktree root before committing its index. |
+| `git_commit` | Selected `worktreePath`, commit `preimage`, `message`, current workbench `context` | Commits the reviewed index and returns the previous and new HEAD. Requires a write-enabled attachment. |
+| `git_amend` | Selected `worktreePath`, commit `preimage`, `message`, current workbench `context` | Replaces the reviewed HEAD and returns the previous and new HEAD. Requires a write-enabled attachment. |
 
 Selection is scoped to the attached workbench. Desktop commands and attached clients share the selection and status shown in Source Control and Project Explorer. On desktop restart, the workspace revalidates the saved checkout before issuing a new attachment. Select a worktree before reading status. If its selection changes while status is being prepared, refresh the context and read again. [Git integration](git-integration.md)
 
 Pass the exact checkout-relative `path` returned by status, including spaces, Unicode, and other literal characters. If the index is locked or changed during preparation, the mutation returns `git_index_busy` or `git_index_changed`. Read the current status and retry after the other Git operation finishes.
 
 Hunk IDs are local to one diff preimage. When a hunk action returns `git_diff_changed`, read or reopen the diff and choose IDs from the new result before retrying.
+
+Commit and amend check the reviewed HEAD and index again before starting native Git. Restart the review when `git_commit_state_changed` is returned. The result reports whether publication of the prepared index succeeded as `indexPublished`.
 
 ## One feature registry
 

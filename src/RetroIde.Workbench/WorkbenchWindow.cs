@@ -10,6 +10,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Dock.Avalonia.Controls;
 using RetroIde.Application;
+using RetroIde.Application.Git;
 
 namespace RetroIde.Workbench;
 
@@ -98,6 +99,7 @@ public sealed class WorkbenchWindow : Window
         SourceControlPane.RegisterShortcuts(this, session.SourceControl);
         session.ExplorerView.PickDirectoryAsync = PickWorkspaceDirectoryAsync;
         session.SourceControl.PromptSetupAsync = PromptGitSetupAsync;
+        session.SourceControl.PromptCommitAsync = PromptGitCommitAsync;
         session.Layout.Factory.DefaultHostWindowLocator = () =>
         {
             var floating = new HostWindow();
@@ -119,6 +121,7 @@ public sealed class WorkbenchWindow : Window
             _closeSave?.Cancel();
             session.ExplorerView.PickDirectoryAsync = null;
             session.SourceControl.PromptSetupAsync = null;
+            session.SourceControl.PromptCommitAsync = null;
             session.Controller.Unregister(session.View);
         };
 
@@ -179,6 +182,20 @@ public sealed class WorkbenchWindow : Window
                 dialog.Close();
         }));
         return await dialog.ShowDialog<GitSetupDialog.Choice?>(this).ConfigureAwait(true);
+    }
+
+    private async Task<string?> PromptGitCommitAsync(GitCommitOperations.CommitState state, bool amend, CancellationToken token)
+    {
+        if (token.IsCancellationRequested || _closed)
+            return null;
+
+        var dialog = new GitCommitDialog(_session.Localization, state, amend) { FlowDirection = FlowDirection };
+        using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
+        {
+            if (dialog.IsVisible)
+                dialog.Close();
+        }));
+        return await dialog.ShowDialog<string?>(this).ConfigureAwait(true);
     }
 
     private void TrackFloatingInteraction(HostWindow floating)

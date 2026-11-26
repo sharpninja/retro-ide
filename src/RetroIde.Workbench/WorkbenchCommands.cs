@@ -33,13 +33,15 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor RefreshGitDiff = Create("git.diff.refresh", "Ctrl+Alt+Shift+D");
     public static readonly CommandDescriptor StageGitHunks = Create("git.hunks.stage", "Ctrl+Alt+K");
     public static readonly CommandDescriptor UnstageGitHunks = Create("git.hunks.unstage", "Ctrl+Alt+Shift+K");
+    public static readonly CommandDescriptor CreateCommit = Create("git.commit.create", "Ctrl+Alt+C");
+    public static readonly CommandDescriptor AmendCommit = Create("git.commit.amend", "Ctrl+Alt+M");
 
     // A document key binding can be active inside a main or floating workbench window.
     // All commands in this catalog can share that input route, so check them together.
     private static readonly CommandDescriptor[] Commands =
         [FocusTool, OpenFolder, OpenProject, Save, Reveal, Search, Next, Previous, Replace, ReplaceAll, Undo, Redo, Close, Discard,
             OpenSourceControl, SelectRepository, RefreshGitStatus, InitializeRepository, CloneRepository, OpenGitDiff, StageGitFile, UnstageGitFile,
-            RefreshGitDiff, StageGitHunks, UnstageGitHunks];
+            RefreshGitDiff, StageGitHunks, UnstageGitHunks, CreateCommit, AmendCommit];
 
     internal static void ValidateBundledResources()
     {

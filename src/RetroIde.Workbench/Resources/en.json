@@ -25,6 +25,8 @@
     "command.git.diff.refresh.label": "Refresh Diff",
     "command.git.hunks.stage.label": "Stage Selected Hunks",
     "command.git.hunks.unstage.label": "Unstage Selected Hunks",
+    "command.git.commit.create.label": "Commit Staged Changes",
+    "command.git.commit.amend.label": "Amend Last Commit",
     "command.git.repository.initialize.label": "Initialize Repository…",
     "command.git.repository.clone.label": "Clone Repository…",
     "menu.file": "_File",
@@ -38,6 +40,10 @@
     "git.diff.layer.staged": "Staged",
     "git.diff.layer.working": "Working tree",
     "git.diff.hunks": "Select diff hunks",
+    "git.commit.message": "Commit message",
+    "git.commit.amend-notice": "Amending replaces the last commit on this worktree.",
+    "git.commit.no-head": "This branch has no commit to amend.",
+    "git.commit.no-staged-changes": "Stage changes before committing.",
     "git.setup.initialize": "Initialize Repository",
     "git.setup.clone": "Clone Repository",
     "git.setup.source": "Git URL or local repository path",
@@ -112,6 +118,8 @@
     "command.git.diff.refresh.icon": "M16,3 L19,3 L19,10 L12,10 L12,8 L15,8 Q10,2 5,8 L3,7 Q8,0 16,5 Z M4,17 L1,17 L1,10 L8,10 L8,12 L5,12 Q10,18 15,12 L17,13 Q12,20 4,15 Z",
     "command.git.hunks.stage.icon": "M2,2 L11,2 L11,4 L2,4 Z M2,7 L9,7 L9,9 L2,9 Z M13,7 L15,7 L15,11 L19,11 L19,13 L15,13 L15,17 L13,17 L13,13 L9,13 L9,11 L13,11 Z",
     "command.git.hunks.unstage.icon": "M2,2 L11,2 L11,4 L2,4 Z M2,7 L9,7 L9,9 L2,9 Z M9,11 L19,11 L19,13 L9,13 Z",
+    "command.git.commit.create.icon": "M9,1 L11,1 L11,6 L14,8 L14,12 L11,14 L11,19 L9,19 L9,14 L6,12 L6,8 L9,6 Z M8,9 L8,11 L10,12 L12,11 L12,9 L10,8 Z",
+    "command.git.commit.amend.icon": "M4,6 Q7,2 12,3 Q17,4 18,8 L16,9 Q15,5 10,5 Q7,5 6,8 L9,8 L9,10 L2,10 L2,3 L4,3 Z M16,12 L18,12 Q16,17 11,17 Q6,17 3,14 L5,13 Q10,17 15,14 Z",
     "command.git.repository.initialize.icon": "M2,4 L8,4 L10,6 L18,6 L18,16 L2,16 Z M9,8 L11,8 L11,10 L14,10 L14,12 L11,12 L11,15 L9,15 L9,12 L6,12 L6,10 L9,10 Z",
     "command.git.repository.clone.icon": "M2,2 L13,2 L13,5 L5,5 L5,13 L2,13 Z M7,7 L18,7 L18,18 L7,18 Z M9,9 L9,16 L16,16 L16,9 Z"
   }

@@ -28,6 +28,10 @@ internal static class WorkbenchText
     internal const string GitSetupDestination = "git.setup.destination";
     internal const string GitSetupBrowse = "git.setup.browse";
     internal const string GitSetupCancel = "git.setup.cancel";
+    internal const string GitCommitMessage = "git.commit.message";
+    internal const string GitAmendNotice = "git.commit.amend-notice";
+    internal const string GitNoCommit = "git.commit.no-head";
+    internal const string GitNoStagedChanges = "git.commit.no-staged-changes";
     internal const string SearchQuery = "editor.search.query";
     internal const string SearchReplacement = "editor.search.replacement";
     internal const string SearchMatchCase = "editor.search.match-case";
@@ -44,6 +48,7 @@ internal static class WorkbenchText
         [FileMenu, ViewMenu, LanguageMenu, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
             ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts, GitDiffStaged, GitDiffWorking, GitDiffHunks,
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupCancel,
+            GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,
             GitBadgeTracked, GitBadgeUntracked, GitBadgeIgnored, GitBadgeModified, GitBadgeStaged, GitBadgeStagedModified, GitBadgeConflicted];
 
     internal static string ExplorerRoot(WorkbenchLocalization localization, WorkspaceExplorer.RootKind kind, string path, bool unavailable)

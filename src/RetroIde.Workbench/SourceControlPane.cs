@@ -98,7 +98,8 @@ internal static class SourceControlPane
 
     private static (CommandDescriptor Descriptor, ICommand Command)[] FileActions(SourceControlViewModel view) =>
         [(WorkbenchCommands.OpenGitDiff, view.OpenDiffCommand), (WorkbenchCommands.StageGitFile, view.StageFileCommand),
-            (WorkbenchCommands.UnstageGitFile, view.UnstageFileCommand)];
+            (WorkbenchCommands.UnstageGitFile, view.UnstageFileCommand), (WorkbenchCommands.CreateCommit, view.CommitCommand),
+            (WorkbenchCommands.AmendCommit, view.AmendCommand)];
 
     private static void BindFileSelection(SourceControlViewModel view, ListBox staged, ListBox working, ListBox conflicts)
     {

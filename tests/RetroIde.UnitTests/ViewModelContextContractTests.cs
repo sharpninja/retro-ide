@@ -55,7 +55,8 @@ public sealed class ViewModelContextContractTests
         [
             "editor_close_document", "editor_edit_text", "editor_find_text", "editor_get_document",
             "editor_redo", "editor_replace_text", "editor_save_document", "editor_undo",
-            "git_clone_repository", "git_close_diff", "git_discover_repository", "git_get_diff", "git_get_status",
+            "git_amend", "git_clone_repository", "git_close_diff", "git_commit", "git_discover_repository",
+            "git_get_commit_state", "git_get_diff", "git_get_status",
             "git_initialize_repository", "git_open_diff", "git_select_repository", "git_stage_file", "git_stage_hunks",
             "git_unstage_file", "git_unstage_hunks",
             "workbench_focus_tool", "workbench_get_context", "workbench_get_display_language", "workbench_set_display_language",

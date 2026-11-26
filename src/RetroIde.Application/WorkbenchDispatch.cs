@@ -229,7 +229,7 @@ public sealed class FeatureRegistry
             Explorer.SaveDocument, Documents.GetContext, Documents.Find, Documents.Replace, Documents.Close,
             Documents.Edit, Documents.Undo, Documents.Redo, Localization.GetLanguage, Localization.SetLanguage,
             Git.Discover, Git.Select, Git.Status, Git.Initialize, Git.Clone, Git.Diff, Git.OpenDiff, Git.CloseDiff,
-            Git.Stage, Git.Unstage, Git.StageHunks, Git.UnstageHunks);
+            Git.Stage, Git.Unstage, Git.StageHunks, Git.UnstageHunks, Git.CommitState, Git.Commit, Git.Amend);
     }
 
     internal ExplorerFeatures Explorer { get; }
@@ -333,7 +333,9 @@ public sealed class WorkbenchUnitOfWork(ViewContextContract contract, Func<Guid,
             return OperationResult.Failure(operationId, "cancelled", "The operation was cancelled.");
         }
         using var preparedResource = outcome.PreparedResource;
-        return actor.Authorize(operationId, feature.IsMutation, () =>
+        Task<FeatureOutcome>? authorizedOperation = null;
+        JsonElement? grantedContext = null;
+        var dispatched = actor.Authorize(operationId, feature.IsMutation, () =>
         {
             var failure = Validate(captured, actor, feature.IsMutation, operationId, cancellationToken, out var current,
                 compareRevision: !outcome.KeepCapturedTarget);
@@ -343,8 +345,28 @@ public sealed class WorkbenchUnitOfWork(ViewContextContract contract, Func<Guid,
                 return OperationResult.Failure(operationId, "view_closed", "The originating registration is no longer live.");
 
             var committed = outcome.Commit?.Invoke(current!) ?? outcome;
+            if (committed.ExecuteAuthorizedAsync is { } execute)
+            {
+                grantedContext = contract.Capture(current!.ContextSource);
+                authorizedOperation = execute(cancellationToken);
+                return new OperationResult(operationId, "authorized", "");
+            }
             return Complete(operationId, current!, committed);
         });
+        if (authorizedOperation is null)
+            return dispatched;
+
+        // Authorization was checked before the external mutation started. Report its actual outcome
+        // even if focus or selection changes while Git finishes.
+        try
+        {
+            var completed = await authorizedOperation.ConfigureAwait(true);
+            return Complete(operationId, grantedContext, completed);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return OperationResult.Failure(operationId, "cancelled", "The operation was cancelled.");
+        }
     }
 
     private OperationResult? Validate(WorkbenchAddress? captured, ActorGrant actor, bool mutation, Guid operationId,
@@ -375,7 +397,10 @@ public sealed class WorkbenchUnitOfWork(ViewContextContract contract, Func<Guid,
     }
 
     private OperationResult Complete(Guid operationId, IWorkbenchRegistration view, FeatureOutcome outcome) =>
+        Complete(operationId, string.Equals(outcome.Code, "ok", StringComparison.Ordinal) ? contract.Capture(view.ContextSource) : null, outcome);
+
+    private static OperationResult Complete(Guid operationId, JsonElement? context, FeatureOutcome outcome) =>
         string.Equals(outcome.Code, "ok", StringComparison.Ordinal)
-            ? new OperationResult(operationId, outcome.Code, outcome.Summary, contract.Capture(view.ContextSource)) { Data = outcome.Data }
+            ? new OperationResult(operationId, outcome.Code, outcome.Summary, context) { Data = outcome.Data }
             : OperationResult.Failure(operationId, outcome.Code, outcome.Summary);
 }

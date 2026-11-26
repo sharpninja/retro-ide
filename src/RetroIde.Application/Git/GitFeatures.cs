@@ -72,6 +72,20 @@ internal sealed class GitFeatures
         static (input, view, token) => GitFileOperations.UpdateHunksAsync(input, view, stage: false, token),
         typeof(GitFileOperations.HunksResult), mutation: true);
 
+    public Feature<GitCommitOperations.StateInput> CommitState { get; } = new("git.commit.state", "git_get_commit_state",
+        "Read the selected worktree's current HEAD, staged state and commit preimage.",
+        GitCommitOperations.ReadAsync, typeof(GitCommitOperations.CommitState));
+
+    public Feature<GitCommitOperations.CommitInput> Commit { get; } = new("git.commit.create", "git_commit",
+        "Commit the selected worktree's reviewed index with an explicit message.",
+        static (input, view, token) => GitCommitOperations.CommitAsync(input, view, amend: false, token),
+        typeof(GitCommitOperations.CommitResult), mutation: true);
+
+    public Feature<GitCommitOperations.CommitInput> Amend { get; } = new("git.commit.amend", "git_amend",
+        "Amend the selected worktree's reviewed HEAD and index with an explicit message.",
+        static (input, view, token) => GitCommitOperations.CommitAsync(input, view, amend: true, token),
+        typeof(GitCommitOperations.CommitResult), mutation: true);
+
     internal GitFeatures(Func<GitSelection, CancellationToken, Task<GitStatus?>>? readStatus = null)
     {
         Status = new("git.status.read", "git_get_status", "Read the selected worktree's staged and working status.",

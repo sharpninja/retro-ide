@@ -28,14 +28,14 @@ internal sealed class PreparedGitIndex : IDisposable
     internal static async Task<PreparedGitIndex?> PrepareAsync(GitWorktree repository, Func<string, Task<bool>> update, CancellationToken token)
     {
         var index = Path.Combine(repository.GitDirectory, "index");
-        var prepared = new PreparedGitIndex(index, ReadIndex(index));
+        var prepared = new PreparedGitIndex(index, GitIndexLock.Read(index));
         try
         {
             if (prepared._original is not null)
                 await File.WriteAllBytesAsync(prepared._temporary, prepared._original, token).ConfigureAwait(false);
             if (await update(prepared._temporary).ConfigureAwait(false))
             {
-                prepared._updated = ReadIndex(prepared._temporary);
+                prepared._updated = GitIndexLock.Read(prepared._temporary);
                 return prepared;
             }
         }
@@ -50,49 +50,21 @@ internal sealed class PreparedGitIndex : IDisposable
 
     internal string? Publish(Func<bool>? verifyWorktree = null)
     {
-        var lockPath = _index + ".lock";
-        FileStream stream;
-        try { stream = new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None); }
-        catch (IOException) when (File.Exists(lockPath)) { return "git_index_busy"; }
-
-        var ownsLock = true;
-        try
-        {
-            using (stream)
-            {
-                var current = ReadIndex(_index);
-                if (!ContentsEqual(current, _original))
-                    return "git_index_changed";
-                if (verifyWorktree is not null && !verifyWorktree())
-                    return "git_diff_changed";
-                if (ContentsEqual(current, _updated))
-                    return null;
-                if (_updated is null)
-                    throw new InvalidDataException("Git did not produce an index.");
-                stream.Write(_updated);
-                stream.Flush(flushToDisk: true);
-            }
-            if (!OperatingSystem.IsWindows() && _original is not null)
-                File.SetUnixFileMode(lockPath, File.GetUnixFileMode(_index));
-            File.Move(lockPath, _index, overwrite: true);
-            ownsLock = false;
+        using var held = GitIndexLock.TryAcquire(_index);
+        if (held is null)
+            return "git_index_busy";
+        var current = GitIndexLock.Read(_index);
+        if (!GitIndexLock.ContentsEqual(current, _original))
+            return "git_index_changed";
+        if (verifyWorktree is not null && !verifyWorktree())
+            return "git_diff_changed";
+        if (GitIndexLock.ContentsEqual(current, _updated))
             return null;
-        }
-        finally
-        {
-            if (ownsLock)
-                File.Delete(lockPath);
-        }
+        if (_updated is null)
+            throw new InvalidDataException("Git did not produce an index.");
+        held.Publish(_updated, _original is not null);
+        return null;
     }
-
-    private static byte[]? ReadIndex(string path)
-    {
-        try { return File.ReadAllBytes(path); }
-        catch (FileNotFoundException) { return null; }
-    }
-
-    private static bool ContentsEqual(byte[]? left, byte[]? right) =>
-        left is null ? right is null : right is not null && left.AsSpan().SequenceEqual(right);
 
     public void Dispose()
     {

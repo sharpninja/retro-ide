@@ -124,6 +124,15 @@ internal static class NativeGit
     internal static async Task<byte[]?> ReadBytesAsync(string directory, IReadOnlyList<string> arguments, CancellationToken token,
         string? indexPath = null, bool allowDifferences = false)
     {
+        var result = await RunCaptureAsync(directory, arguments, token, indexPath).ConfigureAwait(false);
+        return result.ExitCode == 0 || (allowDifferences && result.ExitCode == 1) ? result.Output : null;
+    }
+
+    internal sealed record CommandResult(int ExitCode, byte[] Output, string? Error);
+
+    internal static async Task<CommandResult> RunCaptureAsync(string directory, IReadOnlyList<string> arguments, CancellationToken token,
+        string? indexPath = null, bool captureError = false)
+    {
         var start = new ProcessStartInfo("git")
         {
             WorkingDirectory = directory, UseShellExecute = false, CreateNoWindow = true,
@@ -139,14 +148,15 @@ internal static class NativeGit
         token.ThrowIfCancellationRequested();
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Git did not start.");
         using var buffer = new MemoryStream();
+        using var errorBuffer = captureError ? new MemoryStream() : null;
         var output = process.StandardOutput.BaseStream.CopyToAsync(buffer, token);
-        var error = process.StandardError.BaseStream.CopyToAsync(Stream.Null, token);
+        var error = process.StandardError.BaseStream.CopyToAsync(errorBuffer ?? (Stream)Stream.Null, token);
         try
         {
             await process.WaitForExitAsync(token).ConfigureAwait(false);
             await output.ConfigureAwait(false);
             await error.ConfigureAwait(false);
-            return process.ExitCode == 0 || (allowDifferences && process.ExitCode == 1) ? buffer.ToArray() : null;
+            return new(process.ExitCode, buffer.ToArray(), errorBuffer is null ? null : Encoding.UTF8.GetString(errorBuffer.ToArray()));
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {

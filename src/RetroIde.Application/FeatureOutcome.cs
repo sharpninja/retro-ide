@@ -5,6 +5,7 @@ namespace RetroIde.Application;
 internal sealed record FeatureOutcome(string Code, string Summary, JsonElement? Data = null)
 {
     internal Func<IWorkbenchRegistration, FeatureOutcome>? Commit { get; init; }
+    internal Func<CancellationToken, Task<FeatureOutcome>>? ExecuteAuthorizedAsync { get; init; }
     internal IDisposable? PreparedResource { get; init; }
     internal bool KeepCapturedTarget { get; init; }
 
