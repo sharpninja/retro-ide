@@ -1,0 +1,20 @@
+# Phase 03 test-criterion IDs from the effective QBrain requirements.
+# Earlier projections retain the cross-phase MCP inventory, scope, and context criteria.
+# QBrain export SHA256: 1908c4be5e25ad51d253b74af3973af8083e1bf4fa3e2f3ba7921c05fa7089ee.
+payload:
+  result:
+    testing:
+    - id: TEST-RETRO-013
+      acceptanceCriteria:
+      - id: ac-test-git-multiple-repos
+      - id: ac-test-git-stage-and-push
+      - id: ac-test-git-recovery
+      - id: ac-test-git-extensions
+    - id: TEST-RETRO-014
+      acceptanceCriteria:
+      - id: ac-test-language-session
+      - id: ac-test-language-documents
+      - id: ac-test-language-features
+    - id: TEST-RETRO-015
+      acceptanceCriteria:
+      - id: ac-test-mcp-operation
