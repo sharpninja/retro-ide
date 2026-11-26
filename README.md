@@ -1,6 +1,6 @@
 # Retro IDE
 
-Retro IDE is a shared Windows and Linux development environment for retrocomputing emulators. The initial Avalonia workbench has docked and floating tools, document tabs including Emulation, and a focus command shared by the menu, command bar, shortcut, and MCP clients. The Phase 02 candidate adds Project Explorer, AvaloniaEdit source tabs, and language packs. The corrected candidate passed 67 managed tests per host and the native UI suites. Phase 02 remains open pending independent acceptance of the test-first evidence. The [implementation plan](docs/plans/PLAN-RETROIDE-001.md) tracks each phase.
+Retro IDE is a shared Windows and Linux development environment for retrocomputing emulators. The initial Avalonia workbench has docked and floating tools, document tabs including Emulation, and a focus command shared by the menu, command bar, shortcut, and MCP clients. The Phase 02 candidate adds Project Explorer, AvaloniaEdit source tabs, and language packs. The fresh candidate passed 78 managed tests per host and the native UI suites. Phase 02 remains open on incomplete test-first evidence. The [implementation plan](docs/plans/PLAN-RETROIDE-001.md) tracks each phase.
 
 Phase 01 passed the shared workbench focus and input-free native UI gates on Windows and Linux. [Verification and independent acceptance](docs/receipts/phase-01-workbench-mcp.md)
 

@@ -90,7 +90,15 @@ Use `ProductionAttachmentTests` to verify the Phase 02 tool schemas and outcomes
 
 #### Phase 02 verification status
 
-The corrected candidate passed 67 managed tests per host, Linux RemoteControl and X11 gestures, and Win32 RemoteControl using binaries built on Linux. The Save regression tests verify that a staged write failure reaches the original tab after a tab switch and leaves the buffer dirty. The most recent independent review returned DISAGREE at 99 accuracy and 98 completeness on the earlier candidate. The original test-first records remain incomplete, and all three Phase 02 tasks are open. The 98/98 independent gate applies to each task.
+The fresh delivery at `60457dc` passed 78 managed tests per host, Linux RemoteControl and X11 gestures, and Win32 RemoteControl using binaries built on Linux. The Save regression tests verify that a staged write failure reaches the original tab after a tab switch and leaves the buffer dirty. The independent review returned DISAGREE at 99 accuracy and 98 completeness for the phase and for each slice. All scoped behavior passed. The test-first review identified three complete criteria, three partial criteria, and four without criterion-specific pre-implementation proof. All three Phase 02 tasks remain open.
+
+| Slice | Remaining test-first evidence |
+| --- | --- |
+| 02A · Project Explorer | Restored expansion and selection, rejection of retired-workspace results, targeted external changes, and unavailable roots still need criterion-specific proof. The independent keyboard, pointer, and Reveal cases passed. Their new live binding did not populate the Explorer tree on the frozen candidate and needs investigation. |
+| 02B · Source tabs | Diagnostic-fixture line and column navigation passed five focused cases. Independent buffer, caret, selection and undo through float and redock, find/replace, and syntax fallback passed 11 focused cases. |
+| 02C · Localization | Pack validation passed seven focused cases. Isolated builds also rejected a missing bundled command icon and a missing pane title. Live labels, icons, accessibility, RTL, stable shortcuts, expanded pseudo-localized labels, and persisted locale still need criterion-specific proof. |
+
+Verify the remaining behaviors with passing independent fixtures and discriminating fault controls, then run the same assertions at the missing real entry points on the accepted baseline. The focused candidate results above are local verification. Rerun the full local and independent gates against the renewed delivery before recording acceptance.
 
 ### 03 — Git, terminal, and language servers
 
