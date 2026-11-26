@@ -12,23 +12,26 @@ namespace RetroIde.Workbench;
 public sealed class DockLayout : IDisposable
 {
     private readonly IWorkbenchWorkspaceContext _workspace;
+    private readonly WorkbenchLocalization _localization;
     private readonly Dictionary<string, ShellTool> _tools;
     private readonly Dictionary<string, ShellDocument> _documents;
+    private readonly HashSet<ShellDocument> _sources = [];
     private readonly DockBranch[] _floating;
     private bool _suppress;
     private bool _shown;
     private bool _disposed;
 
-    internal DockLayout(IWorkbenchWorkspaceContext workspace, WorkbenchLayoutState? state, InteractionBlocks interaction)
+    internal DockLayout(IWorkbenchWorkspaceContext workspace, WorkbenchLayoutState? state, InteractionBlocks interaction, ExplorerViewModel explorer, WorkbenchLocalization localization)
     {
         _workspace = workspace;
+        _localization = localization;
         Factory = new Factory
         {
             DefaultHostWindowLocator = () => new HostWindow(),
         };
         _tools = new[]
         {
-            new ShellTool("explorer", "Project Explorer", "Open a project or folder to browse files.", "left", interaction),
+            new ShellTool("explorer", "Project Explorer", "Open a project or folder to browse files.", "left", interaction) { Explorer = explorer },
             new ShellTool("registers", "Registers", "No debugger session connected.", "right", interaction),
             new ShellTool("call-stack", "Call Stack", "No debugger session connected.", "right", interaction),
             new ShellTool("output", "Output", "Workbench ready.", "bottom", interaction),
@@ -44,6 +47,13 @@ public sealed class DockLayout : IDisposable
             new ShellDocument("disassembly", "Disassembly", "No debugger session connected.", interaction),
             new ShellDocument("test-results", "Test Results", "No test run selected.", interaction),
         }.ToDictionary(document => document.Id, StringComparer.Ordinal);
+
+        foreach (var tool in _tools.Values)
+            tool.Localization = localization;
+        foreach (var document in _documents.Values)
+            document.Localization = localization;
+        RefreshLocale(null, EventArgs.Empty);
+        localization.Changed += RefreshLocale;
 
         state = Compatible(state) ? state : null;
         _floating = state?.Floating ?? [];
@@ -88,6 +98,8 @@ public sealed class DockLayout : IDisposable
 
     /// <summary>Gets the selected document in the main host.</summary>
     public string? SelectedDocumentId => FindSelectedDocument(Root)?.Id;
+
+    internal DocumentViewModel? CurrentSource => FindSelectedDocument(Root)?.Source;
 
     internal IEnumerable<ShellTool> Tools => _tools.Values;
 
@@ -136,6 +148,41 @@ public sealed class DockLayout : IDisposable
     /// <summary>Selects a shell document within its current Dock group.</summary>
     public void SelectDocument(string id) => Factory.SetActiveDockable(_documents[id]);
 
+    internal void AddSourceDocument(ShellDocument document)
+    {
+        _sources.Add(document);
+        Factory.AddDockable(FindDocumentGroup(), document);
+    }
+
+    internal void ForgetSourceDocument(ShellDocument document) => _sources.Remove(document);
+
+    internal void ActivateSourceDocument(ShellDocument document)
+    {
+        if (IsDetached(document))
+            Factory.AddDockable(FindDocumentGroup(), document);
+        if (document.Owner is not IDock owner)
+            return;
+
+        Factory.SetActiveDockable(document);
+        Factory.SetFocusedDockable(owner, document);
+        ActivateDocumentBranch(document);
+        Factory.ActivateWindow(document);
+        AdvanceWorkspaceRevision();
+    }
+
+    private IDocumentDock FindDocumentGroup()
+    {
+        if (FindSelectedDocument(Root)?.Owner is IDocumentDock active)
+            return active;
+        if (Descendants(Root).OfType<IDocumentDock>().FirstOrDefault() is { } existing)
+            return existing;
+
+        var created = Factory.CreateDocumentDock();
+        created.Id = "documents";
+        Factory.SplitToDock(Root.VisibleDockables!.OfType<IDock>().First(), created, DockOperation.Right);
+        return created;
+    }
+
     internal void MoveToolToGroup(string id, string group)
     {
         var destination = Descendants(Root).OfType<IToolDock>().First(d => string.Equals(d.Id, group, StringComparison.Ordinal));
@@ -178,7 +225,7 @@ public sealed class DockLayout : IDisposable
         Dispatcher.UIThread.VerifyAccess();
         if (_shown)
             RestoreLostPanes();
-        var floating = Root.Windows?.Where(window => window.Layout is not null)
+        var floating = Root.Windows?.Where(window => window.Layout is { } layout && HasPersistablePanes(layout))
             .Select(window =>
             {
                 window.Save();
@@ -187,14 +234,28 @@ public sealed class DockLayout : IDisposable
         return new WorkbenchLayoutState(1, CaptureBranch(Root), _shown ? floating ?? [] : _floating, ActiveToolId);
     }
 
+    private static bool HasPersistablePanes(IRootDock root) =>
+        Descendants(root).Any(child => child is ShellTool or ShellDocument { Source: null }) ||
+        (root.LeftPinnedDockables?.Count ?? 0) + (root.RightPinnedDockables?.Count ?? 0) +
+        (root.TopPinnedDockables?.Count ?? 0) + (root.BottomPinnedDockables?.Count ?? 0) > 0;
+
     /// <inheritdoc />
     public void Dispose()
     {
         if (_disposed)
             return;
         _disposed = true;
+        _localization.Changed -= RefreshLocale;
         if (Root.ExitWindows.CanExecute(null))
             Root.ExitWindows.Execute(null);
+    }
+
+    private void RefreshLocale(object? sender, EventArgs args)
+    {
+        foreach (var tool in _tools.Values)
+            tool.Title = _localization.Text(WorkbenchText.PaneTitle(tool.Id));
+        foreach (var document in _documents.Values)
+            document.Title = _localization.Text(WorkbenchText.PaneTitle(document.Id));
     }
 
     private bool Compatible(WorkbenchLayoutState? layout)
@@ -288,8 +349,12 @@ public sealed class DockLayout : IDisposable
             (dockables ?? []).OfType<ShellTool>().Select(tool => new PinnedTool(tool.Id, alignment.ToString(),
                 (tool.OriginalOwner as IToolDock ?? tool.Owner as IToolDock) is { } owner ? groupIds.GetValueOrDefault(owner) : null));
 
-        string? CapturedId(IDockable? item) =>
-            item is IDock dock ? groupIds.GetValueOrDefault(dock) : GroupId(item?.Id);
+        string? CapturedId(IDockable? item) => item switch
+        {
+            IDock dock => groupIds.GetValueOrDefault(dock),
+            ShellDocument { Source: not null } => null,
+            _ => GroupId(item?.Id),
+        };
 
         DockNode CaptureNode(IDockable item) => item switch
         {
@@ -305,7 +370,8 @@ public sealed class DockLayout : IDisposable
 
         DockNode CaptureGroup(IDock dock, string kind, string? alignment = null) =>
             new(kind, CapturedId(dock), dock.Proportion is > 0 and <= 1 ? dock.Proportion : null,
-                CapturedId(dock.ActiveDockable), dock.VisibleDockables?.Select(CaptureNode).ToArray() ?? [], alignment);
+                CapturedId(dock.ActiveDockable), (dock.VisibleDockables ?? [])
+                    .Where(child => child is not ShellDocument { Source: not null }).Select(CaptureNode).ToArray(), alignment);
     }
 
     private static Dictionary<IDock, string> CaptureDockGroupIds(IRootDock root)
@@ -372,15 +438,9 @@ public sealed class DockLayout : IDisposable
             owner.ActiveDockable ??= tool;
         }
 
-        foreach (var document in _documents.Values.Where(IsDetached))
+        foreach (var document in _documents.Values.Concat(_sources).Where(IsDetached))
         {
-            var owner = Descendants(Root).OfType<IDocumentDock>().FirstOrDefault();
-            if (owner is null)
-            {
-                owner = Factory.CreateDocumentDock();
-                owner.Id = "documents";
-                Factory.SplitToDock(Root.VisibleDockables!.OfType<IDock>().First(), owner, DockOperation.Right);
-            }
+            var owner = FindDocumentGroup();
             Factory.AddDockable(owner, document);
             owner.ActiveDockable ??= document;
         }
@@ -405,6 +465,8 @@ public sealed class DockLayout : IDisposable
         Factory.SplitToDock(anchor, owner, operation);
         return owner;
     }
+
+    internal void AdvanceWorkspaceRevision() => Publish(ActiveToolId);
 
     private long Publish(string? id)
     {
@@ -474,6 +536,18 @@ public sealed class DockLayout : IDisposable
         }
     }
 
+    internal static IEnumerable<string> RequiredPaneText() => PaneIds(DefaultTopology())
+        .SelectMany(id => new[] { WorkbenchText.PaneTitle(id), WorkbenchText.PaneDescription(id) });
+
+    private static IEnumerable<string> PaneIds(DockNode node)
+    {
+        if (node.Kind is "tool" or "document" && node.Id is { } id)
+            yield return id;
+        foreach (var child in node.Children ?? [])
+            foreach (var pane in PaneIds(child))
+                yield return pane;
+    }
+
     private static DockNode DefaultTopology() => new("vertical", "main", Children:
     [
         new("horizontal", "columns", 0.73, Children:
@@ -505,6 +579,8 @@ internal sealed class ShellTool : Tool
         CanPin = true;
     }
 
+    internal ExplorerViewModel? Explorer { get; init; }
+    internal WorkbenchLocalization Localization { get; set; } = WorkbenchLocalization.English;
     public string Message { get; }
     public string DefaultGroup { get; }
     public InteractionBlocks Interaction { get; }
@@ -522,6 +598,8 @@ internal sealed class ShellDocument : Document
         CanFloat = false;
     }
 
+    internal DocumentViewModel? Source { get; init; }
+    internal WorkbenchLocalization Localization { get; set; } = WorkbenchLocalization.English;
     public string Message { get; }
     public InteractionBlocks Interaction { get; }
 }

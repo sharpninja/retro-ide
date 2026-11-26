@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GPS.SimpleMVC.Views;
 using RetroIde.Application;
+using RetroIde.Application.Localization;
 
 namespace RetroIde.Workbench;
 
@@ -17,27 +18,46 @@ public interface IView : ISimpleView
     void Receive(OperationResult result);
 }
 
-/// <summary>Captures a typed focus request and its requesting view.</summary>
+/// <summary>Captures an operation and its requesting view.</summary>
 /// <remarks>TEST-RETRO-007#ac-test-view-result-routing</remarks>
-public sealed class ViewCommandRequested(Guid requestId, string commandId, WorkbenchAddress context, FocusToolInput input,
-    CancellationToken cancellationToken) : EventArgs
+public sealed class ViewCommandRequested : EventArgs
 {
+    /// <summary>Creates a workbench focus request.</summary>
+    public ViewCommandRequested(Guid requestId, string commandId, WorkbenchAddress context, FocusToolInput input, CancellationToken cancellationToken)
+        : this(requestId, commandId, context, context.ViewKey, input, cancellationToken)
+    {
+    }
+
+    internal ViewCommandRequested(Guid requestId, string commandId, WorkbenchAddress context, Guid originViewKey, object payload,
+        CancellationToken cancellationToken)
+    {
+        RequestId = requestId;
+        CommandId = commandId;
+        Context = context;
+        OriginViewKey = originViewKey;
+        Payload = payload;
+        CancellationToken = cancellationToken;
+    }
+
     /// <summary>Gets the operation correlation ID.</summary>
-    public Guid RequestId { get; } = requestId;
+    public Guid RequestId { get; }
 
     /// <summary>Gets the registered feature ID.</summary>
-    public string CommandId { get; } = commandId;
+    public string CommandId { get; }
 
     /// <summary>Gets the originating registration and captured revision.</summary>
-    public WorkbenchAddress Context { get; } = context;
+    public WorkbenchAddress Context { get; }
 
-    /// <summary>Gets the selected tool argument.</summary>
-    public FocusToolInput Input { get; } = input;
+    /// <summary>Gets the selected tool argument for a focus request.</summary>
+    public FocusToolInput? Input => Payload as FocusToolInput;
 
     /// <summary>Gets cancellation from the shared Toolkit command.</summary>
-    public CancellationToken CancellationToken { get; } = cancellationToken;
+    public CancellationToken CancellationToken { get; }
 
+    internal Guid OriginViewKey { get; }
+    internal object Payload { get; }
     internal Task? Completion { get; set; }
+    internal OperationResult? Result { get; set; }
 }
 
 /// <summary>Projects workbench state and owns the Toolkit command for this activation scope.</summary>
@@ -46,6 +66,8 @@ public sealed partial class WorkbenchViewModel : ObservableObject, IView
 {
     private Func<string, bool>? _canFocus;
     private string? _commandId;
+    private string? _languageCommandId;
+    internal WorkbenchLocalization? Localization { get; init; }
     private string? _activeToolId;
     private long _workbenchRevision;
 
@@ -127,6 +149,20 @@ public sealed partial class WorkbenchViewModel : ObservableObject, IView
         _commandId = commandId;
         _canFocus = canFocus;
         FocusCommand.NotifyCanExecuteChanged();
+    }
+
+    internal void SetLanguageRoute(string? id) => _languageCommandId = id;
+
+    [RelayCommand]
+    private async Task SetDisplayLanguageAsync(string? locale, CancellationToken token)
+    {
+        if (_languageCommandId is not { } id || locale is null)
+            return;
+        var request = new ViewCommandRequested(Guid.NewGuid(), id, Address, ViewKey,
+            new LocalizationFeatures.SetLanguageInput(locale), token);
+        CommandRequested?.Invoke(this, request);
+        if (request.Completion is { } completion)
+            await completion.ConfigureAwait(true);
     }
 
     private bool CanFocus() => FocusTarget is { } target && _canFocus?.Invoke(target) == true;

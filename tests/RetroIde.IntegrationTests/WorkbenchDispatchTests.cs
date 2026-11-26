@@ -50,7 +50,7 @@ public sealed class WorkbenchDispatchTests
             Assert.Equal(window.CommandPresentation.IconGeometry, window.FocusButtonIcon.Data);
             var gestureError = Assert.Throws<InvalidOperationException>(() =>
                 WorkbenchWindow.RegisterShortcut(window, command, window.CommandPresentation.Gesture));
-            Assert.Same(window.FocusShortcut, Assert.Single(window.KeyBindings));
+            Assert.Same(window.FocusShortcut, Assert.Single(window.KeyBindings, binding => Equals(binding.Gesture, window.CommandPresentation.Gesture)));
             Assert.Contains("shortcut", gestureError.Message, StringComparison.OrdinalIgnoreCase);
 
             session.View.FocusTarget = "missing";

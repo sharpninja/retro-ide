@@ -4,10 +4,14 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Avalonia.Automation;
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.VisualTree;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using RetroIde.Application;
+using RetroIde.Application.Workspaces;
 using RetroIde.Mcp;
 using RetroIde.Testing;
 using RetroIde.Workbench;
@@ -49,7 +53,8 @@ public sealed class McpWorkbenchTransportTests
 
             var directTools = await direct.ListToolsAsync(cancellationToken: timeout.Token);
             var bridgeTools = await bridge.ListToolsAsync(cancellationToken: timeout.Token);
-            Assert.Equal(2, directTools.Count);
+            Assert.Equal(session.Registry.Features.Select(feature => feature.ToolName).Order(StringComparer.Ordinal),
+                directTools.Select(tool => tool.Name).Order(StringComparer.Ordinal), StringComparer.Ordinal);
             var focusTool = Assert.Single(directTools, tool => string.Equals(tool.Name, "workbench_focus_tool", StringComparison.Ordinal));
             Assert.Equal(session.Registry.Context.Schema.GetRawText(),
                 focusTool.JsonSchema.GetProperty("properties").GetProperty("context").GetRawText());
@@ -258,6 +263,118 @@ public sealed class McpWorkbenchTransportTests
             Completed.TrySetResult(result);
             return result;
         }
+    }
+
+    /// <summary>Open a folder from the Explorer and a project through MCP in the same workbench.</summary>
+    [AvaloniaFact]
+    public async Task Root_commands_are_shared_between_explorer_and_both_transports()
+    {
+        using var session = new WorkbenchSession(Guid.NewGuid());
+        var folder = Directory.CreateTempSubdirectory("retro-ide-roots-");
+        var plain = Directory.CreateDirectory(Path.Combine(folder.FullName, "files")).FullName;
+        var project = Directory.CreateDirectory(Path.Combine(folder.FullName, "project")).FullName;
+        File.WriteAllText(Path.Combine(plain, "main.asm"), "folder");
+        File.WriteAllText(Path.Combine(project, "main.asm"), "project");
+        var window = new WorkbenchWindow(session);
+        window.Show();
+        session.ExplorerView.PickDirectoryAsync = _ => Task.FromResult<string?>(plain);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+        try
+        {
+            Assert.True(session.Layout.Focus("explorer"));
+            while (!window.GetVisualDescendants().OfType<Button>().Any(button =>
+                string.Equals(AutomationProperties.GetAutomationId(button), "workspace.open-folder.toolbar", StringComparison.Ordinal)))
+            {
+                window.UpdateLayout();
+                await Task.Delay(30, timeout.Token);
+            }
+            await WorkbenchRemoteControl.ClickAsync(window, "workspace.open-folder.toolbar");
+            await Assert.IsAssignableFrom<Task>(session.ExplorerView.OpenFolderCommand.ExecutionTask);
+            var folderRoot = Assert.Single(session.ExplorerView.Roots);
+            Assert.Equal(WorkspaceExplorer.RootKind.Folder, folderRoot.Kind);
+            Assert.Equal("ok", session.ExplorerView.LastResult?.Code);
+            Assert.Null(session.View.LastResult);
+            await ExpandFirstRootAsync(window, session, folderRoot, timeout.Token);
+
+            await VerifyExplorerMcpAsync(session, folder.FullName, project, folderRoot.Id, timeout.Token);
+        }
+        finally
+        {
+            window.Close();
+            folder.Delete(recursive: true);
+        }
+    }
+
+    private static async Task ExpandFirstRootAsync(WorkbenchWindow window, WorkbenchSession session, WorkspaceExplorer.Root root, CancellationToken token)
+    {
+        var node = Assert.Single(session.ExplorerView.TreeRoots);
+        Assert.Null(Assert.Single(node.Children).Address);
+        TreeViewItem? item;
+        do
+        {
+            window.UpdateLayout();
+            item = window.GetVisualDescendants().OfType<TreeViewItem>().SingleOrDefault(candidate => ReferenceEquals(candidate.DataContext, node));
+            if (item is null)
+                await Task.Delay(30, token);
+        } while (item is null);
+
+        item.SetCurrentValue(TreeViewItem.IsExpandedProperty, true);
+        while (!node.IsExpanded || node.Children.Count == 0 || node.Children[0].Address is null)
+            await Task.Delay(30, token);
+        var child = Assert.Single(node.Children);
+        Assert.Equal("main.asm", child.Label);
+        Assert.Equal(new WorkspaceExplorer.Address(root.Id, "main.asm"), child.Address);
+        Assert.Contains(new WorkspaceExplorer.Address(root.Id, ""), session.Explorer.Snapshot().Expanded);
+
+        var tree = window.GetVisualDescendants().OfType<TreeView>().Single(control =>
+            ReferenceEquals(control.ItemsSource, session.ExplorerView.TreeRoots));
+        tree.SetCurrentValue(TreeView.SelectedItemProperty, child);
+        while (!ReferenceEquals(session.ExplorerView.SelectedNode, child))
+            await Task.Delay(30, token);
+        Assert.Equal(child.Address, session.Explorer.Snapshot().Selection);
+    }
+
+    private static async Task VerifyExplorerMcpAsync(WorkbenchSession session, string directory, string project, Guid folderId, CancellationToken token)
+    {
+        await using var host = await LoopbackMcpHost.StartAsync(session.Registry, session.Controller, session.View.Address, token);
+        var descriptor = host.CreateAttachment("root-editor", canMutate: true);
+        using var clientHttp = descriptor.CreateHttpClient();
+        await using var client = await ConnectHttp(descriptor.Endpoint, clientHttp, token);
+        var descriptorPath = Path.Combine(directory, "attach.json");
+        descriptor.Write(descriptorPath);
+        await using var bridge = await McpClient.CreateAsync(new StdioClientTransport(new()
+        {
+            Command = "dotnet",
+            Arguments = [typeof(RetroIde.Mcp.Stdio.BridgeEntryPoint).Assembly.Location, descriptorPath],
+        }), cancellationToken: token);
+
+        var context = Context(await Call(client, "workbench_get_context", null, token));
+        var args = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["path"] = project, ["kind"] = "project", ["context"] = context,
+        };
+        var result = await Call(client, "workspace_open_root", args, token);
+        Assert.Equal("ok", Code(result));
+        var data = result.StructuredContent!.Value.GetProperty("data");
+        Assert.Equal("Project", data.GetProperty("kind").GetString());
+        var projectRoot = Assert.Single(session.ExplorerView.Roots, root => root.Kind == WorkspaceExplorer.RootKind.Project);
+        Assert.Equal(projectRoot.Id, data.GetProperty("id").GetGuid());
+        Assert.Equal("stale_revision", Code(await Call(bridge, "workspace_open_root", args, token)));
+
+        var roots = await Call(bridge, "workspace_list_roots", null, token);
+        Assert.Equal("ok", Code(roots));
+        var entries = roots.StructuredContent!.Value.GetProperty("data").EnumerateArray();
+        Assert.Equal([folderId, projectRoot.Id], entries.Select(root => root.GetProperty("id").GetGuid()));
+        Assert.Equal(2, session.ExplorerView.Roots.Count);
+        var read = new Dictionary<string, object?>(StringComparer.Ordinal) { ["rootId"] = projectRoot.Id, ["relativePath"] = "" };
+        var httpBranch = await Call(client, "workspace_list_children", read, token);
+        var stdioBranch = await Call(bridge, "workspace_list_children", read, token);
+        var branch = httpBranch.StructuredContent!.Value.GetProperty("data");
+        Assert.Equal(branch.GetRawText(), stdioBranch.StructuredContent!.Value.GetProperty("data").GetRawText());
+        var file = Assert.Single(branch.GetProperty("entries").EnumerateArray());
+        Assert.Equal("main.asm", file.GetProperty("name").GetString());
+        Assert.Equal(projectRoot.Id, file.GetProperty("address").GetProperty("rootId").GetGuid());
     }
 
     private static void AssertOwnerOnlyDescriptor(string path)

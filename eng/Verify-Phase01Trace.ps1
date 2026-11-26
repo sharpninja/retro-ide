@@ -1,6 +1,7 @@
 param(
     [ValidateSet('Release', 'Debug')][string]$Configuration = 'Release',
-    [string]$QBrainExport
+    [string]$QBrainExport,
+    [ValidateSet('01', '02')][string]$ThroughPhase = '01'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,6 +16,7 @@ $nativeEntryPoints = @(
     'M:RetroIde.NativeTests.NativeDockingTests.RunAsync'
     'M:RetroIde.NativeTests.ProductionAttachmentTests.RunAsync'
     'M:RetroIde.NativeTests.RemoteControlDockingTests.RunAsync'
+    'M:RetroIde.NativeTests.RemoteControlWorkflowTests.RunAsync'
 )
 $loaded = @{}
 function Get-ProjectXml([string]$ProjectPath) {
@@ -122,7 +124,7 @@ $evidence = foreach ($suite in 'Integration', 'Native', 'Unit') {
         $criteria
     }
 }
-if (!$evidence) { throw 'No Phase 01 test annotations were found in compiled XML documentation.' }
+if (!$evidence) { throw 'No test annotations were found in compiled XML documentation.' }
 
 $contractCriteria = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $contractCount = 0
@@ -143,20 +145,33 @@ if ($PSBoundParameters.ContainsKey('QBrainExport')) {
     $export = Get-Content -LiteralPath $QBrainExport -Raw
     if ([string]::IsNullOrWhiteSpace($export)) { throw 'The supplied QBrain export is empty.' }
 }
-$projection = Get-Content -LiteralPath (Join-Path $root 'docs/requirements/phase-01-test-criteria.yaml') -Raw
-$scopedCriteria = foreach ($requirement in [regex]::Matches($projection, '(?ms)^    - id: (TEST-RETRO-\d+)\r?\n(.*?)(?=^    - id:|^  \w+:|\z)')) {
-    foreach ($criterion in [regex]::Matches($requirement.Groups[2].Value, '(?m)^      - id: ([a-z0-9-]+)\r?$')) {
-        "$($requirement.Groups[1].Value)#$($criterion.Groups[1].Value)"
+$knownCriteria = @{}
+foreach ($phase in '01', '02') {
+    $projection = Get-Content -LiteralPath (Join-Path $root "docs/requirements/phase-$phase-test-criteria.yaml") -Raw
+    $projected = foreach ($requirement in [regex]::Matches($projection, '(?ms)^    - id: (TEST-RETRO-\d+)\r?\n(.*?)(?=^    - id:|^  \w+:|\z)')) {
+        foreach ($criterion in [regex]::Matches($requirement.Groups[2].Value, '(?m)^      - id: ([a-z0-9-]+)\r?$')) {
+            "$($requirement.Groups[1].Value)#$($criterion.Groups[1].Value)"
+        }
+    }
+    if (!$projected) { throw "The Phase $phase QBrain projection contains no test criteria." }
+    foreach ($criterion in $projected) {
+        if ($knownCriteria.ContainsKey($criterion)) { throw "$criterion appears in more than one phase projection." }
+        $knownCriteria[$criterion] = $phase
     }
 }
-if (!$scopedCriteria) { throw 'The Phase 01 QBrain projection contains no test criteria.' }
-$uniqueCriteria = @($evidence | Sort-Object -Unique)
+
+$allLinkedCriteria = @($evidence | Sort-Object -Unique)
+foreach ($criterion in $allLinkedCriteria) {
+    if (!$knownCriteria.ContainsKey($criterion)) { throw "$criterion is outside the known QBrain projections." }
+    [void]$contractCriteria.Remove($criterion)
+}
+$scopedCriteria = @($knownCriteria.Keys | Where-Object { $knownCriteria[$_] -le $ThroughPhase })
+$scopedEvidence = @($evidence | Where-Object { $knownCriteria[$_] -le $ThroughPhase })
+$uniqueCriteria = @($scopedEvidence | Sort-Object -Unique)
 foreach ($criterion in $scopedCriteria) {
-    if ($criterion -cnotin $uniqueCriteria) { throw "$criterion has no compiled Phase 01 test link." }
+    if ($criterion -cnotin $uniqueCriteria) { throw "$criterion has no compiled test link through Phase $ThroughPhase." }
 }
 foreach ($criterion in $uniqueCriteria) {
-    if ($criterion -cnotin $scopedCriteria) { throw "$criterion is outside the Phase 01 QBrain projection." }
-    [void]$contractCriteria.Remove($criterion)
     if ($export) {
         $requirementId, $criterionId = $criterion -split '#'
         $records = [regex]::Match($export, "(?ms)^    - id: $requirementId\r?\n.*?(?=^    - id:|^  \w+:|\z)")
@@ -167,7 +182,8 @@ foreach ($criterion in $uniqueCriteria) {
 }
 if ($contractCriteria.Count -ne 0) { throw "Public contracts without a mapped test: $($contractCriteria -join ', ')." }
 
-Write-Output "Verified $($evidence.Count) Phase 01 test links and $contractCount documented public contracts."
+$scope = if ($ThroughPhase -eq '01') { 'Phase 01' } else { "through Phase $ThroughPhase" }
+Write-Output "Verified $($scopedEvidence.Count) test links $scope and $contractCount documented public contracts."
 if ($null -ne $export) {
     $hash = (Get-FileHash -LiteralPath $QBrainExport -Algorithm SHA256).Hash
     Write-Output "Verified $($uniqueCriteria.Count) distinct criteria in the supplied QBrain export (SHA256 $hash)."

@@ -7,6 +7,20 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args is ["--validate-bundled-resources"])
+        {
+            try
+            {
+                WorkbenchCommands.ValidateBundledResources();
+                return 0;
+            }
+            catch (InvalidDataException error)
+            {
+                Console.Error.WriteLine(error.Message);
+                return 1;
+            }
+        }
+
         try
         {
             return AppBuilder.Configure<WorkbenchApp>()

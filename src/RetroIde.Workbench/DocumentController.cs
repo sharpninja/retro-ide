@@ -1,0 +1,282 @@
+using System.ComponentModel;
+using Avalonia.Threading;
+using Dock.Model.Core.Events;
+using GPS.SimpleMVC.Controllers;
+using RetroIde.Application;
+using RetroIde.Application.Workspaces;
+
+namespace RetroIde.Workbench;
+
+internal sealed class DocumentController : SimpleControllerBase
+{
+    private readonly WorkbenchViewModel _workbench;
+    private readonly DockLayout _layout;
+    private readonly InteractionBlocks _interaction;
+    private readonly FeatureRegistry _features;
+    private Guid? _closingView;
+    private readonly WorkbenchController _dispatch;
+    private readonly Dictionary<WorkspaceExplorer.Address, ShellDocument> _open = new(WorkspaceExplorer.AddressEquality);
+
+    public DocumentController(WorkbenchViewModel workbench, DockLayout layout, InteractionBlocks interaction,
+        FeatureRegistry features, WorkbenchController dispatch)
+    {
+        _workbench = workbench;
+        _layout = layout;
+        _interaction = interaction;
+        _features = features;
+        _dispatch = dispatch;
+        _layout.Factory.DockableClosed += OnTabClosed;
+        _layout.Factory.DockableClosing += OnTabClosing;
+        Initialize();
+    }
+
+    public override bool Initialize() => true;
+
+    internal bool HasDocument(WorkspaceExplorer.Address address) => _open.ContainsKey(address);
+
+    internal bool Owns(Guid viewKey, Guid parentKey) =>
+        parentKey == _workbench.ViewKey && GetView<IView>(viewKey) is DocumentViewModel;
+
+    internal DocumentContext? OpenOrActivate(WorkspaceExplorer.Address address, WorkspaceExplorer.SourceFile? source, SourcePosition? position)
+    {
+        Dispatcher.UIThread.VerifyAccess();
+        if (!_open.TryGetValue(address, out var document))
+        {
+            if (source is null)
+                return null;
+            var view = new DocumentViewModel(_workbench, source, _features);
+            if (!AddOrUpdateView(view))
+                return null;
+
+            document = new ShellDocument($"source-{view.DocumentId:N}", Path.GetFileName(address.RelativePath), "", _interaction)
+            {
+                Source = view,
+                CanClose = true,
+                CanFloat = true,
+            };
+            _open.Add(address, document);
+            view.CommandRequested += OnCommandRequested;
+            view.PropertyChanged += OnDocumentStateChanged;
+            _layout.AddSourceDocument(document);
+        }
+
+        var active = document.Source!;
+        if (position is not null)
+            active.GoTo(position);
+        _layout.ActivateSourceDocument(document);
+        return active.Capture();
+    }
+
+    internal DocumentContext? ReadContext(Guid key) => GetView<IView>(key) is DocumentViewModel view ? view.Capture() : null;
+
+    internal FeatureOutcome Find(DocumentFeatures.FindInput input)
+    {
+        if (!TryResolve(input.Document, out var view))
+            return Changed();
+        var position = view.EditorPosition;
+        var next = input.Backward ? position.SelectionStart : position.SelectionStart + position.SelectionLength;
+        var offset = DocumentSearch.Find(view.Buffer.Text, input.Query, Math.Clamp(next, 0, view.Buffer.TextLength), input.MatchCase, input.Backward);
+        if (offset >= 0)
+            view.ShowRange(offset, input.Query.Length);
+        return SearchResult(view, offset, input.Query.Length, 0);
+    }
+
+    internal FeatureOutcome Replace(DocumentFeatures.ReplaceInput input)
+    {
+        if (!TryResolve(input.Document, out var view))
+            return Changed();
+        var text = view.Buffer.Text;
+        var matches = input.All
+            ? DocumentSearch.FindAll(text, input.Query, input.MatchCase)
+            : FindReplacement(text, input, view.EditorPosition);
+        if (matches.Count == 0)
+            return SearchResult(view, -1, 0, 0);
+
+        using (view.Buffer.RunUpdate())
+            for (var i = matches.Count - 1; i >= 0; i--)
+                view.Buffer.Replace(matches[i], input.Query.Length, input.Replacement);
+        view.ShowRange(matches[0], input.Replacement.Length);
+        return SearchResult(view, matches[0], input.Replacement.Length, matches.Count);
+    }
+
+    internal FeatureOutcome Edit(DocumentFeatures.EditInput input)
+    {
+        if (!TryResolve(input.Document, out var view))
+            return Changed();
+        if (input.Offset < 0 || input.Length < 0 || input.Offset > view.Buffer.TextLength - input.Length)
+            return new("invalid_range", "The edit range must be inside the document.");
+
+        view.Buffer.Replace(input.Offset, input.Length, input.Text);
+        view.ShowRange(input.Offset + input.Text.Length, 0);
+        return FeatureOutcome.Success("Document edited.", view.Capture());
+    }
+
+    internal FeatureOutcome ApplyHistory(DocumentContext document, bool redo)
+    {
+        if (!TryResolve(document, out var view))
+            return Changed();
+
+        var history = view.Buffer.UndoStack;
+        if (redo ? !history.CanRedo : !history.CanUndo)
+            return new("history_empty", redo ? "There is nothing to redo." : "There is nothing to undo.");
+        if (redo)
+            history.Redo();
+        else
+            history.Undo();
+        return FeatureOutcome.Success(redo ? "Document edit redone." : "Document edit undone.", view.Capture());
+    }
+
+    internal FeatureOutcome Close(DocumentFeatures.CloseInput input)
+    {
+        if (!TryResolve(input.Document, out var view) || !_open.TryGetValue(view.Address, out var dockable))
+            return Changed();
+        if (view.IsDirty && !input.DiscardChanges)
+            return new("unsaved", "Save or discard the changes before closing this document.");
+
+        var previous = _closingView;
+        _closingView = view.ViewKey;
+        try { _layout.Factory.CloseDockable(dockable); }
+        finally { _closingView = previous; }
+
+        return _open.ContainsKey(view.Address)
+            ? new("close_failed", "The source tab could not be closed.")
+            : new("ok", "Source tab closed.");
+    }
+
+    private bool TryResolve(DocumentContext context, out DocumentViewModel view)
+    {
+        view = (GetView<IView>(context.ViewKey) as DocumentViewModel)!;
+        return view is not null && view.Capture() == context && !_interaction.IsBlocked(view.Scope);
+    }
+
+    private static IReadOnlyList<int> FindReplacement(string text, DocumentFeatures.ReplaceInput input,
+        (int Caret, int SelectionStart, int SelectionLength) position)
+    {
+        var start = Math.Clamp(position.SelectionStart, 0, text.Length);
+        if (position.SelectionLength == input.Query.Length && position.SelectionLength <= text.Length - start &&
+            text.AsSpan(start, position.SelectionLength).Equals(input.Query.AsSpan(), DocumentSearch.Comparison(input.MatchCase)))
+            return [start];
+
+        var next = DocumentSearch.Find(text, input.Query, start, input.MatchCase, backward: false);
+        return next >= 0 ? [next] : [];
+    }
+
+    private static FeatureOutcome Changed() => new("document_changed", "The document is unavailable or its revision has changed.");
+
+    private static FeatureOutcome SearchResult(DocumentViewModel view, int offset, int length, int replacements) =>
+        FeatureOutcome.Success(offset < 0 ? "No matching text." : replacements == 0 ? "Match selected." : "Matching text replaced.",
+            new DocumentFeatures.SearchResult(view.Capture(), offset >= 0 ? offset : null, offset >= 0 ? length : 0, replacements));
+
+    internal DocumentSaveSnapshot? CaptureSave(DocumentContext context)
+    {
+        return TryResolve(context, out var view) ? view.CaptureSave(context) : null;
+    }
+
+    internal DocumentContext? CommitSave(DocumentSaveSnapshot snapshot, PreparedDocumentSave staged)
+    {
+        if (GetView<IView>(snapshot.Context.ViewKey) is not DocumentViewModel view || view.DocumentId != snapshot.Context.DocumentId)
+            return null;
+        if (snapshot.Context.Revision < view.SavedRevision)
+            throw new IOException("A newer document revision was already saved.");
+
+        staged.Commit();
+        view.MarkSaved(snapshot);
+        return view.Capture();
+    }
+
+    internal bool HasUnsavedDocuments => _open.Values.Any(document => document.Source?.IsDirty == true);
+
+    internal void DetachViews()
+    {
+        foreach (var document in _open.Values.ToArray())
+            RemoveDocument(document);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _layout.Factory.DockableClosed -= OnTabClosed;
+            _layout.Factory.DockableClosing -= OnTabClosing;
+            DetachViews();
+        }
+        base.Dispose(disposing);
+    }
+
+    private void OnTabClosing(object? sender, DockableClosingEventArgs args)
+    {
+        if (args.Dockable is ShellDocument { Source: { } view } && _closingView != view.ViewKey &&
+            ReferenceEquals(GetView<IView>(view.ViewKey), view))
+        {
+            args.Cancel = true;
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (ReferenceEquals(GetView<IView>(view.ViewKey), view))
+                    view.CloseCommand.Execute(null);
+            }, DispatcherPriority.Background);
+        }
+    }
+
+    private void OnDocumentStateChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (sender is DocumentViewModel view && string.Equals(args.PropertyName, nameof(DocumentViewModel.IsDirty), StringComparison.Ordinal) &&
+            _open.TryGetValue(view.Address, out var document))
+            document.Title = Path.GetFileName(view.Address.RelativePath) + (view.IsDirty ? " *" : "");
+    }
+
+    private void OnTabClosed(object? sender, DockableClosedEventArgs args)
+    {
+        if (args.Dockable is ShellDocument { Source: not null } document)
+        {
+            RemoveDocument(document);
+            _layout.AdvanceWorkspaceRevision();
+        }
+    }
+
+    private void RemoveDocument(ShellDocument document)
+    {
+        if (document.Source is not { } view || !_open.Remove(view.Address))
+            return;
+        view.CommandRequested -= OnCommandRequested;
+        view.PropertyChanged -= OnDocumentStateChanged;
+        RemoveView(view);
+        _layout.ForgetSourceDocument(document);
+    }
+
+    private void OnCommandRequested(object? sender, ViewCommandRequested request)
+    {
+        if (request.Completion is not null || sender is not DocumentViewModel view || request.OriginViewKey != view.ViewKey ||
+            !ReferenceEquals(GetView<IView>(view.ViewKey), view))
+            return;
+
+        request.Completion = request.Payload switch
+        {
+            ExplorerFeatures.RevealEntryInput reveal when string.Equals(request.CommandId, _features.Explorer.RevealEntry.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Explorer.RevealEntry, reveal, request),
+            ExplorerFeatures.SaveDocumentInput save when string.Equals(request.CommandId, _features.Explorer.SaveDocument.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Explorer.SaveDocument, save, request),
+            DocumentFeatures.FindInput find when string.Equals(request.CommandId, _features.Documents.Find.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Documents.Find, find, request),
+            DocumentFeatures.ReplaceInput replace when string.Equals(request.CommandId, _features.Documents.Replace.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Documents.Replace, replace, request),
+            DocumentFeatures.HistoryInput undo when string.Equals(request.CommandId, _features.Documents.Undo.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Documents.Undo, undo, request),
+            DocumentFeatures.HistoryInput redo when string.Equals(request.CommandId, _features.Documents.Redo.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Documents.Redo, redo, request),
+            DocumentFeatures.CloseInput close when string.Equals(request.CommandId, _features.Documents.Close.Id, StringComparison.Ordinal) =>
+                CompleteAsync(view, _features.Documents.Close, close, request),
+            _ => null,
+        };
+    }
+
+    private async Task CompleteAsync<TInput>(DocumentViewModel origin, Feature<TInput> feature, TInput input,
+        ViewCommandRequested request) where TInput : class
+    {
+        var result = await _dispatch.DispatchDocumentAsync(feature, input, request).ConfigureAwait(false);
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (ReferenceEquals(GetView<IView>(origin.ViewKey), origin))
+                origin.Receive(result);
+        });
+    }
+}

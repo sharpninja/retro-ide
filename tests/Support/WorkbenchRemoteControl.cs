@@ -10,7 +10,7 @@ namespace RetroIde.Testing;
 
 internal static class WorkbenchRemoteControl
 {
-    public static async Task ClickAsync(Window window, string automationId)
+    public static async Task ClickAsync(TopLevel window, string automationId)
     {
         window.UpdateLayout();
         var options = Options.Create(new AvaloniaRemoteControlOptions { AllowRemoteActions = true });

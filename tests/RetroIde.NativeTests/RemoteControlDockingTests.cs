@@ -19,6 +19,7 @@ internal static class RemoteControlDockingTests
     {
         try
         {
+            await RemoteControlWorkflowTests.RunAsync().ConfigureAwait(true);
             using var session = new WorkbenchSession(Guid.NewGuid());
             var window = new WorkbenchWindow(session);
             window.Show();

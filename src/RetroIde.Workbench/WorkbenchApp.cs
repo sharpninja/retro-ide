@@ -4,11 +4,13 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Templates;
 using Avalonia.Controls.Presenters;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Themes.Fluent;
 using Dock.Avalonia.Controls;
 using Dock.Avalonia.Themes.Fluent;
+using RetroIde.Application.Workspaces;
 using RetroIde.Mcp;
 
 namespace RetroIde.Workbench;
@@ -29,6 +31,10 @@ public sealed class WorkbenchApp : Avalonia.Application
         RequestedThemeVariant = ThemeVariant.Dark;
         Styles.Add(new FluentTheme());
         Styles.Add(new DockFluentTheme());
+        Styles.Add(new StyleInclude(new Uri("avares://AvaloniaEdit/"))
+        {
+            Source = new Uri("avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"),
+        });
         // Keep the drag handle available after a tool becomes the only tab in a floating dock.
         Styles.Add(new Style(selector => selector.OfType<ToolTabStrip>().Class(":singleitem")
             .Template().OfType<ItemsPresenter>().Name("PART_ItemsPresenter"))
@@ -36,9 +42,13 @@ public sealed class WorkbenchApp : Avalonia.Application
             Setters = { new Setter(Visual.IsVisibleProperty, true) },
         });
         DataTemplates.Add(new FuncDataTemplate<ShellTool>((tool, _) =>
-            tool?.Interaction.Wrap(tool.Id, PaneContent(tool.Title, tool.Message, document: false))));
+            tool?.Interaction.Wrap(tool.Id, tool.Explorer is { } explorer
+                ? ExplorerPane.Create(explorer)
+                : PaneContent(tool.Localization, tool.Id, document: false))));
         DataTemplates.Add(new FuncDataTemplate<ShellDocument>((document, _) =>
-            document?.Interaction.Wrap(document.Id, PaneContent(document.Title, document.Message, document: true))));
+            document?.Interaction.Wrap(document.Id, document.Source is { } source
+                ? DocumentSurface.Create(source)
+                : PaneContent(document.Localization, document.Id, document: true))));
     }
 
     /// <inheritdoc />
@@ -52,7 +62,8 @@ public sealed class WorkbenchApp : Avalonia.Application
             if (!Path.IsPathFullyQualified(folder))
                 throw new InvalidOperationException("The Retro IDE application data directory must be an absolute path.");
             var layouts = new LayoutStore(Path.Combine(folder, "layout.json"));
-            var session = new WorkbenchSession(Guid.NewGuid(), layouts.Load());
+            var explorerStore = new WorkspaceExplorerStore(Path.Combine(folder, "workspace.json"));
+            var session = new WorkbenchSession(explorerStore, layouts.Load(), new WorkbenchLocalization(folder));
             var window = new WorkbenchWindow(session, layouts);
             desktop.MainWindow = window;
             var monitor = desktop.Args?.Contains("--mcp", StringComparer.Ordinal) == true;
@@ -128,8 +139,12 @@ public sealed class WorkbenchApp : Avalonia.Application
 
     private sealed record RunningMcp(LoopbackMcpHost Host, string Path);
 
-    private static Control PaneContent(string title, string message, bool document)
+    private static Control PaneContent(WorkbenchLocalization localization, string id, bool document)
     {
+        var title = new TextBlock { FontSize = document ? 24 : 14, FontWeight = FontWeight.SemiBold };
+        var message = new TextBlock { TextWrapping = TextWrapping.Wrap, Opacity = 0.75 };
+        localization.Observe(title, () => title.Text = localization.Text(WorkbenchText.PaneTitle(id)));
+        localization.Observe(message, () => message.Text = localization.Text(WorkbenchText.PaneDescription(id)));
         var panel = new StackPanel
         {
             Margin = new Thickness(document ? 28 : 12),
@@ -137,8 +152,8 @@ public sealed class WorkbenchApp : Avalonia.Application
             HorizontalAlignment = HorizontalAlignment.Left,
             Children =
             {
-                new TextBlock { Text = title, FontSize = document ? 24 : 14, FontWeight = FontWeight.SemiBold },
-                new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, Opacity = 0.75 },
+                title,
+                message,
             },
         };
         return new Border { Child = panel };

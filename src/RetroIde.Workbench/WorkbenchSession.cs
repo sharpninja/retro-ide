@@ -1,4 +1,5 @@
 using RetroIde.Application;
+using RetroIde.Application.Workspaces;
 
 namespace RetroIde.Workbench;
 
@@ -17,16 +18,39 @@ public sealed class WorkbenchSession : IDisposable
     {
     }
 
-    internal WorkbenchSession(IWorkbenchWorkspaceContext workspace, WorkbenchLayoutState? savedLayout)
+    internal WorkbenchSession(WorkspaceExplorerStore explorerStore, WorkbenchLayoutState? savedLayout, WorkbenchLocalization? localization = null)
+        : this(explorerStore.Load() ?? new WorkspaceExplorer(Guid.NewGuid()), explorerStore, savedLayout, localization)
     {
-        ArgumentOutOfRangeException.ThrowIfEqual(workspace.WorkspaceId, Guid.Empty);
-        Interaction = new InteractionBlocks();
-        Layout = new DockLayout(workspace, savedLayout, Interaction);
-        Registry = new FeatureRegistry(new ViewContextContract(typeof(WorkbenchViewModel)));
-        View = new WorkbenchViewModel(workspace.WorkspaceId) { FocusTarget = "registers" };
-        Controller = new WorkbenchController(workspace.WorkspaceId, Layout, Interaction, Registry);
-        Controller.Register(View);
     }
+
+    private WorkbenchSession(WorkspaceExplorer explorer, WorkspaceExplorerStore store, WorkbenchLayoutState? savedLayout, WorkbenchLocalization? localization)
+        : this(new StandaloneWorkspace(explorer.WorkspaceId), savedLayout, explorer, store, localization)
+    {
+    }
+
+    internal WorkbenchSession(IWorkbenchWorkspaceContext workspace, WorkbenchLayoutState? savedLayout,
+        WorkspaceExplorer? explorer = null, WorkspaceExplorerStore? store = null, WorkbenchLocalization? localization = null,
+        Func<DocumentSaveSnapshot, CancellationToken, Task<PreparedDocumentSave>>? stageSave = null)
+    {
+        Explorer = explorer ?? new WorkspaceExplorer(workspace.WorkspaceId);
+        ExplorerStore = store;
+        Localization = localization ?? new WorkbenchLocalization();
+        Interaction = new InteractionBlocks();
+        Registry = new FeatureRegistry(new ViewContextContract(typeof(WorkbenchViewModel)), DocumentViewModel.ContextContract, stageSave);
+        View = new WorkbenchViewModel(workspace.WorkspaceId) { FocusTarget = "registers", Localization = Localization };
+        ExplorerView = new ExplorerViewModel(View, Registry.Explorer);
+        Layout = new DockLayout(workspace, savedLayout, Interaction, ExplorerView, Localization);
+        Controller = new WorkbenchController(Explorer, Layout, Interaction, Registry, Localization);
+        Documents = new DocumentController(View, Layout, Interaction, Registry, Controller);
+        Controller.Register(View);
+        Controller.RegisterExplorer(ExplorerView, View, Documents);
+    }
+
+    internal WorkspaceExplorer Explorer { get; }
+    internal WorkbenchLocalization Localization { get; }
+    internal ExplorerViewModel ExplorerView { get; }
+    internal DocumentController Documents { get; }
+    internal WorkspaceExplorerStore? ExplorerStore { get; }
 
     /// <summary>Gets the live Dock model and its integration.</summary>
     public DockLayout Layout { get; }
@@ -47,8 +71,10 @@ public sealed class WorkbenchSession : IDisposable
     public void Dispose()
     {
         Controller.Dispose();
+        Documents.Dispose();
         Layout.Dispose();
         Interaction.Dispose();
+        Localization.Dispose();
     }
 
     private sealed record StandaloneWorkspace(Guid WorkspaceId) : IWorkbenchWorkspaceContext;

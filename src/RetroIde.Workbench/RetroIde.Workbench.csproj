@@ -8,6 +8,9 @@
     <InternalsVisibleTo Include="RetroIde.UnitTests" />
     <InternalsVisibleTo Include="RetroIde.IntegrationTests" />
     <InternalsVisibleTo Include="RetroIde.NativeTests" />
+    <PackageReference Include="Svg.Skia" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" />
+    <PackageReference Include="AvaloniaEdit.TextMate" />
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="Dock.Avalonia" />
@@ -18,4 +21,8 @@
     <ProjectReference Include="../RetroIde.Application/RetroIde.Application.csproj" />
     <ProjectReference Include="../RetroIde.Mcp/RetroIde.Mcp.csproj" />
   </ItemGroup>
+  <Target Name="ValidateBundledCommandResources" AfterTargets="Build"
+          Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec Command="dotnet &quot;$(TargetPath)&quot; --validate-bundled-resources" />
+  </Target>
 </Project>
