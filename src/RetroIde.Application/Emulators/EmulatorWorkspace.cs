@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
+using RetroIde.Emulation;
 using Source = RetroIde.Application.Emulators.EmulatorBucketCatalog.Source;
 using Pin = RetroIde.Application.Emulators.EmulatorBundleStore.Pin;
 using Project = RetroIde.Application.Workspaces.WorkspaceExplorer.Root;
@@ -10,7 +11,7 @@ namespace RetroIde.Application.Emulators;
 /// <summary>Composes the local emulator catalog used by authorized workbench operations.</summary>
 internal sealed class EmulatorWorkspace
 {
-    private static readonly Version AdapterApi = new(1, 0);
+    private static Version AdapterApi => AdapterContract.CurrentVersion;
     private static readonly HttpClient DownloadClient = new();
     private readonly string _root;
     private readonly ILogger _logger;

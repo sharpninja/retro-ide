@@ -13,7 +13,7 @@ Retro IDE uses one versioned .NET contract for emulator sessions. An adapter shi
 
 ## Core .NET surface
 
-The core surface is required for every adapter. The outer contract and optional ports use typed requests and results. The names below describe the proposed .NET interface. The DTOs are defined by their behavior in this document.
+The core surface is required for every adapter. The `RetroIde.Emulation` assembly defines the factory, session, and shared data types. It depends only on the .NET runtime. The outer contract and optional ports use typed requests and results.
 
 ```csharp
 public interface IEmulatorAdapterFactory
@@ -40,7 +40,7 @@ public interface IEmulatorPort
 }
 ```
 
-- `AdapterDescriptor` reports the adapter ID, supported contract versions, launch or attach modes, and known target families. The bundle loader checks the loaded adapter identity and contract against the installed receipt and manifest.
+- `AdapterDescriptor` reports the adapter ID, supported contract versions, launch or attach modes, and known target families. `AdapterContract` checks adapter identity against the manifest, checks the requested mode, and chooses the newest exact API version supported by the IDE, bundle, and adapter.
 - `SessionRequest` identifies the validated target profile, requested mode, and compatible contract version. Launch uses installed bundle entry points and validated project inputs. Attach uses a configured endpoint reference. Runtime credentials stay with the connection configuration.
 - `SessionIdentity` identifies the adapter, bundle version, and unique session instance. Any backend instance ID is mapped to that identity. `SessionState` contains the lifecycle and execution status, current state revision, machine and device descriptors, capability snapshot, and an event cursor for that state.
 - `SessionCloseRequest` releases the IDE's connection and subscriptions. A launched session follows its declared cleanup policy. An attached host continues independently when the IDE detaches. Guest reset and power operations use the execution port and applicable host authorization.

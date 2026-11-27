@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <ProjectReference Include="../RetroIde.Emulation/RetroIde.Emulation.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Porta.Pty" />
     <PackageReference Include="MessageFormat" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
