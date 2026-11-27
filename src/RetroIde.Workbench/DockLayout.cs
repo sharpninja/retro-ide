@@ -339,9 +339,12 @@ public sealed class DockLayout : IDisposable
             },
         };
         dock.Id = GroupId(node.Id) ?? string.Empty;
-        dock.IsCollapsable = false;
+        dock.IsCollapsable = dock is IToolDock or IProportionalDock;
         if (node.Proportion is > 0 and <= 1)
+        {
             dock.Proportion = node.Proportion.Value;
+            dock.CollapsedProportion = node.Proportion.Value;
+        }
         dock.VisibleDockables = Factory.CreateList(node.Children!.Select(Build).ToArray());
         dock.ActiveDockable = dock.VisibleDockables.FirstOrDefault(child => string.Equals(child.Id, node.Active, StringComparison.Ordinal))
             ?? dock.VisibleDockables.FirstOrDefault(child => child is not ISplitter);
@@ -382,9 +385,19 @@ public sealed class DockLayout : IDisposable
         };
 
         DockNode CaptureGroup(IDock dock, string kind, string? alignment = null) =>
-            new(kind, CapturedId(dock), dock.Proportion is > 0 and <= 1 ? dock.Proportion : null,
+            new(kind, CapturedId(dock), CaptureProportion(dock),
                 CapturedId(dock.ActiveDockable), (dock.VisibleDockables ?? [])
                     .Where(child => child is not ShellDocument { IsTransient: true }).Select(CaptureNode).ToArray(), alignment);
+    }
+
+    private static double? CaptureProportion(IDock dock)
+    {
+        // The current proportions are redistributed while a sibling is auto-hidden.
+        // Save the original split sizes so the hidden pane can reclaim its space.
+        var proportion = dock.Owner is IProportionalDock parent && dock.CollapsedProportion is > 0 and <= 1 &&
+            parent.VisibleDockables?.Any(child => child is IDock { IsEmpty: true, IsCollapsable: true }) == true
+                ? dock.CollapsedProportion : dock.Proportion;
+        return proportion is > 0 and <= 1 ? proportion : null;
     }
 
     private static Dictionary<IDock, string> CaptureDockGroupIds(IRootDock root)
