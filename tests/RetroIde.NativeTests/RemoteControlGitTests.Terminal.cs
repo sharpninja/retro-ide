@@ -1,5 +1,6 @@
 using System.Text;
 using Avalonia.Controls;
+using Avalonia.VisualTree;
 using Avalonia.RemoteControl.Protocol.V1;
 using Avalonia.RemoteControl.Server;
 using Avalonia.RemoteControl.Server.Input;
@@ -36,15 +37,29 @@ internal static partial class RemoteControlGitTests
 
         var rendered = new StringBuilder();
         terminal.OutputReceived += (_, args) => rendered.Append(args.Output);
+        const string command = "git rev-parse --short HEAD";
         var sent = await input.SendInputAsync(
-            [new RemoteInputEvent { Kind = RemoteInputKind.Text, Text = "git rev-parse --short HEAD" },
+            [new RemoteInputEvent { Kind = RemoteInputKind.Text, Text = command },
                 new RemoteInputEvent { Kind = RemoteInputKind.KeyDown, Key = "Enter" },
                 new RemoteInputEvent { Kind = RemoteInputKind.KeyUp, Key = "Enter" }],
             "retro-ide-tests").ConfigureAwait(true);
         if (!sent.Succeeded)
             throw new InvalidOperationException(sent.Message);
-        while (!rendered.ToString().Contains(head, StringComparison.Ordinal))
-            await Task.Delay(20, token).ConfigureAwait(true);
+        try
+        {
+            while (!rendered.ToString().Contains(head, StringComparison.Ordinal))
+                await Task.Delay(20, token).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException error) when (token.IsCancellationRequested)
+        {
+            var snapshot = view.Terminal.Read(0, 16 * 1024);
+            var observed = Encoding.UTF8.GetString(snapshot.Bytes);
+            var focused = terminal.GetVisualDescendants().OfType<TerminalView>().Any(static child => child.IsFocused);
+            throw new TimeoutException($"The repository terminal did not render Git output. " +
+                $"Focus={focused}; command echoed={observed.Contains(command, StringComparison.Ordinal)}; " +
+                $"Git output in PTY={observed.Contains(head, StringComparison.Ordinal)}; " +
+                $"cursor position requested={observed.Contains("\u001b[6n", StringComparison.Ordinal)}; PTY bytes={snapshot.Bytes.Length}.", error);
+        }
 
         session.Layout.Factory.CloseDockable(document);
         await view.Terminal.WaitForExitAsync(token).ConfigureAwait(true);

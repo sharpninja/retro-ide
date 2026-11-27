@@ -43,9 +43,9 @@ public sealed class TerminalWorkbenchTests
         await http.ChangeAsync("git_terminal_resize", new(StringComparer.Ordinal)
             { ["viewKey"] = key, ["columns"] = 102, ["rows"] = 34 }, relay).ConfigureAwait(true);
         await http.ChangeAsync("git_terminal_write", new(StringComparer.Ordinal)
-            { ["viewKey"] = key, ["text"] = "git branch --show-current\r" }).ConfigureAwait(true);
+            { ["viewKey"] = key, ["text"] = "git rev-parse --symbolic-full-name HEAD\r" }).ConfigureAwait(true);
         await http.ChangeAsync("git_terminal_write", new(StringComparer.Ordinal)
-            { ["viewKey"] = key, ["text"] = "echo terminal-proof> terminal-proof.txt\r" }, relay).ConfigureAwait(true);
+            { ["viewKey"] = key, ["text"] = "echo terminal-proof > terminal-proof.txt\r" }, relay).ConfigureAwait(true);
 
         using var output = new MemoryStream();
         long offset = 0;
@@ -57,14 +57,15 @@ public sealed class TerminalWorkbenchTests
             var slice = read.GetProperty("data");
             output.Write(slice.GetProperty("bytes").GetBytesFromBase64());
             offset = slice.GetProperty("nextOffset").GetInt64();
-            if (Encoding.UTF8.GetString(output.GetBuffer(), 0, (int)output.Length).Contains("fixture-linked", StringComparison.Ordinal))
+            if (Encoding.UTF8.GetString(output.GetBuffer(), 0, (int)output.Length).Contains("refs/heads/fixture-linked", StringComparison.Ordinal))
                 break;
             await Task.Delay(25, token).ConfigureAwait(true);
         }
 
         while (!session.SourceControl.Working.Any(entry => string.Equals(entry.Path, "terminal-proof.txt", StringComparison.Ordinal)))
             await Task.Delay(25, token).ConfigureAwait(true);
-        Assert.True(File.Exists(Path.Combine(sample.Linked, "terminal-proof.txt")));
+        var proof = await File.ReadAllTextAsync(Path.Combine(sample.Linked, "terminal-proof.txt"), token).ConfigureAwait(true);
+        Assert.Equal("terminal-proof", proof.Trim(), StringComparer.Ordinal);
         Assert.False(File.Exists(Path.Combine(sample.Primary, "terminal-proof.txt")));
 
         await http.ChangeAsync("git_terminal_close", new(StringComparer.Ordinal) { ["viewKey"] = key }, relay).ConfigureAwait(true);
