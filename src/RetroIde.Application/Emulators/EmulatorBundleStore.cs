@@ -29,8 +29,11 @@ internal sealed partial class EmulatorBundleStore(string root)
         var artifact = manifest.TargetFor(runtimeIdentifier, adapterApi);
         var receipt = new Receipt(SchemaVersion, pin, runtimeIdentifier, artifact.Sha256, Digest(bytes));
         var destination = InstallPath(pin, runtimeIdentifier);
-        if (Directory.Exists(destination))
-            return Reuse(destination, receipt, adapterApi);
+        using (var existing = Acquire(pin, runtimeIdentifier, adapterApi))
+        {
+            if (existing is not null)
+                return Reuse(existing.Installation, receipt);
+        }
 
         var staging = await EmulatorBundleArchive.StageAsync(Path.Combine(_root, "staging"), source, artifact,
             manifest.DebuggerProfiles.Values, cancellationToken).ConfigureAwait(false);
@@ -40,6 +43,8 @@ internal sealed partial class EmulatorBundleStore(string root)
             WriteDocument(staging, ManifestFile, bytes);
             WriteDocument(staging, ReceiptFile, JsonSerializer.SerializeToUtf8Bytes(receipt, StoreJson.Default.Receipt));
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            EnsureLeaseFile(staging, destination);
+            using var access = OpenShared(destination);
             cancellationToken.ThrowIfCancellationRequested();
 
             try
@@ -49,7 +54,7 @@ internal sealed partial class EmulatorBundleStore(string root)
             }
             catch (IOException) when (Directory.Exists(destination))
             {
-                return Reuse(destination, receipt, adapterApi);
+                return Reuse(ReadInstalled(destination, pin, runtimeIdentifier, adapterApi), receipt);
             }
 
             return new InstalledBundle(receipt, manifest, ForwardSlashes(destination));
@@ -63,9 +68,8 @@ internal sealed partial class EmulatorBundleStore(string root)
 
     internal InstalledBundle? Resolve(Pin pin, string runtimeIdentifier, Version adapterApi)
     {
-        pin = Normalize(pin, runtimeIdentifier);
-        var directory = InstallPath(pin, runtimeIdentifier);
-        return Directory.Exists(directory) ? ReadInstalled(directory, pin, runtimeIdentifier, adapterApi) : null;
+        using var access = Acquire(pin, runtimeIdentifier, adapterApi);
+        return access?.Installation;
     }
 
     private static Pin Normalize(Pin pin, string runtimeIdentifier)
@@ -94,9 +98,8 @@ internal sealed partial class EmulatorBundleStore(string root)
         return manifest;
     }
 
-    private static InstalledBundle Reuse(string directory, Receipt expected, Version adapterApi)
+    private static InstalledBundle Reuse(InstalledBundle installed, Receipt expected)
     {
-        var installed = ReadInstalled(directory, expected.Pin, expected.RuntimeIdentifier, adapterApi);
         if (installed.Receipt != expected)
             throw new InvalidDataException("The installed bundle revision does not match the requested manifest and archive.");
         return installed;

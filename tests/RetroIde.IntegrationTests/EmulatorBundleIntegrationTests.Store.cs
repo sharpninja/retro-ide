@@ -113,6 +113,36 @@ public sealed partial class EmulatorBundleIntegrationTests
         Assert.Throws<InvalidDataException>(() => root.Store.Resolve(FirstPin, RuntimeIdentifier, AdapterApi));
     }
 
+    /// <remarks>TR-RETRO-BUNDLE-009#ac-bundle-runtime-resolution; TEST-RETRO-009#ac-test-bundle-versions.</remarks>
+    [Fact]
+    public async Task Independent_session_leases_prevent_removal_until_the_last_session_releases_the_version()
+    {
+        using var root = new BundleStoreFixture();
+        using var archive = LinuxReleaseArchive();
+        var bytes = ReleaseManifest(FirstPin, Digest(archive));
+        var installed = await root.Store.InstallAsync(FirstPin, RuntimeIdentifier, AdapterApi, bytes, archive, root.CancellationToken);
+
+        using var firstSession = Assert.IsType<EmulatorBundleStore.BundleLease>(root.Store.Acquire(FirstPin, RuntimeIdentifier, AdapterApi));
+        using var secondSession = Assert.IsType<EmulatorBundleStore.BundleLease>(root.Store.Acquire(FirstPin, RuntimeIdentifier, AdapterApi));
+        Assert.Equal(installed.Receipt, firstSession.Installation.Receipt);
+        Assert.Equal(installed.Receipt, secondSession.Installation.Receipt);
+        Assert.Equal(EmulatorBundleStore.Removal.InUse, root.Store.Remove(FirstPin, RuntimeIdentifier, root.CancellationToken));
+        firstSession.Dispose();
+        Assert.Equal(EmulatorBundleStore.Removal.InUse, root.Store.Remove(FirstPin, RuntimeIdentifier, root.CancellationToken));
+        Assert.True(File.Exists(secondSession.Installation.EntryPoint("emulator")));
+
+        secondSession.Dispose();
+        Assert.Equal(EmulatorBundleStore.Removal.Removed, root.Store.Remove(FirstPin, RuntimeIdentifier, root.CancellationToken));
+        Assert.Equal(EmulatorBundleStore.Removal.Missing, root.Store.Remove(FirstPin, RuntimeIdentifier, root.CancellationToken));
+        Assert.Null(root.Store.Acquire(FirstPin, RuntimeIdentifier, AdapterApi));
+        Assert.False(Directory.Exists(installed.Directory));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(Path.Combine(root.Directory, "staging")));
+
+        archive.Position = 0;
+        var reinstalled = await root.Store.InstallAsync(FirstPin, RuntimeIdentifier, AdapterApi, bytes, archive, root.CancellationToken);
+        Assert.Equal(installed.Receipt, reinstalled.Receipt);
+    }
+
     private static MemoryStream LinuxReleaseArchive(string runtime = "runtime.so") =>
         Archive(("adapter/Uae.dll", 0), ("bin/uae", 0x81ed), ("profiles/amiga-aga.json", 0), ("bin/" + runtime, 0));
 
