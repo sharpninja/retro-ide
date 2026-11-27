@@ -30,7 +30,7 @@ internal static class GitSubmoduleOperations
         if (initialFailure is not null)
             return initialFailure;
 
-        using var held = await GitConfigurationGate.EnterAsync(token).ConfigureAwait(false);
+        using var held = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
         if (!await SourceAvailableAsync(repo, token).ConfigureAwait(false))
             return SourceUnavailable();
         var (target, failure) = await ReviewAsync(repo, input, token).ConfigureAwait(false);

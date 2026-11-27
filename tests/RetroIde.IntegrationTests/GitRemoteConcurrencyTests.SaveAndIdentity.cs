@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using Avalonia.Headless.XUnit;
+using RetroIde.Application.Git;
 using RetroIde.Testing;
 using RetroIde.Workbench;
 using Xunit;
@@ -108,6 +109,46 @@ public sealed partial class GitRemoteConcurrencyTests
         var result = Code(await queued.WaitAsync(token).ConfigureAwait(true));
         Assert.False(opened, $"{tool} opened a native connection using the stale metadata. It returned {result}.");
         Assert.Equal("git_repository_unavailable", result, StringComparer.Ordinal);
+    }
+
+    /// <remarks>TR-RETRO-GIT-013#ac-git-state-consistency; TEST-RETRO-013#ac-test-git-stage-and-push.</remarks>
+    [AvaloniaFact]
+    public async Task A_prepared_index_update_excludes_a_transfer_until_publication()
+    {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(50));
+        var token = deadline.Token;
+        using var fixture = await GitWorktreeFixture.CreateAsync("git", token).ConfigureAwait(true);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        await PointOriginAsync(fixture, LocalEndpoint(listener), token).ConfigureAwait(true);
+        var checkout = GitPath(fixture.Primary);
+        GitWorktreeFixture.Write(checkout, GitWorktreeFixture.ChangedPath, "updated fixture for index publication\n");
+        var selection = await NativeGit.DiscoverAsync(checkout, "", token).ConfigureAwait(true);
+        Assert.NotNull(selection);
+        await using var session = new WorkbenchSession(Guid.NewGuid());
+        await using var transfer = await Connection.ConnectAsync(session, token).ConfigureAwait(true);
+        await SelectAsync(transfer, checkout).ConfigureAwait(true);
+
+        Guid running;
+        Task<TcpClient> connection;
+        bool connectedEarly;
+        using (var prepared = await PreparedGitIndex.CreateAsync(selection.Repository, [GitWorktreeFixture.ChangedPath], stage: true, token)
+            .ConfigureAwait(true))
+        {
+            Assert.NotNull(prepared);
+            running = await StartReviewedFetchAsync(transfer, checkout).ConfigureAwait(true);
+            connection = listener.AcceptTcpClientAsync(token).AsTask();
+            connectedEarly = ReferenceEquals(connection, await Task.WhenAny(connection, Task.Delay(TimeSpan.FromSeconds(2), token)).ConfigureAwait(true));
+            Assert.Null(prepared.Publish());
+        }
+        using var request = await connection.ConfigureAwait(true);
+        await RejectRequestAsync(request, token).ConfigureAwait(true);
+        await VerifyTransferCompletedAsync(transfer, running, "git_fetch_failed", token).ConfigureAwait(true);
+
+        var staged = await fixture.GitAsync(checkout, token, "diff", "--cached", "--name-only", "-z").ConfigureAwait(true);
+        Assert.Equal(GitWorktreeFixture.ChangedPath + "\0", staged, StringComparer.Ordinal);
+        Assert.False(connectedEarly, "A transfer opened its native connection before the prepared index published.");
     }
 
     private static async Task<Dictionary<string, object?>> ReviewedNamedTransferAsync(Connection connection, GitWorktreeFixture fixture,

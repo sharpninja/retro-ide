@@ -127,7 +127,7 @@ internal static class GitTagOperations
                 {
                     ExecuteAuthorizedAsync = token => GitOperationRecovery.TryAsync(async () =>
                     {
-                        using var held = await GitConfigurationGate.EnterAsync(token).ConfigureAwait(false);
+                        using var held = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
                         var found = await NativeGit.DiscoverAsync(selection.ScopeRoot, "", token).ConfigureAwait(false);
                         return found is not null && NativeGit.IsSameWorktree(found.Repository, selection.Repository)
                             ? await execute(token).ConfigureAwait(false)

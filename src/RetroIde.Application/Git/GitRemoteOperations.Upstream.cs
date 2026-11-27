@@ -13,9 +13,8 @@ internal static partial class GitRemoteOperations
             if (problem is not null)
                 return problem;
 
-            return Authorize(selection, async cancellation =>
+            return Authorize(selection, cancellation => RunReviewedAsync(selection, cancellation, async () =>
             {
-                using var held = await GitConfigurationGate.EnterAsync(cancellation).ConfigureAwait(false);
                 var current = await ValidateUpstreamAsync(repo, input, cancellation).ConfigureAwait(false);
                 if (current is not null)
                     return current;
@@ -27,7 +26,7 @@ internal static partial class GitRemoteOperations
                 return result.ExitCode == 0
                     ? FeatureOutcome.Success("Git branch tracking updated.", new UpstreamResult(repo, input.BranchName, input.Upstream))
                     : new("git_upstream_update_failed", "Git could not update the branch upstream.");
-            });
+            }));
         }, token);
 
     private static async Task<FeatureOutcome?> ValidateUpstreamAsync(GitWorktree repo, UpstreamInput input, CancellationToken token)

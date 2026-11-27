@@ -35,7 +35,7 @@ internal static partial class GitRemoteOperations
             var problem = await ValidateChangeAsync(repo, snapshot, input, change, token).ConfigureAwait(false);
             if (problem is not null)
                 return problem;
-            return Authorize(selection, cancellation => GitConfigurationGate.RunAsync(cancellation,
+            return Authorize(selection, cancellation => RunReviewedAsync(selection, cancellation,
                 () => ConfigureReviewedAsync(repo, input, change, cancellation)));
         }, token);
 
@@ -74,7 +74,7 @@ internal static partial class GitRemoteOperations
             if (!remote.FetchMappings.All(IsTrackingRefspec))
                 return new("git_fetch_refspec_unsupported", "Fetch must target remote tracking refs or tags.");
 
-            return Authorize(selection, cancellation => GitConfigurationGate.RunAsync(cancellation, async () =>
+            return Authorize(selection, cancellation => RunReviewedAsync(selection, cancellation, async () =>
             {
                 if (!Matches(await ReadConfigAsync(repo, cancellation).ConfigureAwait(false), input.Revision))
                     return Changed();
@@ -199,14 +199,21 @@ internal static partial class GitRemoteOperations
             return new("git_worktree_mismatch", "The requested worktree differs from the current selection.");
         if (!NativeGit.SamePath(selection.ScopeRoot, selection.Repository.WorktreePath))
             return new("git_remote_scope_required", "Open the worktree root before managing its remotes.");
-        return await TryAsync(async () =>
-        {
-            var found = await NativeGit.DiscoverAsync(selection.ScopeRoot, "", token).ConfigureAwait(false);
-            return found is null || !NativeGit.IsSameWorktree(found.Repository, selection.Repository)
-                ? new("git_repository_unavailable", "The selected Git worktree is unavailable.")
-                : await operation(selection).ConfigureAwait(false);
-        }).ConfigureAwait(false);
+        return await TryAsync(async () => await IsCurrentWorktreeAsync(selection, token).ConfigureAwait(false)
+            ? await operation(selection).ConfigureAwait(false)
+            : RepositoryUnavailable()).ConfigureAwait(false);
     }
+
+    private static Task<FeatureOutcome> RunReviewedAsync(GitSelection selection, CancellationToken token, Func<Task<FeatureOutcome>> operation) =>
+        WorkspaceMutationGate.RunAsync(token, async () => await IsCurrentWorktreeAsync(selection, token).ConfigureAwait(false)
+            ? await operation().ConfigureAwait(false)
+            : RepositoryUnavailable());
+
+    private static async Task<bool> IsCurrentWorktreeAsync(GitSelection selection, CancellationToken token) =>
+        await NativeGit.DiscoverAsync(selection.ScopeRoot, "", token).ConfigureAwait(false) is { } found &&
+        NativeGit.IsSameWorktree(found.Repository, selection.Repository);
+
+    private static FeatureOutcome RepositoryUnavailable() => new("git_repository_unavailable", "The selected Git worktree is unavailable. Reopen it and review the operation again.");
 
     private static FeatureOutcome Finish(GitSelection expected, Func<FeatureOutcome> result) => new("ok", "Git remote operation prepared.")
     {

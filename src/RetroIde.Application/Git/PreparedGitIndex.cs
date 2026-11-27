@@ -8,6 +8,7 @@ internal sealed class PreparedGitIndex : IDisposable
     private readonly string _temporary;
     private readonly byte[]? _original;
     private byte[]? _updated;
+    private IDisposable? _workspaceLease;
 
     private PreparedGitIndex(string index, byte[]? original)
     {
@@ -17,14 +18,33 @@ internal sealed class PreparedGitIndex : IDisposable
     }
 
     internal static Task<PreparedGitIndex?> CreateAsync(GitWorktree repository, string[] paths, bool stage, CancellationToken token) =>
-        PrepareAsync(repository, async indexPath =>
+        PrepareWithWorkspaceLeaseAsync(repository, async indexPath =>
         {
-            using var held = await GitConfigurationGate.EnterAsync(token).ConfigureAwait(false);
             var arguments = NativeGit.WorktreeArguments(repository);
             arguments.AddRange(stage ? ["add", "--"] : ["reset", "--quiet", "--"]);
             arguments.AddRange(paths);
             return await NativeGit.RunAsync(repository.WorktreePath, arguments, token, indexPath).ConfigureAwait(false) is not null;
         }, token);
+
+    internal static async Task<PreparedGitIndex?> PrepareWithWorkspaceLeaseAsync(GitWorktree repository,
+        Func<string, Task<bool>> update, CancellationToken token)
+    {
+        IDisposable? lease = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
+        try
+        {
+            var current = await NativeGit.DiscoverAsync(repository.WorktreePath, "", token).ConfigureAwait(false);
+            if (current is null || !NativeGit.IsSameWorktree(repository, current.Repository))
+                return null;
+            var prepared = await PrepareAsync(repository, update, token).ConfigureAwait(false);
+            if (prepared is not null)
+            {
+                prepared._workspaceLease = lease;
+                lease = null;
+            }
+            return prepared;
+        }
+        finally { lease?.Dispose(); }
+    }
 
     internal static async Task<PreparedGitIndex?> PrepareAsync(GitWorktree repository, Func<string, Task<bool>> update, CancellationToken token)
     {
@@ -69,8 +89,12 @@ internal sealed class PreparedGitIndex : IDisposable
 
     public void Dispose()
     {
-        File.Delete(_temporary);
-        File.Delete(_temporary + ".lock");
-        File.Delete(_temporary + ".patch");
+        try
+        {
+            File.Delete(_temporary);
+            File.Delete(_temporary + ".lock");
+            File.Delete(_temporary + ".patch");
+        }
+        finally { Interlocked.Exchange(ref _workspaceLease, null)?.Dispose(); }
     }
 }

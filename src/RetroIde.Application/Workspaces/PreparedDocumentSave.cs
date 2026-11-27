@@ -2,6 +2,8 @@ namespace RetroIde.Application.Workspaces;
 
 internal sealed class PreparedDocumentSave(string temporaryPath, WorkspaceExplorer.SourceAddress source) : IDisposable
 {
+    private IDisposable? _publicationLease;
+
     public static async Task<PreparedDocumentSave> WriteAsync(DocumentSaveSnapshot snapshot, CancellationToken token)
     {
         return await Task.Run(async () =>
@@ -42,10 +44,21 @@ internal sealed class PreparedDocumentSave(string temporaryPath, WorkspaceExplor
         File.Replace(temporaryPath, destination, destinationBackupFileName: null);
     }
 
+    internal async Task WaitForPublicationAsync(CancellationToken token)
+    {
+        try { _publicationLease = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false); }
+        catch
+        {
+            Dispose();
+            throw;
+        }
+    }
+
     public void Dispose()
     {
         try { File.Delete(temporaryPath); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+        finally { Interlocked.Exchange(ref _publicationLease, null)?.Dispose(); }
     }
 
     private static string ResolveDestination(WorkspaceExplorer.SourceAddress address)

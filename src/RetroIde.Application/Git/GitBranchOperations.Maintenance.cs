@@ -94,7 +94,7 @@ internal static partial class GitBranchOperations
     {
         try
         {
-            using var held = await GitConfigurationGate.EnterAsync(token).ConfigureAwait(false);
+            using var held = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
             if (await ValidateMaintenanceAsync(plan, token).ConfigureAwait(false) is { } failure)
                 return failure;
             var rename = plan.NewName is not null;

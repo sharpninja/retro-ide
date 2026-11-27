@@ -60,7 +60,11 @@ internal sealed class ExplorerFeatures(Func<DocumentSaveSnapshot, CancellationTo
             return new("document_changed", "The document is unavailable or its revision has changed.");
 
         PreparedDocumentSave staged;
-        try { staged = await stageSave(snapshot, token).ConfigureAwait(false); }
+        try
+        {
+            staged = await stageSave(snapshot, token).ConfigureAwait(false);
+            await staged.WaitForPublicationAsync(token).ConfigureAwait(false);
+        }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or NotSupportedException or System.Text.EncoderFallbackException)
         {
             return new("save_failed", "Unable to write the source file.") { KeepCapturedTarget = true };

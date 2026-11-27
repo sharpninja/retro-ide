@@ -192,7 +192,7 @@ internal static class GitWorktreeOperations
             ExecuteAuthorizedAsync = token => GitOperationRecovery.TryAsync(async () =>
             {
                 var repo = selection.Repository;
-                using var held = await GitConfigurationGate.EnterAsync(token).ConfigureAwait(false);
+                using var held = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
                 return await SourceAvailableAsync(repo, token).ConfigureAwait(false)
                     ? await run(token).ConfigureAwait(false) : SourceUnavailable();
             }),

@@ -56,7 +56,7 @@ internal sealed class PreparedGitRepository : IDisposable
         try
         {
             // Keep the lease until the prepared checkout has been installed or discarded.
-            prepared._configuration = await GitConfigurationGate.EnterAsync(token).ConfigureAwait(false);
+            prepared._configuration = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
             if (OperatingSystem.IsWindows())
                 Directory.CreateDirectory(staging);
             else

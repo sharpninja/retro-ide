@@ -85,7 +85,7 @@ internal static partial class GitBranchOperations
         var changedCheckout = false;
         try
         {
-            using var held = await GitConfigurationGate.EnterAsync(token).ConfigureAwait(false);
+            using var held = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
             var refs = await GitHistoryOperations.ReadRefsAsync(plan.Repository, token).ConfigureAwait(false);
             var current = CurrentWorktree(refs, plan.Repository);
             if (!string.Equals(current?.Branch, plan.PreviousBranch, StringComparison.Ordinal) ||

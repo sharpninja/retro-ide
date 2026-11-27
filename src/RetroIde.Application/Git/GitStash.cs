@@ -54,7 +54,7 @@ internal static class GitStash
                 ? new FeatureOutcome("ok", "Git stash operation authorized.")
                 {
                     ExecuteAuthorizedAsync = cancellation => GitOperationRecovery.TryAsync(
-                        () => GitConfigurationGate.RunAsync(cancellation, () => execute(git, selection, cancellation))),
+                        () => WorkspaceMutationGate.RunAsync(cancellation, () => execute(git, selection, cancellation))),
                 }
                 : GitOperationRecovery.ChangedSelection(),
         }), token);

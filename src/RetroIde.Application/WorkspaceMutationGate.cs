@@ -1,10 +1,9 @@
-namespace RetroIde.Application.Git;
+namespace RetroIde.Application;
 
-/// <summary>Coordinates native Git transfers with built-in Git operations across all repositories used by the IDE process.</summary>
-internal static class GitConfigurationGate
+/// <summary>Coordinates reviewed native Git operations with writes that can change their filesystem inputs.</summary>
+internal static class WorkspaceMutationGate
 {
-    // Git can include files from a different checkout, and a native hook can modify
-    // shared configuration. The selected repository cannot bound those effects.
+    // Git includes can point into another checkout, including files open in the editor.
     private static readonly SemaphoreSlim Gate = new(1);
 
     internal static async Task<FeatureOutcome> RunAsync(CancellationToken token, Func<Task<FeatureOutcome>> operation)
