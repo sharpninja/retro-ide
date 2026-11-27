@@ -34,12 +34,8 @@ internal sealed partial class EmulatorSessionControl
 
         try
         {
-            if (_uncertain is not null)
-                return Fail<MutationReceipt>(AdapterErrorCodes.UnknownOutcome,
-                    "Reconcile the outstanding emulator mutation before issuing another.", scope.OperationId);
-
-            var retry = false;
-            if (_lastResolution is { } previous && previous.Request.Scope.OperationId == scope.OperationId)
+            var retry = _resolutions.TryGetValue(scope.OperationId, out var previous);
+            if (retry)
             {
                 if (previous.Request.Scope != scope)
                     return Fail<MutationReceipt>(AdapterErrorCodes.PermissionDenied, "The operation ID belongs to another scope.", scope.OperationId);
@@ -49,8 +45,10 @@ internal sealed partial class EmulatorSessionControl
                 if (previous.Receipt.Disposition == MutationDisposition.Applied)
                     return AdapterResult<MutationReceipt>.Success(new(scope, previous.Receipt.StateRevision));
 
-                retry = true;
             }
+            if (_uncertain is not null)
+                return Fail<MutationReceipt>(AdapterErrorCodes.UnknownOutcome,
+                    "Reconcile the outstanding emulator mutation before issuing another.", scope.OperationId);
 
             var snapshot = await ReadAsync(token).ConfigureAwait(false);
             if (!snapshot.Succeeded)
@@ -72,7 +70,7 @@ internal sealed partial class EmulatorSessionControl
 
             var result = await DispatchAsync(target, cancellation => invoke(port, cancellation), token).ConfigureAwait(false);
             if (retry && result.Succeeded)
-                _lastResolution = (target, new(scope, MutationDisposition.Applied, result.Value.StateRevision));
+                _resolutions[scope.OperationId] = (target, new(scope, MutationDisposition.Applied, result.Value.StateRevision));
             return result;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -119,7 +117,7 @@ internal sealed partial class EmulatorSessionControl
             if (result.Value.Disposition != MutationDisposition.Unknown)
             {
                 _uncertain = null;
-                _lastResolution = (pending, result.Value);
+                _resolutions[scope.OperationId] = (pending, result.Value);
             }
             return result;
         }

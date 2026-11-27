@@ -10,9 +10,11 @@ internal sealed partial class EmulatorSessionControl
     private readonly ILogger _logger;
     private readonly SessionIdentity _identity;
     private readonly SessionClosePolicy _closePolicy;
+    // The backend owns normal operation receipts and keeps them across connections.
+    // Retain the uncertain operations this connection has explicitly reconciled.
+    private readonly Dictionary<Guid, (PendingMutation Request, MutationResolution Receipt)> _resolutions = [];
     private SessionState _state;
     private PendingMutation? _uncertain;
-    private (PendingMutation Request, MutationResolution Receipt)? _lastResolution;
 
     internal EmulatorSessionControl(IEmulatorSession connection, SessionState initialState, ILogger logger)
     {
