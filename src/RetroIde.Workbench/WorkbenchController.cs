@@ -4,6 +4,7 @@ using GPS.SimpleMVC.Controllers;
 using Microsoft.Extensions.Logging;
 using RetroIde.Application;
 using RetroIde.Application.Git;
+using RetroIde.Application.Terminals;
 using RetroIde.Application.Workspaces;
 using RetroIde.Application.Localization;
 
@@ -11,7 +12,7 @@ namespace RetroIde.Workbench;
 
 /// <summary>Owns workbench view registrations and the shared typed dispatch entry point.</summary>
 /// <remarks>TEST-RETRO-007#ac-test-simplemvc-views; TEST-RETRO-007#ac-test-view-result-routing</remarks>
-public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispatcher
+public sealed partial class WorkbenchController : SimpleControllerBase, IWorkbenchDispatcher
 {
     private readonly Guid _workspaceId;
     private readonly DockLayout _layout;
@@ -324,6 +325,8 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                     DispatchToViewAsync(git, registration, _registry.Git.Select, locate, request),
                 GitFeatures.StatusInput status when string.Equals(request.CommandId, _registry.Git.Status.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.Status, status, request),
+                TerminalFeatures.OpenInput terminal when string.Equals(request.CommandId, _registry.Terminals.Open.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Terminals.Open, terminal, request),
                 GitOperationRecovery.ReadInput op when string.Equals(request.CommandId, _registry.Git.Operation.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.Operation, op, request),
                 GitOperationRecovery.RecoverInput resume when string.Equals(request.CommandId, _registry.Git.ContinueOperation.Id, StringComparison.Ordinal) =>
@@ -452,8 +455,8 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
 
     /// <summary>Represents the live workbench registration and its own native Git selection.</summary>
     /// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-multiple-repos; TEST-RETRO-015#ac-test-mcp-same-instance. Publish selection revisions through the existing workbench layout.</remarks>
-    private sealed record Registration(WorkbenchViewModel View, ActorGrant Grant, WorkbenchController Controller) : IWorkbenchRegistration,
-        IExplorerRegistration, ILocalizationRegistration, IGitRegistration
+    private sealed partial record Registration(WorkbenchViewModel View, ActorGrant Grant, WorkbenchController Controller) : IWorkbenchRegistration,
+        IExplorerRegistration, ILocalizationRegistration, IGitRegistration, ITerminalRegistration
     {
         private GitStatusMonitor? _gitMonitor;
         private Task _drainingMonitors = Task.CompletedTask;

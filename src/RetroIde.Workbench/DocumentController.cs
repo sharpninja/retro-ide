@@ -39,7 +39,7 @@ internal sealed partial class DocumentController : SimpleControllerBase
     internal bool HasDocument(WorkspaceExplorer.Address address) => _open.ContainsKey(address);
 
     internal bool Owns(Guid viewKey, Guid parentKey) =>
-        parentKey == _workbench.ViewKey && GetView<IView>(viewKey) is DocumentViewModel or GitDiffViewModel or GitHistoryViewModel or GitBlameViewModel;
+        parentKey == _workbench.ViewKey && GetView<IView>(viewKey) is DocumentViewModel or GitDiffViewModel or GitHistoryViewModel or GitBlameViewModel or TerminalViewModel;
 
     internal DocumentContext? OpenOrActivate(WorkspaceExplorer.Address address, WorkspaceExplorer.SourceFile? source, SourcePosition? position)
     {
@@ -241,6 +241,8 @@ internal sealed partial class DocumentController : SimpleControllerBase
             RemoveHistory(document);
         foreach (var document in _blames.Values.ToArray())
             RemoveBlame(document);
+        foreach (var document in _terminals.Values.ToArray())
+            RemoveTerminal(document);
     }
 
     protected override void Dispose(bool disposing)
@@ -259,9 +261,10 @@ internal sealed partial class DocumentController : SimpleControllerBase
     {
         if (args.Dockable is not ShellDocument document)
             return;
-        IView? view = (IView?)document.Source ?? (IView?)document.GitDiff ?? (IView?)document.GitHistory ?? document.GitBlame;
+        IView? view = (IView?)document.Source ?? (IView?)document.GitDiff ?? (IView?)document.GitHistory ??
+            (IView?)document.GitBlame ?? document.GitTerminal;
         IAsyncRelayCommand? close = document.Source?.CloseCommand ?? document.GitDiff?.CloseCommand ??
-            document.GitHistory?.CloseCommand ?? document.GitBlame?.CloseCommand;
+            document.GitHistory?.CloseCommand ?? document.GitBlame?.CloseCommand ?? document.GitTerminal?.CloseCommand;
         if (view is not null && close is not null && _closingView != view.ViewKey &&
             ReferenceEquals(GetView<IView>(view.ViewKey), view))
         {
@@ -291,6 +294,8 @@ internal sealed partial class DocumentController : SimpleControllerBase
                 RemoveDiff(document);
             else if (document.GitBlame is not null)
                 RemoveBlame(document);
+            else if (document.GitTerminal is not null)
+                RemoveTerminal(document);
             else
                 RemoveDocument(document);
             _layout.AdvanceWorkspaceRevision();
@@ -305,6 +310,8 @@ internal sealed partial class DocumentController : SimpleControllerBase
             document.Title = document.GitHistory!.Title;
         foreach (var document in _blames.Values)
             document.Title = document.GitBlame!.Title;
+        foreach (var document in _terminals.Values)
+            document.Title = document.GitTerminal!.Title;
     }
 
     private void RemoveDiff(ShellDocument document)

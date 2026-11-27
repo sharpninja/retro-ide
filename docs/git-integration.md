@@ -79,6 +79,12 @@ Open **Patches** from Source Control and choose **Index** for staged changes or 
 | Worktrees, submodules, and LFS | List, add, open, lock, unlock, and remove linked worktrees. Show submodule status and support init, update, and sync in the selected repository. Honor configured Git LFS filters and hooks and expose LFS commands where Git LFS is installed. |
 | Advanced commands | Open the integrated terminal in the selected worktree with the same native Git environment. It supports arbitrary Git commands and extensions, including reflog, bisect, notes, and recovery workflows. Refresh IDE state after terminal and external client changes. |
 
+### Repository terminal
+
+Choose **Git → Open Repository Terminal** or use the matching Source Control action after selecting the full worktree. The terminal opens as a document tab and starts the user's shell in that checkout. It keeps its own shell and checkout when you select another repository. The tab supports native terminal input and output, including interactive Git prompts and full-screen programs. Closing the tab stops its shell. Source Control updates as Git and worktree files change.
+
+The attached workbench exposes the same terminal sessions through [MCP](mcp-tools.md#git). Output is retained in a bounded byte transcript. When a reader falls behind, the response includes the oldest retained offset and indicates that earlier bytes have been dropped.
+
 ## Execution and state
 
 Use the installed Git executable for repository operations on Windows and Linux. The IDE discovers Git or accepts a configured executable and reports its availability. The Source Control ViewModel registers with the main controller. Commands launch typed CQRS requests with the repository, worktree, and selected files or refs captured at invocation. The Git service invokes the executable asynchronously with explicit arguments and working directory. Its interactive commands use the user's Git configuration, HTTPS credential helpers, SSH agent, and signing environment. Credential prompts and signing tools use their interactive channels, and logs omit secrets. [Git credentials](https://git-scm.com/docs/gitcredentials)

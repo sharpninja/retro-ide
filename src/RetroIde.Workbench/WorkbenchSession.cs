@@ -97,7 +97,7 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
     /// <summary>Drains native background work before releasing the workbench and its views.</summary>
     public async ValueTask DisposeAsync()
     {
-        try { await Controller.DrainGitRefreshAsync(View).ConfigureAwait(true); }
+        try { await Task.WhenAll(Controller.DrainGitRefreshAsync(View), Documents.DrainTerminalsAsync()).ConfigureAwait(true); }
         finally { Dispose(); }
     }
 

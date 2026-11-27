@@ -179,10 +179,10 @@ public sealed partial class GitWorkspaceStateTests
 
     internal sealed class WorkspaceConnection(LoopbackMcpHost host, McpClient client, HttpClient http, CancellationToken token) : IAsyncDisposable
     {
-        internal static async Task<WorkspaceConnection> ConnectAsync(WorkbenchSession session, CancellationToken token)
+        internal static async Task<WorkspaceConnection> ConnectAsync(WorkbenchSession session, CancellationToken token, bool canMutate = true)
         {
             var host = await LoopbackMcpHost.StartAsync(session.Registry, session.Controller, session.View.Address, token).ConfigureAwait(false);
-            var attachment = host.CreateAttachment("workspace-git-state", canMutate: true);
+            var attachment = host.CreateAttachment("workspace-git-state", canMutate);
             var http = attachment.CreateHttpClient();
             try
             {

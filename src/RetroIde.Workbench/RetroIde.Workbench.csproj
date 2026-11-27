@@ -21,6 +21,7 @@
     <PackageReference Include="Dock.Model.Mvvm" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="GPS.SimpleMVC" />
+    <PackageReference Include="Iciclecreek.Avalonia.Terminal" />
     <ProjectReference Include="../RetroIde.Application/RetroIde.Application.csproj" />
     <ProjectReference Include="../RetroIde.Mcp/RetroIde.Mcp.csproj" />
   </ItemGroup>

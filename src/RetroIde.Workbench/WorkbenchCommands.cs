@@ -59,6 +59,7 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor UpdateGitSubmodule = Create("git.submodule.update", "Alt+Shift+F8");
     public static readonly CommandDescriptor SyncGitSubmodule = Create("git.submodule.sync", "Ctrl+Shift+F9");
     public static readonly CommandDescriptor OpenGitLfs = Create("git.lfs.open", "Ctrl+Shift+F2");
+    public static readonly CommandDescriptor OpenGitTerminal = Create("git.terminal.open", "Ctrl+Alt+T");
     public static readonly CommandDescriptor RefreshGitLfs = Create("git.lfs.status", "Alt+Shift+F2");
     public static readonly CommandDescriptor FetchGitLfs = Create("git.lfs.fetch", "Ctrl+Shift+F3");
     public static readonly CommandDescriptor CheckoutGitLfs = Create("git.lfs.checkout", "Alt+Shift+F3");
@@ -102,7 +103,7 @@ internal static class WorkbenchCommands
             StartGitOperation, ResetToGitCommit, OpenGitStashes, RefreshGitStashes, InspectGitStash, CreateGitStash, ApplyGitStash,
             PopGitStash, DropGitStash, OpenGitPatches, ExportGitPatch, ReviewGitPatch, ApplyGitPatch,
             OpenGitSubmodules, RefreshGitSubmodules, InitGitSubmodule, UpdateGitSubmodule, SyncGitSubmodule,
-            OpenGitLfs, RefreshGitLfs, FetchGitLfs, CheckoutGitLfs, PullGitLfs,
+            OpenGitLfs, RefreshGitLfs, FetchGitLfs, CheckoutGitLfs, PullGitLfs, OpenGitTerminal,
             OpenGitHistory, CurrentGitHistory,
             ShowGitRefHistory, PreviousGitHistoryPage, NextGitHistoryPage, InspectGitCommit, CreateGitBranch, SwitchGitBranch,
             CreateGitTag, InspectGitTag, DeleteGitTag,
@@ -119,6 +120,7 @@ internal static class WorkbenchCommands
         _ = WorkbenchText.ExplorerRoot(english, WorkspaceExplorer.RootKind.Folder, "example", unavailable: false);
         _ = WorkbenchText.GitDiffName(english, "example.asm", "staged");
         _ = WorkbenchText.GitBlameName(english, "example.asm");
+        _ = WorkbenchText.GitTerminalName(english, "example");
         _ = WorkbenchText.GitRemoteDivergence(english, 0, 0);
         _ = WorkbenchText.ExplorerRoot(english, WorkspaceExplorer.RootKind.Project, "example", unavailable: true);
         Validate(Commands, english);

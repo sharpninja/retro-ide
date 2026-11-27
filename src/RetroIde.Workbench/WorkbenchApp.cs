@@ -27,6 +27,7 @@ public sealed class WorkbenchApp : Avalonia.Application
     private readonly ILogger _logger;
     private readonly bool _showStartupSplash;
     private Task<RunningMcp?>? _attachmentStartup;
+    private Task _terminalShutdown = Task.CompletedTask;
     private Action? _stopDesktop;
     private Dispatcher? _dispatcher;
     internal static WorkbenchApp? Instance { get; private set; }
@@ -76,6 +77,7 @@ public sealed class WorkbenchApp : Avalonia.Application
                 { GitDiff: { } diff } => GitDiffSurface.Create(diff),
                 { GitHistory: { } history } => GitHistorySurface.Create(history),
                 { GitBlame: { } blame } => GitBlameSurface.Create(blame),
+                { GitTerminal: { } terminal } => TerminalSurface.Create(terminal),
                 { Id: "start" } => new BrandingPanel(document.Localization, _logger),
                 _ => PaneContent(document!.Localization, document.Id, document: true),
             })));
@@ -97,6 +99,7 @@ public sealed class WorkbenchApp : Avalonia.Application
             _stopDesktop = () =>
             {
                 Cleanup(lifetimeCancellation.Cancel, "desktop cancellation");
+                _terminalShutdown = session.Documents.DrainTerminalsAsync();
                 Cleanup(session.Dispose, "workbench session shutdown");
                 lifetimeCancellation.Dispose();
             };
@@ -115,6 +118,8 @@ public sealed class WorkbenchApp : Avalonia.Application
     }
 
     internal void StopDesktop() => Interlocked.Exchange(ref _stopDesktop, null)?.Invoke();
+
+    internal Task DrainTerminalsAsync() => _terminalShutdown;
 
     internal void DetachDispatcherExceptionHandler()
     {

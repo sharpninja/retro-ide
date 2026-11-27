@@ -38,6 +38,11 @@ internal sealed class RepositoryTerminal : IAsyncDisposable
     internal int ProcessId => _connection.Pid;
     internal bool IsRunning => Volatile.Read(ref _shutdown) is null && !_exited.Task.IsCompleted;
     internal Exit? ExitResult => _exited.Task.IsCompletedSuccessfully ? _exited.Task.Result : null;
+    internal event EventHandler<PtyExitedEventArgs>? ProcessExited
+    {
+        add => _connection.ProcessExited += value;
+        remove => _connection.ProcessExited -= value;
+    }
 
     internal static async Task<RepositoryTerminal> StartAsync(GitWorktree repository, int columns, int rows,
         ILogger logger, CancellationToken token, Shell? shell = null)
@@ -69,6 +74,11 @@ internal sealed class RepositoryTerminal : IAsyncDisposable
     }
 
     internal TerminalTranscript.Slice Read(long offset, int maximumBytes) => _transcript.Read(offset, maximumBytes);
+
+    internal ValueTask<TerminalTranscript.Slice> WaitForOutputAsync(long offset, int maximumBytes, CancellationToken token) =>
+        _transcript.WaitForOutputAsync(offset, maximumBytes, token);
+
+    internal void ReportFailure(Exception error, string operation) => RuntimeFailures.Report(_logger, error, operation);
 
     internal Task<Exit> WaitForExitAsync(CancellationToken token) => _exited.Task.WaitAsync(token);
 
@@ -127,6 +137,7 @@ internal sealed class RepositoryTerminal : IAsyncDisposable
         {
             RuntimeFailures.Report(_logger, error, "Repository terminal output");
         }
+        finally { _transcript.Complete(); }
     }
 
     private async Task ShutdownAsync()

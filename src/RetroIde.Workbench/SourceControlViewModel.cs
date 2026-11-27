@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RetroIde.Application;
 using RetroIde.Application.Git;
+using RetroIde.Application.Terminals;
 using RetroIde.Application.Workspaces;
 
 namespace RetroIde.Workbench;
@@ -20,6 +21,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     private string? _explorerBlameFile;
     private bool _preferExplorerBlame;
     private GitFeatures Git => registry.Git;
+    private TerminalFeatures Terminals => registry.Terminals;
     private InteractionBlocks Interaction => interaction;
 
     public Guid ViewKey { get; } = Guid.NewGuid();
@@ -44,6 +46,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     [NotifyCanExecuteChangedFor(nameof(OpenPatchesCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenSubmodulesCommand), nameof(RefreshSubmodulesCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenLfsCommand), nameof(RefreshLfsCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenTerminalCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenBlameCommand))]
     [NotifyPropertyChangedFor(nameof(HasRepository))]
     public partial GitWorktree? Repository { get; private set; }
@@ -135,6 +138,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         OpenPatchesCommand.NotifyCanExecuteChanged();
         NotifySubmoduleCommands();
         NotifyLfsCommands();
+        OpenTerminalCommand.NotifyCanExecuteChanged();
         ContinueOperationCommand.NotifyCanExecuteChanged();
         AbortOperationCommand.NotifyCanExecuteChanged();
         SkipOperationCommand.NotifyCanExecuteChanged();

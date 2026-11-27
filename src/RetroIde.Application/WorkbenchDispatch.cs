@@ -224,6 +224,7 @@ public sealed class FeatureRegistry
         Documents = new DocumentFeatures();
         Localization = new LocalizationFeatures();
         Git = new GitFeatures();
+        Terminals = new Terminals.TerminalFeatures();
         Features = ImmutableArray.Create<FeatureRegistration>(GetContext, FocusTool, Explorer.OpenRoot, Explorer.ReadRoots,
             Explorer.ReadChildren, Explorer.SetExpansion, Explorer.SelectEntry, Explorer.OpenEntry, Explorer.RevealEntry,
             Explorer.SaveDocument, Documents.GetContext, Documents.Find, Documents.Replace, Documents.Close,
@@ -234,6 +235,7 @@ public sealed class FeatureRegistry
             Git.ListWorktrees, Git.AddWorktree, Git.OpenWorktree, Git.LockWorktree, Git.UnlockWorktree, Git.RemoveWorktree,
             Git.ListSubmodules, Git.InitSubmodule, Git.UpdateSubmodule, Git.SyncSubmodule,
             Git.LfsStatus, Git.FetchLfs, Git.CheckoutLfs, Git.PullLfs,
+            Terminals.Open, Terminals.List, Terminals.Read, Terminals.Write, Terminals.Resize, Terminals.Close,
             Git.Stage, Git.Unstage, Git.StageHunks, Git.UnstageHunks, Git.CommitState, Git.Commit, Git.Amend,
             Git.Refs, Git.History, Git.CommitDetails, Git.OpenHistory, Git.CloseHistory, Git.CreateBranch, Git.SwitchBranch, Git.RenameBranch, Git.DeleteBranch,
             Git.Remotes, Git.AddRemote, Git.SetRemoteUrl, Git.RenameRemote, Git.RemoveRemote, Git.Fetch, Git.SetUpstream, Git.Push, Git.Pull,
@@ -247,6 +249,7 @@ public sealed class FeatureRegistry
     internal LocalizationFeatures Localization { get; }
     /// <summary>Gets the Git operations used by the shared controller and MCP registry.</summary>
     internal GitFeatures Git { get; }
+    internal Terminals.TerminalFeatures Terminals { get; }
     internal ViewContextContract? DocumentContextContract { get; }
 
     /// <summary>Gets the public workbench context contract shared by its tools.</summary>

@@ -46,10 +46,10 @@ internal static class Program
                     RuntimeFailures.Report(logger, error, "desktop shutdown", LogLevel.Critical);
                     exitCode = 1;
                 }
-                try { Task.Run(app.StopMcpAsync).GetAwaiter().GetResult(); }
+                try { Task.Run(() => Task.WhenAll(app.StopMcpAsync(), app.DrainTerminalsAsync())).GetAwaiter().GetResult(); }
                 catch (Exception error)
                 {
-                    RuntimeFailures.Report(logger, error, "desktop MCP shutdown", LogLevel.Critical);
+                    RuntimeFailures.Report(logger, error, "desktop background services shutdown", LogLevel.Critical);
                     exitCode = 1;
                 }
                 app.DetachDispatcherExceptionHandler();

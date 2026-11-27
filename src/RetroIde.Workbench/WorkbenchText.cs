@@ -54,6 +54,7 @@ internal static class WorkbenchText
     internal const string GitSubmoduleIndexCommit = "git.submodule.index-commit";
     internal const string GitSubmoduleHead = "git.submodule.head";
     internal const string GitLfsTitle = "git.lfs.title";
+    internal const string GitTerminalTitle = "git.terminal.title";
     internal const string GitLfsUnavailable = "git.lfs.unavailable";
     internal const string GitLfsFilterConfigured = "git.lfs.filter.configured";
     internal const string GitLfsFilterMissing = "git.lfs.filter.missing";
@@ -206,6 +207,9 @@ internal static class WorkbenchText
             ["path"] = path,
             ["layer"] = localization.Text(string.Equals(layer, "staged", StringComparison.Ordinal) ? GitDiffStaged : GitDiffWorking),
         });
+
+    internal static string GitTerminalName(WorkbenchLocalization localization, string path) =>
+        localization.Text(GitTerminalTitle, new Dictionary<string, object>(StringComparer.Ordinal) { ["path"] = path });
 
     internal static string GitBlameName(WorkbenchLocalization localization, string path) =>
         localization.Text(GitBlameTitle, new Dictionary<string, object>(StringComparer.Ordinal) { ["path"] = path });

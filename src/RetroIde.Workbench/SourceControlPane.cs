@@ -104,7 +104,8 @@ internal static class SourceControlPane
             (WorkbenchCommands.UnstageGitFile, view.UnstageFileCommand), (WorkbenchCommands.CreateCommit, view.CommitCommand),
             (WorkbenchCommands.AmendCommit, view.AmendCommand), (WorkbenchCommands.OpenGitHistory, view.OpenHistoryCommand),
             (WorkbenchCommands.OpenGitStashes, view.OpenStashesCommand), (WorkbenchCommands.OpenGitPatches, view.OpenPatchesCommand),
-            (WorkbenchCommands.OpenGitSubmodules, view.OpenSubmodulesCommand), (WorkbenchCommands.OpenGitLfs, view.OpenLfsCommand)];
+            (WorkbenchCommands.OpenGitSubmodules, view.OpenSubmodulesCommand), (WorkbenchCommands.OpenGitLfs, view.OpenLfsCommand),
+            (WorkbenchCommands.OpenGitTerminal, view.OpenTerminalCommand)];
 
     private static (CommandDescriptor Descriptor, ICommand Command)[] RecoveryActions(SourceControlViewModel view) =>
         [(WorkbenchCommands.ContinueGitOperation, view.ContinueOperationCommand), (WorkbenchCommands.SkipGitOperation, view.SkipOperationCommand),

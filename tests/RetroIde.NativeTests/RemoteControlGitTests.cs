@@ -89,6 +89,7 @@ internal static partial class RemoteControlGitTests
             await VerifySubmodulesAsync(window, session.SourceControl, sample, token).ConfigureAwait(true);
             using var lfsDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(40));
             await VerifyLfsAsync(window, session.SourceControl, sample, lfsDeadline.Token).ConfigureAwait(true);
+            await VerifyTerminalAsync(window, session, sample).ConfigureAwait(true);
 
             async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments)
             {
