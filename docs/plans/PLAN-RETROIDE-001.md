@@ -108,12 +108,12 @@ All seven incomplete test-first entries from `60457dc` now have criterion-specif
 
 #### Phase 03 independent review
 
-The 2026-11-27 review of `212cac6` returned DISAGREE at 96 accuracy and 95 completeness overall. No accepted Phase 01 or 02 task regressed. [Full verdict](../receipts/hv/20261127T083643-phase-03-renewed.verdict.md)
+The 2026-11-27 review of `023e0d7` returned DISAGREE at 96 accuracy and 95 completeness overall. It accepted the language-server slice. Earlier accepted Phase 01, 02, and 03C behavior passed regression review. [Current verdict](../receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md) · [Previous verdict](../receipts/hv/20261127T083643-phase-03-renewed.verdict.md)
 
 | Task | Verdict | Accuracy | Completeness | Status |
 | --- | --- | --- | --- | --- |
-| 03A · `EXEC-TODO-008` | DISAGREE | 96 | 95 | Open. Protect Git transfers from overlapping remote changes. Retain live evidence for the overlap and for reviewed commits on initial or detached HEAD. |
-| 03B · `EXEC-TODO-009` | DISAGREE | 96 | 96 | Open. Preserve successful save notifications through close and first synchronization. Verify both at the workbench-to-server boundary. |
+| 03A · `EXEC-TODO-008` | DISAGREE | 96 | 95 | Open. Protect transfers from effective endpoint changes caused by submodule URL sync and branch-dependent configuration. Retain live overlap tests for both paths. Direct remote edit exclusion and reviewed commits on unborn and detached HEAD passed. |
+| 03B · `EXEC-TODO-009` | AGREE | 99 | 99 | Complete. The live workbench and framed server observed successful saves on first synchronization and before editor close. The earlier coalesced save cases passed. |
 | 03C · `EXEC-TODO-010` | AGREE | 99 | 99 | Complete. Scoped native success, cancellation, failure and foreign-result denial passed across HTTP and stdio. |
 
 Negotiated MCP Tasks and bounded diagnostic or image results remain in Phase 07. The complete MCP inventory and scope audit remain in Phase 08.
