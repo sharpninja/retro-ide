@@ -95,7 +95,8 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
     [RelayCommand]
     private Task ReadProjectAsync(CancellationToken token) => BlockAsync(LoadProjectAsync, token);
 
-    private bool IsAvailable() => !_closing && !IsBusy && ParentViewKey is not null;
+    private bool IsAvailable() => !_closing && !IsBusy && ParentViewKey is not null &&
+        !_interaction.IsBlocked(InteractionBlocks.WorkbenchScope);
     private bool CanConfigure() => IsAvailable() && !string.IsNullOrWhiteSpace(BucketId) && !string.IsNullOrWhiteSpace(Repository);
     private bool HasBucket() => IsAvailable() && SelectedBucket is not null;
     private bool HasInstallation() => IsAvailable() && SelectedInstallation is not null;
@@ -171,6 +172,12 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
     {
         _closing = true;
         _activeCommand?.Cancel();
+    }
+
+    internal Task CancelActiveCommandAsync()
+    {
+        _activeCommand?.Cancel();
+        return _pendingWork;
     }
 
     internal Task DrainAsync()

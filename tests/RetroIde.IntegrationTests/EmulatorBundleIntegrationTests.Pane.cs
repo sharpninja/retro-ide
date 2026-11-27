@@ -4,6 +4,8 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using RetroIde.Testing;
 using RetroIde.Workbench;
@@ -30,6 +32,8 @@ public sealed partial class EmulatorBundleIntegrationTests
             ["kind"] = "project", ["path"] = project.FullName.Replace('\\', '/'),
         })).GetProperty("data").GetProperty("id").GetGuid();
         var window = new WorkbenchWindow(session);
+        var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        window.Closed += (_, _) => closed.TrySetResult();
         window.Show();
         try
         {
@@ -53,7 +57,51 @@ public sealed partial class EmulatorBundleIntegrationTests
             Assert.Contains(picker.GetVisualDescendants().OfType<TextBlock>(), text =>
                 string.Equals(text.Text, project.FullName.Replace('\\', '/'), StringComparison.Ordinal));
         }
-        finally { window.Close(); }
+        finally
+        {
+            window.Close();
+            await closed.Task.WaitAsync(token);
+        }
+    }
+
+    /// <summary>Checks that the desktop closing path releases a stalled native Git operation.</summary>
+    [AvaloniaFact]
+    public async Task Closing_the_workbench_drains_an_active_bucket_refresh_before_the_window_closes()
+    {
+        using var root = new BundleStoreFixture();
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(root.CancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(40));
+        var token = deadline.Token;
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var endpoint = (IPEndPoint)listener.LocalEndpoint;
+        await using var session = OpenEmulatorWorkbench(root);
+        await using var http = await GitWorkspaceStateTests.WorkspaceConnection.ConnectAsync(session, token);
+        await http.ChangeAsync("emulator_configure_bucket", BucketArguments($"http://127.0.0.1:{endpoint.Port}/bucket.git"));
+        var window = new WorkbenchWindow(session);
+        var blockedAtClose = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        window.Closed += (_, _) => blockedAtClose.TrySetResult(session.EmulatorsView.IsBusy);
+        window.Show();
+        try
+        {
+            session.View.FocusTarget = "emulators";
+            await session.View.FocusCommand.ExecuteAsync(null);
+            await ClickEmulatorButtonAsync(window, "emulator.buckets.list.toolbar", token);
+            await ClickEmulatorButtonAsync(window, "emulator.bucket.refresh.toolbar", token);
+            using var connection = await listener.AcceptTcpClientAsync(token);
+            Assert.True(session.Interaction.IsBlocked("emulators"));
+
+            window.Close();
+
+            Assert.False(await blockedAtClose.Task.WaitAsync(token));
+            Assert.False(session.Interaction.IsBlocked("emulators"));
+        }
+        finally
+        {
+            listener.Stop();
+            if (window.IsVisible)
+                window.Close();
+        }
     }
 
     private static async Task ClickEmulatorButtonAsync(WorkbenchWindow window, string id, CancellationToken token)

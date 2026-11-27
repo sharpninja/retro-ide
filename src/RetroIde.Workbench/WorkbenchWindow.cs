@@ -353,8 +353,9 @@ public sealed partial class WorkbenchWindow : Window
             return;
         }
 
-        if (args.Cancel || (_layouts is null && _session.ExplorerStore is null) || _replayingClose ||
-            args.CloseReason is WindowCloseReason.ApplicationShutdown or WindowCloseReason.OSShutdown)
+        if (args.Cancel || _replayingClose ||
+            args.CloseReason is WindowCloseReason.ApplicationShutdown or WindowCloseReason.OSShutdown ||
+            (_layouts is null && _session.ExplorerStore is null && !_session.EmulatorsView.IsBusy && _closeSave is null))
             return; // A forced shutdown can proceed; Closed cancels any pending save.
 
         args.Cancel = true;
@@ -372,6 +373,8 @@ public sealed partial class WorkbenchWindow : Window
         {
             interaction.Begin(InteractionBlocks.WorkbenchScope);
             var token = closeSave.Token;
+            // The pane delivers its final result and clears its wait state on the UI dispatcher.
+            await _session.EmulatorsView.CancelActiveCommandAsync().WaitAsync(token).ConfigureAwait(true);
             if (_layouts is { } layouts)
             {
                 var snapshot = _session.Layout.Capture();

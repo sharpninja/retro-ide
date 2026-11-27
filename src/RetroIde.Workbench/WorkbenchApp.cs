@@ -99,8 +99,7 @@ public sealed class WorkbenchApp : Avalonia.Application
             _stopDesktop = () =>
             {
                 Cleanup(lifetimeCancellation.Cancel, "desktop cancellation");
-                _backgroundShutdown = Task.WhenAll(session.Documents.DrainTerminalsAsync(), session.Controller.DrainLanguageServersAsync(),
-                    session.EmulatorsView.DrainAsync());
+                _backgroundShutdown = Task.WhenAll(session.Documents.DrainTerminalsAsync(), session.Controller.DrainLanguageServersAsync());
                 Cleanup(session.Dispose, "workbench session shutdown");
                 lifetimeCancellation.Dispose();
             };
