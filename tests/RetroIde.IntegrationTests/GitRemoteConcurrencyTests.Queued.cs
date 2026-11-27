@@ -79,13 +79,7 @@ public sealed partial class GitRemoteConcurrencyTests
 
         var queued = change.CallAsync(reviewed.Tool, reviewed.Arguments);
         Assert.NotSame(queued, await Task.WhenAny(queued, Task.Delay(TimeSpan.FromSeconds(2), token)).ConfigureAwait(true));
-        // Git for Windows marks the pointer file hidden. Open it in place, preserving its attributes.
-        await using (var pointer = new FileStream(Path.Combine(checkout, ".git"), FileMode.Open, FileAccess.Write,
-            FileShare.None, bufferSize: 4096, useAsync: true))
-        {
-            pointer.SetLength(0);
-            await pointer.WriteAsync(Encoding.UTF8.GetBytes($"gitdir: {replacement}\n"), token).ConfigureAwait(true);
-        }
+        await ReplaceGitPointerAsync(checkout, replacement, token).ConfigureAwait(true);
         var current = (await fixture.GitAsync(checkout, token, "rev-parse", "--absolute-git-dir").ConfigureAwait(true)).Trim();
         Assert.Equal(replacement, GitPath(current), StringComparer.Ordinal);
         var actualParent = (await fixture.GitAsync(checkout, token, "rev-parse", "--show-superproject-working-tree").ConfigureAwait(true)).Trim();
@@ -97,10 +91,19 @@ public sealed partial class GitRemoteConcurrencyTests
         await VerifyTransferCompletedAsync(transfer, running, "git_fetch_failed", token).ConfigureAwait(true);
     }
 
+    private static async Task ReplaceGitPointerAsync(string checkout, string replacement, CancellationToken token)
+    {
+        // Git for Windows marks the pointer file hidden. Open it in place, preserving its attributes.
+        await using var pointer = new FileStream(Path.Combine(checkout, ".git"), FileMode.Open, FileAccess.Write,
+            FileShare.None, bufferSize: 4096, useAsync: true);
+        pointer.SetLength(0);
+        await pointer.WriteAsync(Encoding.UTF8.GetBytes($"gitdir: {replacement}\n"), token).ConfigureAwait(false);
+    }
+
     private static async Task<string> PrepareReplacementMetadataAsync(GitWorktreeFixture fixture, string checkout,
         string endpoint, CancellationToken token)
     {
-        var admin = GitPath(Path.Combine(fixture.Peer, ".git", "replacement-submodule"));
+        var admin = GitPath(Path.Combine(fixture.Peer, ".git", "replacement-checkout"));
         await fixture.GitAsync(fixture.Peer, token, "clone", "--bare", "--no-local", GitPath(fixture.Remote), admin).ConfigureAwait(false);
         var config = GitPath(Path.Combine(admin, "config"));
         await fixture.GitAsync(fixture.Peer, token, "config", "--file", config, "core.bare", "false").ConfigureAwait(false);

@@ -10,6 +10,8 @@ namespace RetroIde.IntegrationTests;
 
 public sealed partial class GitRemoteConcurrencyTests
 {
+    private const string IncludedRemoteFile = "included-remote.config";
+
     /// <remarks>TR-RETRO-GIT-013#ac-git-state-consistency; TEST-RETRO-013#ac-test-git-stage-and-push.</remarks>
     [AvaloniaTheory]
     [InlineData("git_commit")]
@@ -78,7 +80,6 @@ public sealed partial class GitRemoteConcurrencyTests
 
     private static async Task<string> ConfigureCrossCheckoutIncludeAsync(GitWorktreeFixture fixture, string endpoint, CancellationToken token)
     {
-        const string FileName = "included-remote.config";
         var peer = GitPath(fixture.Peer);
         await CommitConfigAsync(endpoint).ConfigureAwait(false);
         await fixture.GitAsync(peer, token, "switch", "-c", AlternateBranch).ConfigureAwait(false);
@@ -86,13 +87,13 @@ public sealed partial class GitRemoteConcurrencyTests
         await fixture.GitAsync(peer, token, "switch", "main").ConfigureAwait(false);
         await fixture.GitAsync(fixture.Primary, token, "config", "--local", "--unset-all", "remote.origin.url").ConfigureAwait(false);
         await fixture.GitAsync(fixture.Primary, token, "config", "--local", "--add", "include.path",
-            GitPath(Path.Combine(peer, FileName))).ConfigureAwait(false);
+            GitPath(Path.Combine(peer, IncludedRemoteFile))).ConfigureAwait(false);
         return peer;
 
         async Task CommitConfigAsync(string url)
         {
-            GitWorktreeFixture.Write(peer, FileName, $"[remote \"origin\"]\n\turl = {url}\n");
-            await fixture.GitAsync(peer, token, "add", "--", FileName).ConfigureAwait(false);
+            GitWorktreeFixture.Write(peer, IncludedRemoteFile, $"[remote \"origin\"]\n\turl = {url}\n");
+            await fixture.GitAsync(peer, token, "add", "--", IncludedRemoteFile).ConfigureAwait(false);
             await fixture.GitAsync(peer, token, "commit", "-m", "Set fixture include").ConfigureAwait(false);
         }
     }
