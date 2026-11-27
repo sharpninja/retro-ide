@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using Avalonia.Headless.XUnit;
 using RetroIde.Testing;
 using RetroIde.Workbench;
@@ -78,7 +79,13 @@ public sealed partial class GitRemoteConcurrencyTests
 
         var queued = change.CallAsync(reviewed.Tool, reviewed.Arguments);
         Assert.NotSame(queued, await Task.WhenAny(queued, Task.Delay(TimeSpan.FromSeconds(2), token)).ConfigureAwait(true));
-        await File.WriteAllTextAsync(Path.Combine(checkout, ".git"), $"gitdir: {replacement}\n", token).ConfigureAwait(true);
+        // Git for Windows marks the pointer file hidden. Open it in place, preserving its attributes.
+        await using (var pointer = new FileStream(Path.Combine(checkout, ".git"), FileMode.Open, FileAccess.Write,
+            FileShare.None, bufferSize: 4096, useAsync: true))
+        {
+            pointer.SetLength(0);
+            await pointer.WriteAsync(Encoding.UTF8.GetBytes($"gitdir: {replacement}\n"), token).ConfigureAwait(true);
+        }
         var current = (await fixture.GitAsync(checkout, token, "rev-parse", "--absolute-git-dir").ConfigureAwait(true)).Trim();
         Assert.Equal(replacement, GitPath(current), StringComparer.Ordinal);
         var actualParent = (await fixture.GitAsync(checkout, token, "rev-parse", "--show-superproject-working-tree").ConfigureAwait(true)).Trim();
