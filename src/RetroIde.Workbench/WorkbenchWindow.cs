@@ -61,6 +61,7 @@ public sealed partial class WorkbenchWindow : Window
             ItemsSource = new[]
             {
                 FocusMenu,
+                CommandPresentation.CreateMenuItem(WorkbenchCommands.OpenEmulators, session.EmulatorsView.OpenPaneCommand, localization),
                 CommandPresentation.CreateMenuItem(WorkbenchCommands.OpenLanguageServers, session.LanguageServersView.OpenPaneCommand, localization),
                 CommandPresentation.CreateMenuItem(WorkbenchCommands.OpenProblems, session.ProblemsView.OpenPaneCommand, localization),
                 CreateLanguageMenu(session),
@@ -110,7 +111,7 @@ public sealed partial class WorkbenchWindow : Window
         FocusShortcut = AddFocusShortcut(this);
         ExplorerPane.RegisterShortcuts(this, session.ExplorerView);
         SourceControlPane.RegisterShortcuts(this, session.SourceControl);
-        RegisterLanguagePaneShortcuts(this);
+        RegisterPaneShortcuts(this);
         session.ExplorerView.PickDirectoryAsync = PickWorkspaceDirectoryAsync;
         session.SourceControl.PromptSetupAsync = PromptGitSetupAsync;
         session.SourceControl.PromptCommitAsync = PromptGitCommitAsync;
@@ -126,7 +127,7 @@ public sealed partial class WorkbenchWindow : Window
             AddFocusShortcut(floating);
             ExplorerPane.RegisterShortcuts(floating, session.ExplorerView);
             SourceControlPane.RegisterShortcuts(floating, session.SourceControl);
-            RegisterLanguagePaneShortcuts(floating);
+            RegisterPaneShortcuts(floating);
             TrackFloatingInteraction(floating);
             return floating;
         };
@@ -160,8 +161,9 @@ public sealed partial class WorkbenchWindow : Window
 
         KeyBinding AddFocusShortcut(Window surface) => RegisterShortcut(surface, focusCommand, CommandPresentation.Gesture);
 
-        void RegisterLanguagePaneShortcuts(Window surface)
+        void RegisterPaneShortcuts(Window surface)
         {
+            RegisterShortcut(surface, session.EmulatorsView.OpenPaneCommand, KeyGesture.Parse(WorkbenchCommands.OpenEmulators.EffectiveGesture));
             RegisterShortcut(surface, session.LanguageServersView.OpenPaneCommand, KeyGesture.Parse(WorkbenchCommands.OpenLanguageServers.EffectiveGesture));
             RegisterShortcut(surface, session.ProblemsView.OpenPaneCommand, KeyGesture.Parse(WorkbenchCommands.OpenProblems.EffectiveGesture));
         }

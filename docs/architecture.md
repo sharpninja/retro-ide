@@ -150,6 +150,8 @@ Each configured source has its own bare cache. Refresh reads regular manifest bl
 
 Bucket operations use the existing controller and CQRS command flow. Configured sources live in `emulators/buckets.json` under the IDE application data directory and are shared by workbenches using that directory. Presets describe the guest machine and launch or attach settings, while bundle manifests describe host executables and bindings. ROMs and project media remain user-supplied. QBrain tracks the packaging and publishing contract under `FR-RETRO-009`, `TR-RETRO-BUNDLE-009`, and `TEST-RETRO-009`. [Emulator bucket tools](mcp-tools.md#emulator-bucket-tools)
 
+Open **Emulators** from the **View** menu to manage sources, review available and installed releases, and select or restore a project's verified version. The pane uses the same operations as the MCP clients. Package work blocks interaction within the pane and shows the system wait pointer there. Older layouts gain **Emulators** as a right-side auto-hide pane and retain their saved tab and window positions.
+
 ## Emulator adapters
 
 | Preset | Integration boundary | Current evidence |

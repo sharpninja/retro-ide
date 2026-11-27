@@ -23,7 +23,7 @@ public sealed class DockLayout : IDisposable
 
     internal DockLayout(IWorkbenchWorkspaceContext workspace, WorkbenchLayoutState? state, InteractionBlocks interaction,
         ExplorerViewModel explorer, SourceControlViewModel sourceControl, LanguageServersViewModel languageServers, ProblemsViewModel problems,
-        WorkbenchLocalization localization)
+        EmulatorsViewModel emulators, WorkbenchLocalization localization)
     {
         _workspace = workspace;
         _localization = localization;
@@ -39,6 +39,7 @@ public sealed class DockLayout : IDisposable
             new ShellTool("call-stack", "Call Stack", "No debugger session connected.", "right", interaction),
             new ShellTool(LanguageServersViewModel.PaneId, "Language Servers", "Manage language servers for this workspace.", "right", interaction)
                 { LanguageServers = languageServers },
+            new ShellTool(EmulatorsViewModel.PaneId, "Emulators", "Manage emulator packages.", "right", interaction) { Emulators = emulators },
             new ShellTool("output", "Output", "Workbench ready.", "bottom", interaction),
             new ShellTool(ProblemsViewModel.PaneId, "Problems", "No diagnostics.", "bottom", interaction) { Problems = problems },
             new ShellTool("serial", "Serial Console", "No session connected.", "bottom", interaction),
@@ -282,6 +283,7 @@ public sealed class DockLayout : IDisposable
         {
             new(SourceControlViewModel.PaneId, "Left", "left"),
             new(LanguageServersViewModel.PaneId, "Right", "right"),
+            new(EmulatorsViewModel.PaneId, "Right", "right"),
         }.Where(pane => !ids.Contains(pane.Tool)).ToArray();
         if (ids.Count + additions.Length == paneCount)
             return layout with { Main = layout.Main with { Pinned = [.. layout.Main.Pinned, .. additions] } };
@@ -591,7 +593,8 @@ public sealed class DockLayout : IDisposable
             new("document-tabs", "documents", 0.56, "start",
                 [new("document", "start"), new("document", "emulation"), new("document", "disassembly"), new("document", "test-results")]),
             new("splitter"),
-            new("tool-tabs", "right", 0.24, "registers", [new("tool", "registers"), new("tool", "call-stack"), new("tool", LanguageServersViewModel.PaneId)], "Right"),
+            new("tool-tabs", "right", 0.24, "registers",
+                [new("tool", "registers"), new("tool", "call-stack"), new("tool", LanguageServersViewModel.PaneId), new("tool", EmulatorsViewModel.PaneId)], "Right"),
         ]),
         new("splitter"),
         new("tool-tabs", "bottom", 0.27, "output",
@@ -617,6 +620,7 @@ internal sealed class ShellTool : Tool
     internal SourceControlViewModel? SourceControl { get; init; }
     internal LanguageServersViewModel? LanguageServers { get; init; }
     internal ProblemsViewModel? Problems { get; init; }
+    internal EmulatorsViewModel? Emulators { get; init; }
     internal WorkbenchLocalization Localization { get; set; } = WorkbenchLocalization.English;
     public string Message { get; }
     public string DefaultGroup { get; }

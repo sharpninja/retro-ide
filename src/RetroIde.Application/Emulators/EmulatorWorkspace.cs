@@ -141,7 +141,8 @@ internal sealed class EmulatorWorkspace
                 release.Manifest.AdapterApi.Contains(AdapterApi))).ToArray() ?? []);
 
     internal sealed record CatalogState(string RuntimeIdentifier, string AdapterApi, BucketState[] Buckets);
-    internal sealed record BucketState(string Id, string Repository, string? Revision, ReleaseState[] Releases);
+    internal sealed record BucketState(string Id, string Repository,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] string? Revision, ReleaseState[] Releases);
     internal sealed record ReleaseState(EmulatorBundleStore.Pin Pin, string Name, string Description, string AdapterId, bool IsCompatible);
     internal sealed record BucketChange(string BucketId);
     internal sealed record InstalledState(Pin Pin, string Name, string AdapterId, string RuntimeIdentifier, bool IsCompatible);

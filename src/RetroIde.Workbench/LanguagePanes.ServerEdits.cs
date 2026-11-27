@@ -4,6 +4,8 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using RetroIde.Application.LanguageServers;
 
+using static RetroIde.Workbench.DockPaneControls;
+
 namespace RetroIde.Workbench;
 
 internal static partial class LanguagePanes

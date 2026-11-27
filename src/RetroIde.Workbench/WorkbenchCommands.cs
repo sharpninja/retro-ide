@@ -122,6 +122,16 @@ internal static class WorkbenchCommands
 
     public static readonly CommandDescriptor LanguageApplyServerEdit = Create("language.server-edits.apply", "Ctrl+Alt+Shift+A");
     public static readonly CommandDescriptor LanguageDeclineServerEdit = Create("language.server-edits.decline", "Alt+Shift+Escape");
+    public static readonly CommandDescriptor OpenEmulators = Create("emulator.pane.focus", "Ctrl+Alt+Shift+E");
+    public static readonly CommandDescriptor ReloadEmulators = Create("emulator.buckets.list", "Ctrl+Alt+Shift+D1");
+    public static readonly CommandDescriptor ConfigureEmulatorBucket = Create("emulator.bucket.configure", "Ctrl+Alt+Shift+D2");
+    public static readonly CommandDescriptor RefreshEmulatorBucket = Create("emulator.bucket.refresh", "Ctrl+Alt+Shift+D3");
+    public static readonly CommandDescriptor RemoveEmulatorBucket = Create("emulator.bucket.remove", "Ctrl+Alt+Shift+D4");
+    public static readonly CommandDescriptor InstallEmulatorBundle = Create("emulator.bundle.install", "Ctrl+Alt+Shift+D5");
+    public static readonly CommandDescriptor UpdateEmulatorBundle = Create("emulator.bundle.update", "Ctrl+Alt+Shift+D6");
+    public static readonly CommandDescriptor RemoveEmulatorBundle = Create("emulator.bundle.remove", "Ctrl+Alt+Shift+D7");
+    public static readonly CommandDescriptor SelectEmulatorBundle = Create("emulator.project.select", "Ctrl+Alt+Shift+D8");
+    public static readonly CommandDescriptor RollbackEmulatorBundle = Create("emulator.project.rollback", "Ctrl+Alt+Shift+D9");
 
     // A document key binding can be active inside a main or floating workbench window.
     // All commands in this catalog can share that input route, so check them together.
@@ -142,12 +152,14 @@ internal static class WorkbenchCommands
             LanguageComplete, LanguageHover, LanguageSignature, LanguageDefinition, LanguageDeclaration, LanguageType,
             LanguageImplementation, LanguageReferences, LanguageSymbols, LanguageDiagnostics, LanguageFormat, LanguageRename,
             LanguageActions, LanguageOpenResult, LanguageApply, OpenLanguageServers, OpenProblems, LanguageConfigureServer, LanguageRefreshServers,
-            LanguageStopServer, LanguageRestartServer, LanguageRemoveServer, LanguageServerOutput, OpenLanguageProblem, LanguageApplyServerEdit, LanguageDeclineServerEdit];
+            LanguageStopServer, LanguageRestartServer, LanguageRemoveServer, LanguageServerOutput, OpenLanguageProblem, LanguageApplyServerEdit, LanguageDeclineServerEdit,
+            OpenEmulators, ReloadEmulators, ConfigureEmulatorBucket, RefreshEmulatorBucket, RemoveEmulatorBucket, InstallEmulatorBundle,
+            UpdateEmulatorBundle, RemoveEmulatorBundle, SelectEmulatorBundle, RollbackEmulatorBundle];
 
     internal static void ValidateBundledResources()
     {
         using var english = new WorkbenchLocalization(initial: CultureInfo.GetCultureInfo("en"));
-        foreach (var slug in WorkbenchText.Required.Concat(DockLayout.RequiredPaneText()))
+        foreach (var slug in WorkbenchText.Required.Concat(DockLayout.RequiredPaneText()).Concat(EmulatorsPane.TextSlugs))
             if (string.IsNullOrWhiteSpace(english.Text(slug)))
                 throw new InvalidDataException($"The required English resource '{slug}' is empty.");
         _ = WorkbenchText.ExplorerRoot(english, WorkspaceExplorer.RootKind.Folder, "example", unavailable: false);

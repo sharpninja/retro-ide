@@ -91,6 +91,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
             return;
 
         UnregisterLanguageViews(view);
+        UnregisterEmulators(view);
         registration.Grant.Revoke();
         registration.Operations.Dispose();
         _retiredGitReads = CombineDrains(_retiredGitReads, registration.StopGitMonitor(closing: true));
@@ -430,6 +431,12 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
                     DispatchToViewAsync(explorer, registration, _registry.Explorer.OpenEntry, source, request),
                 _ => null,
             };
+        }
+        else if (_emulatorsView is { } emulators && ReferenceEquals(sender, emulators) &&
+            request.OriginViewKey == emulators.ViewKey && emulators.ParentViewKey == registration.View.ViewKey &&
+            ReferenceEquals(GetView<IView>(emulators.ViewKey), emulators))
+        {
+            RouteEmulators(emulators, registration, request);
         }
         else if (sender is LanguageToolViewModel language && request.OriginViewKey == language.ViewKey &&
             language.ParentViewKey == registration.View.ViewKey && ReferenceEquals(GetView<IView>(language.ViewKey), language))

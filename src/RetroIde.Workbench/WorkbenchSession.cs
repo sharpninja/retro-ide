@@ -56,7 +56,9 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
         SourceControl = new SourceControlViewModel(View, Registry, Interaction);
         LanguageServersView = new LanguageServersViewModel(View, Registry, Interaction);
         ProblemsView = new ProblemsViewModel(View, Registry);
-        Layout = new DockLayout(workspace, savedLayout, Interaction, ExplorerView, SourceControl, LanguageServersView, ProblemsView, Localization);
+        EmulatorsView = new EmulatorsViewModel(View, Registry, Interaction, Logs.CreateLogger<EmulatorsViewModel>());
+        Layout = new DockLayout(workspace, savedLayout, Interaction, ExplorerView, SourceControl, LanguageServersView, ProblemsView,
+            EmulatorsView, Localization);
         var emulators = emulatorDataFolder is null ? null : new EmulatorWorkspace(Path.Combine(emulatorDataFolder, "emulators"),
             Logs.CreateLogger<EmulatorWorkspace>());
         Controller = new WorkbenchController(Explorer, Layout, Interaction, Registry, Localization, Logs.CreateLogger<WorkbenchController>(),
@@ -66,6 +68,7 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
         Controller.RegisterExplorer(ExplorerView, View, Documents);
         Controller.RegisterSourceControl(SourceControl, View);
         Controller.RegisterLanguageViews(View, LanguageServersView, ProblemsView);
+        Controller.RegisterEmulators(View, EmulatorsView);
         GitRestoration = Controller.RestoreGitAsync(View);
         _ = Task.Run(Controller.LanguageServers.RestoreAsync);
     }
@@ -77,6 +80,7 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
     internal SourceControlViewModel SourceControl { get; }
     internal LanguageServersViewModel LanguageServersView { get; }
     internal ProblemsViewModel ProblemsView { get; }
+    internal EmulatorsViewModel EmulatorsView { get; }
     internal DocumentController Documents { get; }
     internal WorkspaceExplorerStore? ExplorerStore { get; }
     internal Task GitRestoration { get; }
