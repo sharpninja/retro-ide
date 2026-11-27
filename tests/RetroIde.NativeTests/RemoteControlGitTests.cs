@@ -86,7 +86,8 @@ internal static partial class RemoteControlGitTests
             await VerifyRecoveryAsync(window, session, sample, token).ConfigureAwait(true);
             await VerifyStashAsync(window, sample, token).ConfigureAwait(true);
             await VerifyPatchAsync(window, session.SourceControl, sample, token).ConfigureAwait(true);
-            await VerifySubmodulesAsync(window, session.SourceControl, sample, token).ConfigureAwait(true);
+            using var submoduleDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+            await VerifySubmodulesAsync(window, session.SourceControl, sample, submoduleDeadline.Token).ConfigureAwait(true);
             using var lfsDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(40));
             await VerifyLfsAsync(window, session.SourceControl, sample, lfsDeadline.Token).ConfigureAwait(true);
             await VerifyTerminalAsync(window, session, sample).ConfigureAwait(true);
@@ -106,6 +107,11 @@ internal static partial class RemoteControlGitTests
                     throw new InvalidOperationException($"Native Git tool {tool} failed.");
                 return result;
             }
+        }
+        catch (Exception failure)
+        {
+            Console.Error.WriteLine(failure);
+            throw;
         }
         finally { window.Close(); }
     }
