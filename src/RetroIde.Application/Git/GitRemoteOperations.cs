@@ -35,7 +35,7 @@ internal static partial class GitRemoteOperations
             var problem = await ValidateChangeAsync(repo, snapshot, input, change, token).ConfigureAwait(false);
             if (problem is not null)
                 return problem;
-            return Authorize(selection, cancellation => GitConfigurationGate.RunAsync(repo, cancellation,
+            return Authorize(selection, cancellation => GitConfigurationGate.RunAsync(cancellation,
                 () => ConfigureReviewedAsync(repo, input, change, cancellation)));
         }, token);
 
@@ -74,7 +74,7 @@ internal static partial class GitRemoteOperations
             if (!remote.FetchMappings.All(IsTrackingRefspec))
                 return new("git_fetch_refspec_unsupported", "Fetch must target remote tracking refs or tags.");
 
-            return Authorize(selection, cancellation => GitConfigurationGate.RunAsync(repo, cancellation, async () =>
+            return Authorize(selection, cancellation => GitConfigurationGate.RunAsync(cancellation, async () =>
             {
                 if (!Matches(await ReadConfigAsync(repo, cancellation).ConfigureAwait(false), input.Revision))
                     return Changed();

@@ -19,6 +19,7 @@ internal sealed class PreparedGitIndex : IDisposable
     internal static Task<PreparedGitIndex?> CreateAsync(GitWorktree repository, string[] paths, bool stage, CancellationToken token) =>
         PrepareAsync(repository, async indexPath =>
         {
+            using var held = await GitConfigurationGate.EnterAsync(token).ConfigureAwait(false);
             var arguments = NativeGit.WorktreeArguments(repository);
             arguments.AddRange(stage ? ["add", "--"] : ["reset", "--quiet", "--"]);
             arguments.AddRange(paths);

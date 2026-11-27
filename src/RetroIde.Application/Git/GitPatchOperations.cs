@@ -61,7 +61,7 @@ internal static class GitPatchOperations
     private static async Task<FeatureOutcome> ExecuteAsync(IGitRegistration git, GitSelection selection, ApplyInput input, byte[] bytes,
         string[] paths, CancellationToken token)
     {
-        using var held = await GitConfigurationGate.EnterAsync(selection.Repository, token).ConfigureAwait(false);
+        using var held = await GitConfigurationGate.EnterAsync(token).ConfigureAwait(false);
         var worktree = input.Layer is "worktree";
         var lease = await git.BeginIntegrationAsync(selection, worktree ? paths : [], token).ConfigureAwait(false);
         if (lease.Guard is not { } guard)

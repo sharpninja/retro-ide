@@ -50,7 +50,7 @@ internal static class GitOperationStart
     private static async Task<FeatureOutcome> ExecuteAsync(IGitRegistration git, GitSelection selection, Input input,
         string? basis, CancellationToken token)
     {
-        using var held = await GitConfigurationGate.EnterAsync(selection.Repository, token).ConfigureAwait(false);
+        using var held = await GitConfigurationGate.EnterAsync(token).ConfigureAwait(false);
         // A three-way integration can also change paths renamed on the local side.
         var editors = await git.BeginIntegrationAsync(selection, paths: null, token).ConfigureAwait(false);
         if (editors.Guard is not { } guard)

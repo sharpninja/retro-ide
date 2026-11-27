@@ -30,13 +30,13 @@ internal static class GitSubmoduleOperations
         if (initialFailure is not null)
             return initialFailure;
 
-        using var held = await GitConfigurationGate.EnterAsync(repo, token, reviewed!.Checkout).ConfigureAwait(false);
+        using var held = await GitConfigurationGate.EnterAsync(token).ConfigureAwait(false);
         if (!await SourceAvailableAsync(repo, token).ConfigureAwait(false))
             return SourceUnavailable();
         var (target, failure) = await ReviewAsync(repo, input, token).ConfigureAwait(false);
         if (failure is not null)
             return failure;
-        if (!SameCheckout(reviewed.Checkout, target!.Checkout))
+        if (!SameCheckout(reviewed!.Checkout, target!.Checkout))
             return Changed();
         if (operation == Operation.Update)
             return await UpdateAsync(git, selection, input, target, token).ConfigureAwait(false);

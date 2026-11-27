@@ -11,6 +11,7 @@ internal sealed class PreparedGitRepository : IDisposable
 
     private readonly string? _staging;
     private readonly InstallKind _kind;
+    private IDisposable? _configuration;
 
     private PreparedGitRepository(GitWorktree repository, InstallKind kind, string? staging = null)
     {
@@ -54,6 +55,8 @@ internal sealed class PreparedGitRepository : IDisposable
         var prepared = new PreparedGitRepository(new GitWorktree(path, gitDirectory, gitDirectory), kind, staging);
         try
         {
+            // Keep the lease until the prepared checkout has been installed or discarded.
+            prepared._configuration = await GitConfigurationGate.EnterAsync(token).ConfigureAwait(false);
             if (OperatingSystem.IsWindows())
                 Directory.CreateDirectory(staging);
             else
@@ -195,8 +198,12 @@ internal sealed class PreparedGitRepository : IDisposable
 
     public void Dispose()
     {
-        if (_staging is not null)
-            RemoveDirectory(_staging, recursive: true);
+        try
+        {
+            if (_staging is not null)
+                RemoveDirectory(_staging, recursive: true);
+        }
+        finally { Interlocked.Exchange(ref _configuration, null)?.Dispose(); }
     }
 
     internal sealed class Failure(string code, string message) : IOException(message)

@@ -20,6 +20,7 @@ internal static partial class GitFileOperations
             FeatureOutcome? prepareError = null;
             var prepared = await Task.Run(() => PreparedGitIndex.PrepareAsync(selection.Repository, async indexPath =>
             {
+                using var held = await GitConfigurationGate.EnterAsync(token).ConfigureAwait(false);
                 var patch = await ReadPatchAsync(selection, entry, path, layer, token, indexPath).ConfigureAwait(false);
                 var review = patch is null ? null : IdentifyHunks(patch, selection.Repository, entry, path, layer);
                 if (review is null || !string.Equals(review.Preimage, input.Preimage, StringComparison.Ordinal))
