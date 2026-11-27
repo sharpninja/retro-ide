@@ -27,6 +27,12 @@ internal static partial class RemoteControlGitTests
         await (session.SourceControl.OpenTerminalCommand.ExecutionTask ??
             throw new InvalidOperationException("Source Control did not dispatch Open Repository Terminal.")).WaitAsync(token).ConfigureAwait(true);
         var terminal = await FindAsync<TerminalControl>(window, TerminalSurface.AutomationId, token).ConfigureAwait(true);
+        var firstCursorReply = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        terminal.InputSent += (_, data) =>
+        {
+            if (data.StartsWith("\u001b[", StringComparison.Ordinal) && data.EndsWith('R') && data.Contains(';'))
+                firstCursorReply.TrySetResult();
+        };
         while (!terminal.IsLive)
             await Task.Delay(20, token).ConfigureAwait(true);
         var document = (ShellDocument)terminal.DataContext!;
@@ -38,6 +44,13 @@ internal static partial class RemoteControlGitTests
         var rendered = new StringBuilder();
         terminal.OutputReceived += (_, args) => rendered.Append(args.Output);
         const string command = "git rev-parse --short HEAD";
+        if (OperatingSystem.IsLinux() &&
+            string.Equals(Path.GetFileName(Environment.GetEnvironmentVariable("SHELL")), "pwsh", StringComparison.Ordinal))
+        {
+            await firstCursorReply.Task.WaitAsync(token).ConfigureAwait(true);
+            Console.WriteLine("The terminal renderer emitted a PowerShell cursor-position reply before input.");
+            await Task.Delay(200, token).ConfigureAwait(true);
+        }
         var sent = await input.SendInputAsync(
             [new RemoteInputEvent { Kind = RemoteInputKind.Text, Text = command },
                 new RemoteInputEvent { Kind = RemoteInputKind.KeyDown, Key = "Enter" },
