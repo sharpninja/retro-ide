@@ -30,13 +30,46 @@ public sealed partial class Phase03GitCommitContractTests
             Assert.Equal("git_commit_state_changed", result);
         });
 
-    private static async Task WithLiveCommitPortAsync(Func<LiveCommitPort, CancellationToken, Task> exercise)
+    /// <remarks>TEST-RETRO-013#ac-test-git-stage-and-push; TR-RETRO-GIT-013#ac-git-state-consistency.</remarks>
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public Task Live_review_guards_unborn_and_detached_head(bool detached) => WithLiveCommitPortAsync(
+        async (port, token) =>
+        {
+            var before = await port.ReadCommitBoundaryAsync(token).ConfigureAwait(false);
+            Assert.Equal(detached ? "(detached)" : "main", before.Branch);
+            Assert.Equal(detached ? before.MainTip : null, before.Head);
+            Assert.Equal(Staged, before.IndexText);
+            Assert.Equal(Dirty, before.WorktreeText);
+            var reviewed = await port.ReviewAsync(token).ConfigureAwait(false);
+            await port.ConfigureRestagingHookAsync(token).ConfigureAwait(false);
+
+            Assert.Equal("git_commit_state_changed", await port.CommitAsync(reviewed, token).ConfigureAwait(false));
+            Assert.Equal(before, await port.ReadCommitBoundaryAsync(token).ConfigureAwait(false));
+
+            await port.ConfigureHookAsync(allow: true, token).ConfigureAwait(false);
+            Assert.Equal("ok", await port.CommitAsync(reviewed, token).ConfigureAwait(false));
+            var committed = await port.ReadStateAsync(token).ConfigureAwait(false);
+            var after = await port.ReadCommitBoundaryAsync(token).ConfigureAwait(false);
+            Assert.NotEqual(before.Head, committed.Head);
+            Assert.Equal(before.Head, committed.Parent);
+            Assert.Equal(Staged, committed.CommittedText);
+            Assert.Equal(before with { Head = committed.Head, MainTip = detached ? before.MainTip : committed.Head }, after);
+        }, detached ? FixtureHead.Detached : FixtureHead.Unborn);
+
+    private enum FixtureHead { Branch, Unborn, Detached }
+
+    private sealed record CommitBoundary(string Branch, string? Head, string MainTip, string IndexText, string WorktreeText);
+
+    private static async Task WithLiveCommitPortAsync(Func<LiveCommitPort, CancellationToken, Task> exercise,
+        FixtureHead head = FixtureHead.Branch)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
         var folder = Directory.CreateTempSubdirectory("retro-commit-contract-");
         try
         {
-            await VerifyWorkbenchAsync(folder, exercise, timeout.Token).ConfigureAwait(true);
+            await VerifyWorkbenchAsync(folder, exercise, head, timeout.Token).ConfigureAwait(true);
         }
         finally
         {
@@ -48,7 +81,7 @@ public sealed partial class Phase03GitCommitContractTests
     }
 
     private static async Task VerifyWorkbenchAsync(DirectoryInfo folder, Func<LiveCommitPort, CancellationToken, Task> exercise,
-        CancellationToken token)
+        FixtureHead head, CancellationToken token)
     {
         var session = new WorkbenchSession(Guid.NewGuid());
         try
@@ -66,7 +99,7 @@ public sealed partial class Phase03GitCommitContractTests
             var checkout = folder.CreateSubdirectory("checkout").FullName;
             var hooks = folder.CreateSubdirectory("hooks").FullName;
             var port = new LiveCommitPort(bridge, checkout, hooks);
-            await port.ConfigureFixtureAsync(token).ConfigureAwait(true);
+            await port.ConfigureFixtureAsync(head, token).ConfigureAwait(true);
             await exercise(port, token).ConfigureAwait(true);
         }
         finally { await GitFixture.DisposeWorkbenchAsync(session).ConfigureAwait(true); }
@@ -77,7 +110,7 @@ public sealed partial class Phase03GitCommitContractTests
         private const string Source = "contract.asm";
         private string WorkingFile => Path.Combine(checkout, Source);
 
-        internal async Task ConfigureFixtureAsync(CancellationToken token)
+        internal async Task ConfigureFixtureAsync(FixtureHead head, CancellationToken token)
         {
             await GitAsync(token, "init", "--initial-branch=main").ConfigureAwait(false);
             await GitAsync(token, "config", "--local", "user.name", "Retro IDE Fixture").ConfigureAwait(false);
@@ -85,9 +118,14 @@ public sealed partial class Phase03GitCommitContractTests
             await GitAsync(token, "config", "--local", "commit.gpgsign", "false").ConfigureAwait(false);
             await GitAsync(token, "config", "--local", "core.autocrlf", "false").ConfigureAwait(false);
             await GitAsync(token, "config", "--local", "core.hooksPath", hooks).ConfigureAwait(false);
-            await File.WriteAllTextAsync(WorkingFile, "prior revision\n", token).ConfigureAwait(false);
-            await GitAsync(token, "add", "--", Source).ConfigureAwait(false);
-            await GitAsync(token, "commit", "-m", "Seed fixture").ConfigureAwait(false);
+            if (head != FixtureHead.Unborn)
+            {
+                await File.WriteAllTextAsync(WorkingFile, "prior revision\n", token).ConfigureAwait(false);
+                await GitAsync(token, "add", "--", Source).ConfigureAwait(false);
+                await GitAsync(token, "commit", "-m", "Seed fixture").ConfigureAwait(false);
+            }
+            if (head == FixtureHead.Detached)
+                await GitAsync(token, "switch", "--detach", "HEAD").ConfigureAwait(false);
             await File.WriteAllTextAsync(WorkingFile, Staged, token).ConfigureAwait(false);
             await GitAsync(token, "add", "--", Source).ConfigureAwait(false);
             await File.WriteAllTextAsync(WorkingFile, Dirty, token).ConfigureAwait(false);
@@ -108,6 +146,20 @@ public sealed partial class Phase03GitCommitContractTests
             var staged = await GitAsync(token, "show", ":" + Source).ConfigureAwait(false);
             var working = await File.ReadAllTextAsync(WorkingFile, token).ConfigureAwait(false);
             return new(head, parent.Length == 0 ? null : parent, committed + '\n', staged + '\n', working);
+        }
+
+        internal async Task<CommitBoundary> ReadCommitBoundaryAsync(CancellationToken token)
+        {
+            const string HeadPrefix = "# branch.oid ";
+            const string BranchPrefix = "# branch.head ";
+            var status = await GitAsync(token, "status", "--porcelain=v2", "--branch", "--untracked-files=no").ConfigureAwait(false);
+            var headers = status.Split('\n', StringSplitOptions.TrimEntries);
+            var branch = headers.Single(line => line.StartsWith(BranchPrefix, StringComparison.Ordinal))[BranchPrefix.Length..];
+            var head = headers.Single(line => line.StartsWith(HeadPrefix, StringComparison.Ordinal))[HeadPrefix.Length..];
+            var main = await GitAsync(token, "for-each-ref", "--format=%(objectname)", "refs/heads/main").ConfigureAwait(false);
+            var staged = await GitAsync(token, "show", ":" + Source).ConfigureAwait(false);
+            var working = await File.ReadAllTextAsync(WorkingFile, token).ConfigureAwait(false);
+            return new(branch, head == "(initial)" ? null : head, main, staged + '\n', working);
         }
 
         public async Task<string> ReviewAsync(CancellationToken token)
