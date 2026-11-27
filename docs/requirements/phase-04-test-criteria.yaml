@@ -1,0 +1,21 @@
+# Phase 04 test-criterion IDs from the effective QBrain requirements.
+# This projection tracks the first compiled links. Provider and debugger UI evidence
+# belongs to the later acceptance phases assigned in PLAN-RETROIDE-001.
+payload:
+  result:
+    testing:
+    - id: TEST-RETRO-009
+      acceptanceCriteria:
+      - id: ac-test-bucket-platforms
+      - id: ac-test-bundle-integrity
+      - id: ac-test-bundle-versions
+    - id: TEST-RETRO-010
+      acceptanceCriteria:
+      - id: ac-test-session-contract
+      - id: ac-test-control-semantics
+      - id: ac-test-media-ports
+      - id: ac-test-port-conformance
+    - id: TEST-RETRO-017
+      acceptanceCriteria:
+      - id: ac-test-machine-descriptor-contract
+      - id: ac-test-machine-descriptor-compatibility

@@ -1,7 +1,7 @@
 param(
     [ValidateSet('Release', 'Debug')][string]$Configuration = 'Release',
     [string]$QBrainExport,
-    [ValidateSet('01', '02', '03')][string]$ThroughPhase = '01'
+    [ValidateSet('01', '02', '03', '04')][string]$ThroughPhase = '01'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -151,7 +151,7 @@ if ($PSBoundParameters.ContainsKey('QBrainExport')) {
     if ([string]::IsNullOrWhiteSpace($export)) { throw 'The supplied QBrain export is empty.' }
 }
 $knownCriteria = @{}
-foreach ($phase in '01', '02', '03') {
+foreach ($phase in '01', '02', '03', '04') {
     $projection = Get-Content -LiteralPath (Join-Path $root "docs/requirements/phase-$phase-test-criteria.yaml") -Raw
     $projected = foreach ($requirement in [regex]::Matches($projection, '(?ms)^    - id: (TEST-RETRO-\d+)\r?\n(.*?)(?=^    - id:|^  \w+:|\z)')) {
         foreach ($criterion in [regex]::Matches($requirement.Groups[2].Value, '(?m)^      - id: ([a-z0-9-]+)\r?$')) {
