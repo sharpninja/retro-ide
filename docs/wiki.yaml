@@ -129,6 +129,11 @@ documents:
     source: docs/receipts/phase-02-workbench-explorer-editor.md
     target: Phase-02-Verification.md
     platforms: [github, azure]
+  - id: phase03-verification
+    title: Phase 03 Verification
+    source: docs/receipts/phase-03-git-terminal-language-servers.md
+    target: Phase-03-Verification.md
+    platforms: [github, azure]
 navigation:
   - document: home
   - document: project-overview
@@ -146,6 +151,7 @@ navigation:
       - document: implementation-plan
       - document: phase01-verification
       - document: phase02-verification
+      - document: phase03-verification
   - document: functional
   - document: technical
   - document: testing

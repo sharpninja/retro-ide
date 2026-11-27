@@ -135,19 +135,19 @@ Verify the project and folder tree, document routing, persistence, and error han
 Test native Git integrations on Windows and Linux with isolated repositories, a local bare remote, and controlled credential and extension fixtures.
 
 **Acceptance Criteria:**
-- [ ] Exercise clone, init, nested roots, linked worktrees, same-name files, and unusual paths. Verify repo selection and worktree-specific status and indexing.
-- [ ] Verify partial staging and unstaging, commit and amend, history and blame, tags, branches, fetch, pull and push including divergence, rejected updates, and configured authentication and signing.
-- [ ] Exercise stash and patches, merge and rebase conflicts, start an operation externally, edit and stage resolutions, and use native continue, abort and reset. Verify stale hunks, canceled operations, and dirty buffers.
-- [ ] Verify submodule and linked-worktree management, installed LFS integration, and IDE refresh after native terminal or external Git changes.
+- [x] Exercise clone, init, nested roots, linked worktrees, same-name files, and unusual paths. Verify repo selection and worktree-specific status and indexing. (evidence: Phase 03A AGREE 99/98 on ca9ae78. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. See docs/receipts/hv/20261127T132143-phase-03-accepted.verdict.md.)
+- [x] Verify partial staging and unstaging, commit and amend, history and blame, tags, branches, fetch, pull and push including divergence, rejected updates, and configured authentication and signing. (evidence: Phase 03A AGREE 99/98 on ca9ae78. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. See docs/receipts/hv/20261127T132143-phase-03-accepted.verdict.md.)
+- [x] Exercise stash and patches, merge and rebase conflicts, start an operation externally, edit and stage resolutions, and use native continue, abort and reset. Verify stale hunks, canceled operations, and dirty buffers. (evidence: Phase 03A AGREE 99/98 on ca9ae78. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. See docs/receipts/hv/20261127T132143-phase-03-accepted.verdict.md.)
+- [x] Verify submodule and linked-worktree management, installed LFS integration, and IDE refresh after native terminal or external Git changes. (evidence: Phase 03A AGREE 99/98 on ca9ae78. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. See docs/receipts/hv/20261127T132143-phase-03-accepted.verdict.md.)
 
 ### TEST-RETRO-014
 
 Verify deterministic LSP fixtures and real clangd and rust-analyzer interoperability on Windows and Linux.
 
 **Acceptance Criteria:**
-- [ ] Exercise initialize and shutdown, static and dynamic capability changes, multi-root routing, unsupported features, and restart after process failure.
-- [ ] Verify URI and Unicode positions, full and incremental sync from unsaved buffers, dirty files, cancellation, late replies, and server generation changes.
-- [ ] Exercise completion, hover, diagnostics, navigation, code actions, and accepted and rejected workspace edits with a fixture. Verify live clangd and rust-analyzer behavior in small projects.
+- [x] Exercise initialize and shutdown, static and dynamic capability changes, multi-root routing, unsupported features, and restart after process failure. (evidence: 2026-11-27 Phase 03B AGREE 99/99 on 023e0d7. Full independent verdict and passing Linux and Windows receipts. docs/receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md.)
+- [x] Verify URI and Unicode positions, full and incremental sync from unsaved buffers, dirty files, cancellation, late replies, and server generation changes. (evidence: 2026-11-27 Phase 03B AGREE 99/99 on 023e0d7. Full independent verdict and passing Linux and Windows receipts. docs/receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md. Actual workbench Save and Close sent framed didSave on first observation and before close, with the saved bytes and monotonic versions.)
+- [x] Exercise completion, hover, diagnostics, navigation, code actions, and accepted and rejected workspace edits with a fixture. Verify live clangd and rust-analyzer behavior in small projects. (evidence: 2026-11-27 Phase 03B AGREE 99/99 on 023e0d7. Full independent verdict and passing Linux and Windows receipts. docs/receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md.)
 
 ### TEST-RETRO-015
 

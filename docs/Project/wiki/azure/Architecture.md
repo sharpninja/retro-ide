@@ -14,7 +14,9 @@ Retro IDE exposes every supported feature as an MCP tool using the official .NET
 
 ## Phase 01 implementation
 
-The [candidate C4 model](architecture/structurizr/README.md) records the running Avalonia workbench, shared focus command and both MCP transports. The hosted tools cover context read and tool focus. The desktop persists dock layout independently of emulator state. The [verification receipt](receipts/phase-01-remotecontrol-verification.md) describes the separate input-free Windows and isolated Linux test runs. Backend adapters, editor, Git and LSP integration are later increments.
+The [accepted Phase 01 C4 model](architecture/structurizr/README.md) records the running Avalonia workbench, shared focus command and both MCP transports. The desktop persists dock layout independently of emulator state. UI acceptance uses SharpNinja.Avalonia.RemoteControl on real windows, with isolated Linux coverage for X11 drag and system-cursor sampling. The [implementation plan](plans/PLAN-RETROIDE-001.md#local-verification-for-every-phase) applies local input-free UI verification to each phase.
+
+Phase 02 adds Project Explorer, editor tabs, and localization. Phase 03 adds native Git, the repository terminal, framed language-server sessions, and scoped operation handles. The Git write lease verifies the selected checkout after waiting before allowing a native write. The emulator bundle manager and real adapter lifecycle are later phases. [Phase 03 acceptance](receipts/phase-03-git-terminal-language-servers.md)
 
 ## MVVM Toolkit, SimpleMVC, and CQRS
 
@@ -36,6 +38,12 @@ Build Project runs the configured build and publishes diagnostics. Start Debuggi
 1. Each `IView` registers with one controller by `ViewKey`. Registration establishes the dispatch owner. That controller subscribes once to `CommandRequested` and unsubscribes when the view closes or its registration is replaced. Menu, command-bar, and keyboard bindings use the command registered for the originating view's activation scope.
 2. The Toolkit command raises `CommandRequested` on that view. The event carries the command ID, a unique request ID, the originating `ViewKey`, captured context, and a cancellation token when applicable. The owner checks the sender against its live registration, resolves the command ID, and dispatches the typed request through the main controller's shared CQRS execution entry point. The owner supplies the completion task to an async command. An invocation without a registered subscriber completes as unavailable.
 3. The owner awaits the handler and uses `Dispatcher.UIThread.InvokeAsync` to deliver success, failure, or cancellation to the originating view. The callback checks that the originating registration is still live under that owner and correlates the result by request ID. Closing or replacing the registration suppresses delivery. Focus and docking changes preserve the recipient while the registration is live. Shared application state and diagnostics flow through the model. [Avalonia threading model](https://docs.avaloniaui.net/docs/app-development/threading)
+
+### Runtime exception handling
+
+Desktop command failures return an `internal_error` with the operation ID. The controller logs the original exception through `ILogger` and delivers the failure to the calling view. The caller can inspect current state and retry explicitly. A failed editor save retains the draft, and watcher notification failures retry delivery. An invalid saved layout or workspace uses the default layout or an empty workspace. Failure to start the optional MCP listener leaves the desktop available.
+
+The desktop records warnings and exceptions in `logs/desktop-*.log` under its application data directory. It also writes diagnostics to standard error. MCP HTTP and stdio log request and transport failures to standard error and return generic protocol errors. Stdio reserves standard output for MCP messages. Unknown dispatcher failures and fatal startup failures are logged before controlled shutdown where the runtime permits it. Process-level handlers also log unhandled managed exceptions and unobserved task failures. Operating-system termination and native process corruption can interrupt logging and cleanup. [Avalonia dispatcher exceptions](https://api-docs.avaloniaui.net/docs/E_Avalonia_Threading_Dispatcher_UnhandledException)
 
 ### Tabbed document editing
 
@@ -88,12 +96,31 @@ Every command registration pairs its shared `ICommand` with an immutable descrip
 | `project.build` | `command.project.build.label` | `command.project.build.icon` | Ctrl+Shift+B |
 | `debug.start` | `command.debug.start.label` | `command.debug.start.icon` | F5 |
 
-A shared localization service resolves a namespaced slug as a text or image resource from a versioned locale catalog. The default English (`en`) catalog ships with the IDE. Additional language packs declare a BCP 47 locale and supply translated strings, message patterns, and optional image variants. Each pack has a manifest with typed entries. A text entry holds a UTF-8 string or message pattern. An image entry names a packaged SVG or PNG relative to that pack. Translators can reuse the default icon by leaving the translated image entry absent. The service uses the same lookup for command labels, tooltips, accessible names, diagnostics, and other IDE-owned UI resources. [BCP 47 language tags](https://www.rfc-editor.org/info/rfc5646/)
+A shared localization service resolves a namespaced slug as a text or image resource from a versioned locale catalog. The default English (`en`) catalog ships with the IDE. Additional language packs declare a BCP 47 locale and supply translated strings, message patterns, and optional image variants. Each pack has a manifest with typed entries. A text entry holds a UTF-8 string or message pattern. An image entry names a packaged SVG or PNG relative to that pack. Translators can reuse the default icon by leaving the translated image entry absent. Explorer root captions and availability messages use the same catalog and keep the filesystem names as typed arguments. The service uses the same lookup for command labels, tooltips, accessible names, diagnostics, and other IDE-owned UI resources. [BCP 47 language tags](https://www.rfc-editor.org/info/rfc5646/)
 
 - **Lookup.** Resolve each slug independently from the selected locale to its parent tags and then to `en`. For `fr-CA`, the service checks `fr-CA`, `fr`, and `en` in order. A missing or unusable entry advances the lookup and produces a diagnostic for malformed entries. If the default also fails, return a visible placeholder string or fallback icon and record the missing slug and resource kind. [BCP 47 lookup](https://www.rfc-editor.org/rfc/rfc4647.html#section-3.4)
 - **Formatting.** Support named arguments, plural and select forms, and locale-aware number and date formatting. Use the resolved message's locale for plural rules and the user's formatting culture for number and date values. Preserve parameters as typed data so translations can reorder them. [ICU message formatting](https://unicode-org.github.io/icu/userguide/format_parse/messages/)
 - **Language changes.** Start with the OS language or a saved IDE choice. A language change goes through the main MVC controller and CQRS Unit of Work, which persists the choice and publishes the updated presentation culture. Open windows refresh text, images, accessible names, and layout direction through Avalonia bindings. The command ID, default gesture, and handler stay the same when the UI language changes.
 - **Validation.** Check command IDs, required descriptor fields, default resource coverage, resource kinds, gesture syntax, and overlapping shortcut scopes at build time. Validate language pack manifests, message arguments, and that local image paths resolve within the pack before accepting a pack. Tests cover a partial locale, a right-to-left locale, and a pseudo-localized catalog with expanded strings.
+
+#### Install a language pack
+
+Place `manifest.json` and its images under `RetroIde/locales/<tag>/` in your user’s local application data directory. On Windows this is under `%LOCALAPPDATA%`. On Linux it is under `$XDG_DATA_HOME`, normally `~/.local/share`. Launch the IDE and choose the locale under **View → Display Language**.
+
+```json
+{
+  "version": 1,
+  "locale": "fr-CA",
+  "text": {
+    "command.workspace.open-folder.label": "Ouvrir un dossier…"
+  },
+  "images": {
+    "command.workspace.open-folder.icon": "icons/open-folder.svg"
+  }
+}
+```
+
+Leave a slug out to inherit it. To translate a named message, use an object with `pattern` and an `arguments` map. Keep the source argument names and types (`text`, `number`, or `date`). Package images as relative SVG or PNG files. SVGs can reference elements in the same image, such as a gradient by ID.
 
 QBrain tracks command presentation and localization under `FR-RETRO-008`, `TR-RETRO-LOCALIZATION-008`, and `TEST-RETRO-008`.
 
@@ -111,10 +138,11 @@ Use a Git repository with one JSON manifest per emulator at `bucket/<id>.json`. 
 | `name`, `description`, `homepage`, `license` | Catalog display and publisher-provided release metadata. |
 | `adapterId`, `adapterApi` | Adapter identity and compatible Retro IDE adapter contract versions. |
 | `targets` | Map from host runtime identifier, such as `win-x64` or `linux-x64`, to the release archive URL, SHA-256 digest, and relative entry points for the binding library and any emulator or worker the adapter launches. [Portable .NET runtime identifiers](https://learn.microsoft.com/en-us/dotnet/core/rid-catalog) |
+| `debuggerProfiles` | Optional versioned profile IDs and archive-relative declarative display definitions. The selected package version pins these definitions. The active adapter supplies the machine description and map revision when it opens a session. [Debugger machine description](emulator-adapter-contract.md#debugger-machine-description) |
 
 ### Installing and running a bundle
 
-1. Select a bundle release for a supported host and adapter contract. The manager downloads and verifies the advertised SHA-256, then extracts to a staging directory. It validates archive paths and declared entry points before publishing a version to the per-user bundle store. Catalog refresh and package install treat manifests as data. The manager performs installation through its own archive and file operations.
+1. Select a bundle release for a supported host and adapter contract. The manager downloads and verifies the advertised SHA-256, then extracts to a staging directory. It validates archive paths, declared entry points, and declared debugger profile assets before publishing a version to the per-user bundle store. Catalog refresh and package install treat manifests and debugger profiles as data. The manager performs installation through its own archive and file operations.
 2. The store commits verified versions atomically with receipts recording the bucket, Git commit, bundle ID, version, host target, and archive digest. A failed or cancelled install leaves existing versions usable. The manager can browse its last valid catalog offline and launch installed bundles without contacting a bucket.
 3. Projects select a bundle by bucket and ID and pin the chosen version and manifest revision. The adapter catalog resolves the pinned, compatible local receipt and uses its entry points. The manager can fetch the recorded manifest revision to install that version on another workstation where its artifact is available for the host. Missing or incompatible bundles surface in **Emulators** so the user can install or select a version. A feed refresh or update adds versions without changing a project's pin. Rollback selects a prior verified version. Running sessions retain their exact version and prevent its removal until they release it.
 

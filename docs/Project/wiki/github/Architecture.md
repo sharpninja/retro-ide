@@ -14,7 +14,9 @@ Retro IDE exposes every supported feature as an MCP tool using the official .NET
 
 ## Phase 01 implementation
 
-The [accepted Phase 01 C4 model](architecture/structurizr/README.md) records the running Avalonia workbench, shared focus command and both MCP transports. The hosted tools cover context read and tool focus. The desktop persists dock layout independently of emulator state. UI acceptance uses SharpNinja.Avalonia.RemoteControl on real windows, with isolated Linux coverage for X11 drag and system-cursor sampling. The [implementation plan](plans/PLAN-RETROIDE-001.md#local-verification-for-every-phase) applies local input-free UI verification to each phase. Backend adapters, editor, Git and LSP integration are later increments.
+The [accepted Phase 01 C4 model](architecture/structurizr/README.md) records the running Avalonia workbench, shared focus command and both MCP transports. The desktop persists dock layout independently of emulator state. UI acceptance uses SharpNinja.Avalonia.RemoteControl on real windows, with isolated Linux coverage for X11 drag and system-cursor sampling. The [implementation plan](plans/PLAN-RETROIDE-001.md#local-verification-for-every-phase) applies local input-free UI verification to each phase.
+
+Phase 02 adds Project Explorer, editor tabs, and localization. Phase 03 adds native Git, the repository terminal, framed language-server sessions, and scoped operation handles. The Git write lease verifies the selected checkout after waiting before allowing a native write. The emulator bundle manager and real adapter lifecycle are later phases. [Phase 03 acceptance](receipts/phase-03-git-terminal-language-servers.md)
 
 ## MVVM Toolkit, SimpleMVC, and CQRS
 
@@ -36,6 +38,12 @@ Build Project runs the configured build and publishes diagnostics. Start Debuggi
 1. Each `IView` registers with one controller by `ViewKey`. Registration establishes the dispatch owner. That controller subscribes once to `CommandRequested` and unsubscribes when the view closes or its registration is replaced. Menu, command-bar, and keyboard bindings use the command registered for the originating view's activation scope.
 2. The Toolkit command raises `CommandRequested` on that view. The event carries the command ID, a unique request ID, the originating `ViewKey`, captured context, and a cancellation token when applicable. The owner checks the sender against its live registration, resolves the command ID, and dispatches the typed request through the main controller's shared CQRS execution entry point. The owner supplies the completion task to an async command. An invocation without a registered subscriber completes as unavailable.
 3. The owner awaits the handler and uses `Dispatcher.UIThread.InvokeAsync` to deliver success, failure, or cancellation to the originating view. The callback checks that the originating registration is still live under that owner and correlates the result by request ID. Closing or replacing the registration suppresses delivery. Focus and docking changes preserve the recipient while the registration is live. Shared application state and diagnostics flow through the model. [Avalonia threading model](https://docs.avaloniaui.net/docs/app-development/threading)
+
+### Runtime exception handling
+
+Desktop command failures return an `internal_error` with the operation ID. The controller logs the original exception through `ILogger` and delivers the failure to the calling view. The caller can inspect current state and retry explicitly. A failed editor save retains the draft, and watcher notification failures retry delivery. An invalid saved layout or workspace uses the default layout or an empty workspace. Failure to start the optional MCP listener leaves the desktop available.
+
+The desktop records warnings and exceptions in `logs/desktop-*.log` under its application data directory. It also writes diagnostics to standard error. MCP HTTP and stdio log request and transport failures to standard error and return generic protocol errors. Stdio reserves standard output for MCP messages. Unknown dispatcher failures and fatal startup failures are logged before controlled shutdown where the runtime permits it. Process-level handlers also log unhandled managed exceptions and unobserved task failures. Operating-system termination and native process corruption can interrupt logging and cleanup. [Avalonia dispatcher exceptions](https://api-docs.avaloniaui.net/docs/E_Avalonia_Threading_Dispatcher_UnhandledException)
 
 ### Tabbed document editing
 

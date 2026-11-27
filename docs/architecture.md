@@ -14,7 +14,9 @@ Retro IDE exposes every supported feature as an MCP tool using the official .NET
 
 ## Phase 01 implementation
 
-The [accepted Phase 01 C4 model](architecture/structurizr/README.md) records the running Avalonia workbench, shared focus command and both MCP transports. The hosted tools cover context read and tool focus. The desktop persists dock layout independently of emulator state. UI acceptance uses SharpNinja.Avalonia.RemoteControl on real windows, with isolated Linux coverage for X11 drag and system-cursor sampling. The [implementation plan](plans/PLAN-RETROIDE-001.md#local-verification-for-every-phase) applies local input-free UI verification to each phase. Backend adapters, editor, Git and LSP integration are later increments.
+The [accepted Phase 01 C4 model](architecture/structurizr/README.md) records the running Avalonia workbench, shared focus command and both MCP transports. The desktop persists dock layout independently of emulator state. UI acceptance uses SharpNinja.Avalonia.RemoteControl on real windows, with isolated Linux coverage for X11 drag and system-cursor sampling. The [implementation plan](plans/PLAN-RETROIDE-001.md#local-verification-for-every-phase) applies local input-free UI verification to each phase.
+
+Phase 02 adds Project Explorer, editor tabs, and localization. Phase 03 adds native Git, the repository terminal, framed language-server sessions, and scoped operation handles. The Git write lease verifies the selected checkout after waiting before allowing a native write. The emulator bundle manager and real adapter lifecycle are later phases. [Phase 03 acceptance](receipts/phase-03-git-terminal-language-servers.md)
 
 ## MVVM Toolkit, SimpleMVC, and CQRS
 

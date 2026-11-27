@@ -121,14 +121,14 @@ Scope: layer-1+
 
 **Native Git execution and workspace state** — Use native Git from typed MVC and CQRS requests with explicit repository and worktree context, usable outcomes and integration with the editor state.
 **Covered by:** FR: FR-RETRO-013; TEST: TEST-RETRO-013
-**Status:** pending
+**Status:** completed
 Scope: layer-1+
 **Acceptance Criteria:**
-- [ ] Discover or configure the installed Git executable and invoke it asynchronously with argument arrays and a captured working directory. Respect native credentials, SSH, hooks, and signing, and omit secrets from logs.
-- [ ] Parse stable NUL-delimited state, account for separate worktree indexes and shared Git refs, scope file selection literally, and apply async results to the captured context.
-- [ ] Respect Git locking, serialize overlapping IDE writes, refresh after external changes, and revalidate hunk preimages. Keep unsaved buffers distinct from disk and index state.
-- [ ] Expose typed outcomes and Git diagnostics. Detect merge and rebase state, verify conflict stages, and refresh authoritative status after success, errors, or cancellation.
-- [ ] Start the integrated terminal in the selected worktree using the user's Git environment so advanced Git operations remain accessible and state changes are reflected in the IDE.
+- [x] Discover or configure the installed Git executable and invoke it asynchronously with argument arrays and a captured working directory. Respect native credentials, SSH, hooks, and signing, and omit secrets from logs. (evidence: Phase 03A AGREE 99/98 on ca9ae78. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. See docs/receipts/hv/20261127T132143-phase-03-accepted.verdict.md.)
+- [x] Parse stable NUL-delimited state, account for separate worktree indexes and shared Git refs, scope file selection literally, and apply async results to the captured context. (evidence: Phase 03A AGREE 99/98 on ca9ae78. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. See docs/receipts/hv/20261127T132143-phase-03-accepted.verdict.md.)
+- [x] Respect Git locking, serialize overlapping IDE writes, refresh after external changes, and revalidate hunk preimages. Keep unsaved buffers distinct from disk and index state. (evidence: Phase 03A AGREE 99/98 on ca9ae78. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. See docs/receipts/hv/20261127T132143-phase-03-accepted.verdict.md.)
+- [x] Expose typed outcomes and Git diagnostics. Detect merge and rebase state, verify conflict stages, and refresh authoritative status after success, errors, or cancellation. (evidence: Phase 03A AGREE 99/98 on ca9ae78. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. See docs/receipts/hv/20261127T132143-phase-03-accepted.verdict.md.)
+- [x] Start the integrated terminal in the selected worktree using the user's Git environment so advanced Git operations remain accessible and state changes are reflected in the IDE. (evidence: Phase 03A AGREE 99/98 on ca9ae78. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. See docs/receipts/hv/20261127T132143-phase-03-accepted.verdict.md.)
 
 ## TR-RETRO-LOCALIZATION-008
 
@@ -147,13 +147,13 @@ Scope: layer-1+
 
 **Versioned editor synchronization and LSP lifecycle** — Implement an LSP client against the 3.18 reference with capability-based interoperability for 3.17 servers.
 **Covered by:** FR: FR-RETRO-014; TEST: TEST-RETRO-014
-**Status:** pending
+**Status:** completed
 Scope: layer-1+
 **Acceptance Criteria:**
-- [ ] Route installed servers by workspace root and language. Exchange framed JSON-RPC over stdio with initialize, shutdown, and exit. Handle supported configuration, workspace folders, and capability registrations.
-- [ ] Synchronize open, changed, saved, and closed documents according to capabilities. Use monotonic document versions, correct file URIs, and the negotiated character encoding with UTF-16 fallback.
-- [ ] Correlate requests and results by server session, workspace, and versioned document. Cancel superseded work, discard stale replies, and deliver results only to the originating registered editor on the Avalonia UI thread.
-- [ ] Validate workspace edit targets and document versions before routing supported changes through the owning controller and CQRS. Preserve unsaved buffers and advertise only supported edit and failure-handling capabilities.
+- [x] Route installed servers by workspace root and language. Exchange framed JSON-RPC over stdio with initialize, shutdown, and exit. Handle supported configuration, workspace folders, and capability registrations. (evidence: 2026-11-27 Phase 03B AGREE 99/99 on 023e0d7. Full independent verdict and passing Linux and Windows receipts. docs/receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md.)
+- [x] Synchronize open, changed, saved, and closed documents according to capabilities. Use monotonic document versions, correct file URIs, and the negotiated character encoding with UTF-16 fallback. (evidence: 2026-11-27 Phase 03B AGREE 99/99 on 023e0d7. Full independent verdict and passing Linux and Windows receipts. docs/receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md. Actual workbench Save and Close sent framed didSave on first observation and before close, with the saved bytes and monotonic versions.)
+- [x] Correlate requests and results by server session, workspace, and versioned document. Cancel superseded work, discard stale replies, and deliver results only to the originating registered editor on the Avalonia UI thread. (evidence: 2026-11-27 Phase 03B AGREE 99/99 on 023e0d7. Full independent verdict and passing Linux and Windows receipts. docs/receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md.)
+- [x] Validate workspace edit targets and document versions before routing supported changes through the owning controller and CQRS. Preserve unsaved buffers and advertise only supported edit and failure-handling capabilities. (evidence: 2026-11-27 Phase 03B AGREE 99/99 on 023e0d7. Full independent verdict and passing Linux and Windows receipts. docs/receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md.)
 
 ## TR-RETRO-MACHINE-017
 

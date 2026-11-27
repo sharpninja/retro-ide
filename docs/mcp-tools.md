@@ -37,9 +37,9 @@ The Phase 02 implementation currently exposes these Project Explorer operations 
 
 Read-only attachments can list workspace roots and children and read a live document context. Root, expansion, selection, and editor mutations require a write-enabled attachment and the current public workbench context. Each branch read is scoped to an open root. Refresh the context after a successful mutation before sending the next write.
 
-## Phase 03 Git tools in development
+## Phase 03 Git tools
 
-The Phase 03 candidate exposes native Git discovery, selection, status, file diffs, and whole-file stage and unstage through the same attached workbench over stdio and Streamable HTTP. Discovery takes a literal path within an open Project Explorer root. Use an empty `relativePath` to inspect the root itself.
+Phase 03 exposes native Git actions and the repository terminal through the same attached workbench over stdio and Streamable HTTP. Discovery takes a literal path within an open Project Explorer root. Use an empty `relativePath` to inspect the root itself. Use forward slashes in path arguments on both hosts, including Windows paths such as `C:/src/example`. [Phase 03 acceptance](receipts/phase-03-git-terminal-language-servers.md)
 
 | Tool | Arguments | Result |
 | --- | --- | --- |

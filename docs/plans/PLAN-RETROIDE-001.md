@@ -1,6 +1,6 @@
 # PLAN-RETROIDE-001 — Retro IDE BDPv4 implementation plan
 
-**Status.** Phases 01 and 02 were accepted on 2026-11-26. Phase 03 remains open. Its operation-handle task was accepted on 2026-11-27. [Phase 01 verification](../receipts/phase-01-workbench-mcp.md) · [Phase 02 verification](../receipts/phase-02-workbench-explorer-editor.md) · [Phase 03 verdict](../receipts/hv/20261127T083643-phase-03-renewed.verdict.md)
+**Status.** Phases 01 and 02 were accepted on 2026-11-26. Phase 03 was accepted on 2026-11-27. Phase 04 is next. [Phase 01 verification](../receipts/phase-01-workbench-mcp.md) · [Phase 02 verification](../receipts/phase-02-workbench-explorer-editor.md) · [Phase 03 verification](../receipts/phase-03-git-terminal-language-servers.md)
 
 **Baseline.** The original Retro IDE QBrain baseline has 15 functional, 15 technical, and 15 testing records across 15 mappings and 176 acceptance criteria. The current requirements also include the debugger CPU and emulator machine description groups in the traceability table below. Published source `e066c7325f3ad3c9a14c1310fbeba0c8b531edda` and wiki `13fc5aa1f0729e0879e9e515824ce2d9d56d4cb7` document local validation. [Published architecture](https://github.com/sharpninja/retro-ide/wiki/Architecture) · [MCP Tools](https://github.com/sharpninja/retro-ide/wiki/MCP-Tools) · [Accepted Phase 01 C4 model](../architecture/structurizr/versions/implementation-01-workbench-mcp/manifest.json)
 
@@ -108,11 +108,11 @@ All seven incomplete test-first entries from `60457dc` now have criterion-specif
 
 #### Phase 03 independent review
 
-The 2026-11-27 review of `60e32c1` returned DISAGREE at 97 accuracy and 96 completeness. It confirmed the editor save, named transfer identity, and index publication repairs on both hosts. The review found that branch and patch writes still need to rediscover the checkout after waiting. Earlier accepted slices passed regression review. [Current verdict](../receipts/hv/20261127T120307-phase-03-mutation-identity-review.verdict.md) · [Previous save and identity review](../receipts/hv/20261127T113256-phase-03-save-and-identity-review.verdict.md) · [Language-server acceptance](../receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md)
+The 2026-11-27 independent review of `ca9ae78` accepted Phase 03 at 99 accuracy and 98 completeness. It verified the shared checkout identity guard and confirmed that four queued branch operations and both patch layers leave earlier Git metadata and working files unchanged when the checkout is replaced. Accepted workbench, editor, language-server, and operation-handle behavior passed regression review. [Acceptance evidence](../receipts/phase-03-git-terminal-language-servers.md) · [Independent verdict](../receipts/hv/20261127T132143-phase-03-accepted.verdict.md) · [Previous mutation identity review](../receipts/hv/20261127T120307-phase-03-mutation-identity-review.verdict.md) · [Language-server acceptance](../receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md)
 
 | Task | Verdict | Accuracy | Completeness | Status |
 | --- | --- | --- | --- | --- |
-| 03A · `EXEC-TODO-008` | DISAGREE | 97 | 96 | Open. Apply post-wait checkout identity checks to branch and patch writes and verify the same guard across existing Git mutations. |
+| 03A · `EXEC-TODO-008` | AGREE | 99 | 98 | Complete. Reviewed Git writes revalidate the checkout after waiting. Both native hosts passed the full Git and terminal scope. |
 | 03B · `EXEC-TODO-009` | AGREE | 99 | 99 | Complete. The live workbench and framed server observed successful saves on first synchronization and before editor close. The earlier coalesced save cases passed. |
 | 03C · `EXEC-TODO-010` | AGREE | 99 | 99 | Complete. Scoped native success, cancellation, failure and foreign-result denial passed across HTTP and stdio. |
 

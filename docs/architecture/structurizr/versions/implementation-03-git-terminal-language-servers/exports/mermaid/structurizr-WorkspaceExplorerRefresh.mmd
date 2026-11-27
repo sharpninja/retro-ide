@@ -1,0 +1,51 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#62aa88,color:#62aa88
+
+        10("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 10 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        11("<div style='font-weight: bold'>IDE ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.ComponentModel and SimpleMVC]</div><div style='font-size: 80%; margin-top:10px'>Implement IView with a stable<br />ViewKey. Raise<br />CommandRequested, receive<br />correlated results on the UI<br />thread, and expose observable<br />properties through<br />ObservableObject.</div>")
+        style 11 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        14("<div style='font-weight: bold'>Project Explorer</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia and Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Dockable tree of project and<br />folder roots. Restores stable<br />roots, expansion and<br />selection. Loads children on<br />demand, refreshes affected<br />expanded branches, and offers<br />Open and Reveal for the<br />active workspace.</div>")
+        style 14 fill:#17665b,stroke:#10473f,color:#ffffff
+        15("<div style='font-weight: bold'>Explorer Filesystem Watcher</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET FileSystemWatcher]</div><div style='font-size: 80%; margin-top:10px'>Coalesces external changes by<br />workspace root and directory,<br />tracks missing roots, and<br />requests refresh for affected<br />expanded branches on the<br />Avalonia dispatcher.</div>")
+        style 15 fill:#17665b,stroke:#10473f,color:#ffffff
+        23("<div style='font-weight: bold'>Avalonia UI Dispatcher</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia Dispatcher.UIThread]</div><div style='font-size: 80%; margin-top:10px'>Schedules callbacks on the UI<br />thread. The dispatch owner<br />checks its originating<br />registration inside the<br />callback before applying the<br />result.</div>")
+        style 23 fill:#235c49,stroke:#184033,color:#ffffff
+        24("<div style='font-weight: bold'>IDE State (Model)</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Provides observable<br />workspace, presentation<br />culture, active document and<br />target, selected session,<br />availability, operation<br />state, interaction blocks by<br />scope, and diagnostics.</div>")
+        style 24 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch and result<br />delivery for views registered<br />directly with it. Provides<br />the shared execution entry<br />point for typed requests from<br />all controllers into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+      end
+
+      42[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout, workspace<br />roots and Explorer state,<br />preferences, and language<br />server registrations. Bucket<br />and emulator project settings<br />are planned.</div>")]
+      style 42 fill:#235c49,stroke:#62aa88,color:#ffffff
+      43[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, and<br />Git worktrees and metadata<br />where present.</div>")]
+      style 43 fill:#275c60,stroke:#1b4043,color:#ffffff
+    end
+
+    42[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout, workspace<br />roots and Explorer state,<br />preferences, and language<br />server registrations. Bucket<br />and emulator project settings<br />are planned.</div>")]
+    style 42 fill:#235c49,stroke:#62aa88,color:#ffffff
+    43[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, and<br />Git worktrees and metadata<br />where present.</div>")]
+    style 43 fill:#275c60,stroke:#1b4043,color:#ffffff
+
+    14-. "<div>1. Restore roots, saved<br />expansion and selection</div><div style='font-size: 70%'></div>" .->42
+    8-. "<div>2. Watch the open roots for<br />the current registration</div><div style='font-size: 70%'></div>" .->15
+    15-. "<div>3. Observe a file create,<br />rename or removal and detect<br />root availability</div><div style='font-size: 70%'></div>" .->43
+    15-. "<div>4. Post a coalesced directory<br />invalidation on Avalonia</div><div style='font-size: 70%'></div>" .->23
+    23-. "<div>5. Refresh affected expanded<br />branches and leave collapsed<br />branches for the next<br />expansion</div><div style='font-size: 70%'></div>" .->14
+    14-. "<div>6. Request an updated listing<br />for the selected root and<br />relative directory</div><div style='font-size: 70%'></div>" .->11
+    11-. "<div>7. Submit a scoped listing<br />from the registered workspace</div><div style='font-size: 70%'>[IView events]</div>" .->8
+    8-. "<div>8. Check the current<br />registration before returning<br />directory results</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>9. Enumerate the available<br />target directory</div><div style='font-size: 70%'>[Local filesystem]</div>" .->43
+    10-. "<div>10. Publish the current tree<br />result and suppress<br />retired-workspace results</div><div style='font-size: 70%'></div>" .->24
+
+  end

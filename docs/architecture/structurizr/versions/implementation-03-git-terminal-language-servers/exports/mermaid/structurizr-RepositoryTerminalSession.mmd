@@ -1,0 +1,53 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    55("<div style='font-weight: bold'>Native Repository Shell</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Runs the user's interactive<br />shell with the inherited<br />environment and the selected<br />Git worktree as its current<br />directory.</div>")
+    style 55 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#62aa88,color:#62aa88
+
+        10("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 10 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        11("<div style='font-weight: bold'>IDE ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.ComponentModel and SimpleMVC]</div><div style='font-size: 80%; margin-top:10px'>Implement IView with a stable<br />ViewKey. Raise<br />CommandRequested, receive<br />correlated results on the UI<br />thread, and expose observable<br />properties through<br />ObservableObject.</div>")
+        style 11 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        16("<div style='font-weight: bold'>Source Control</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia and Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Dockable repository and<br />worktree view for status,<br />diffs, staging, history,<br />branches, remotes, and<br />conflict workflows. Binds the<br />registered Git commands.</div>")
+        style 16 fill:#235c49,stroke:#62aa88,color:#ffffff
+        21("<div style='font-weight: bold'>Integrated Terminal</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET and Porta.Pty]</div><div style='font-size: 80%; margin-top:10px'>Validates the selected<br />checkout before starting the<br />native shell. Supports scoped<br />tab and MCP input, resizing,<br />bounded transcript reads, and<br />exit state.</div>")
+        style 21 fill:#235c49,stroke:#62aa88,color:#ffffff
+        24("<div style='font-weight: bold'>IDE State (Model)</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Provides observable<br />workspace, presentation<br />culture, active document and<br />target, selected session,<br />availability, operation<br />state, interaction blocks by<br />scope, and diagnostics.</div>")
+        style 24 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        5("<div style='font-weight: bold'>Predefined Command Catalog</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm and typed .NET requests]</div><div style='font-size: 80%; margin-top:10px'>Registers typed IDE commands<br />and queries with stable IDs<br />and required capabilities.<br />Pairs UI commands with<br />Toolkit bindings and<br />localized metadata. Supplies<br />the MCP tool registry.</div>")
+        style 5 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch and result<br />delivery for views registered<br />directly with it. Provides<br />the shared execution entry<br />point for typed requests from<br />all controllers into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+      end
+
+      43[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, and<br />Git worktrees and metadata<br />where present.</div>")]
+      style 43 fill:#275c60,stroke:#1b4043,color:#ffffff
+    end
+
+    43[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, and<br />Git worktrees and metadata<br />where present.</div>")]
+    style 43 fill:#275c60,stroke:#1b4043,color:#ffffff
+    55("<div style='font-weight: bold'>Native Repository Shell</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Runs the user's interactive<br />shell with the inherited<br />environment and the selected<br />Git worktree as its current<br />directory.</div>")
+    style 55 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    16-. "<div>1. Open Terminal in the<br />selected worktree</div><div style='font-size: 70%'></div>" .->5
+    5-. "<div>2. Raise the terminal request<br />from the registered view</div><div style='font-size: 70%'>[RelayCommand or AsyncRelayCommand]</div>" .->11
+    11-. "<div>3. Submit the captured<br />workspace and checkout</div><div style='font-size: 70%'>[IView events]</div>" .->8
+    8-. "<div>4. Dispatch the typed<br />terminal operation</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>5. Open the scoped terminal<br />session</div><div style='font-size: 70%'></div>" .->21
+    21-. "<div>6. Check that the selected<br />checkout still resolves to<br />its captured Git metadata</div><div style='font-size: 70%'></div>" .->43
+    21-. "<div>7. Start the native shell<br />with that working directory<br />and inherited environment</div><div style='font-size: 70%'>[Native PTY]</div>" .->55
+    55-. "<div>8. Stream shell output and<br />report process exit</div><div style='font-size: 70%'>[Native PTY]</div>" .->21
+    21-. "<div>9. Make the bounded output<br />and exit state available to<br />the attached terminal</div><div style='font-size: 70%'></div>" .->24
+    10-. "<div>10. Dispatch scoped input,<br />resize, or transcript<br />requests</div><div style='font-size: 70%'></div>" .->21
+    21-. "<div>11. Forward input and resize<br />requests through the PTY</div><div style='font-size: 70%'>[Native PTY]</div>" .->55
+
+  end

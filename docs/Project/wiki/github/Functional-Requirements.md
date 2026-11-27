@@ -117,19 +117,19 @@ Scope: layer-1+
 Use Git from the Source Control pane, Project Explorer, editor, and integrated terminal across workspace repositories and worktrees.
 Scope: layer-1+
 **Acceptance Criteria:**
-- [ ] Discover or open repositories, initialize or clone a workspace root, select the repository and worktree visibly, and decorate the project tree with current Git status.
-- [ ] Review staged and unstaged diffs, stage and unstage files or hunks, commit or amend, inspect history and blame, and manage branches, tags, upstream tracking, fetch, pull, and push.
-- [ ] Support stash and patch workflows, merge, rebase, cherry-pick, revert and reset. Detect conflicts and ongoing operations, edit and stage resolutions, and expose continue, skip, and abort where applicable.
-- [ ] Manage linked worktrees and submodules. Honor Git LFS configuration where installed and allow advanced Git commands in the repository-scoped integrated terminal.
+- [x] Discover or open repositories, initialize or clone a workspace root, select the repository and worktree visibly, and decorate the project tree with current Git status. (evidence: Phase 03A AGREE 99/98 on ca9ae78. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. See docs/receipts/hv/20261127T132143-phase-03-accepted.verdict.md.)
+- [x] Review staged and unstaged diffs, stage and unstage files or hunks, commit or amend, inspect history and blame, and manage branches, tags, upstream tracking, fetch, pull, and push. (evidence: Phase 03A AGREE 99/98 on ca9ae78. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. See docs/receipts/hv/20261127T132143-phase-03-accepted.verdict.md.)
+- [x] Support stash and patch workflows, merge, rebase, cherry-pick, revert and reset. Detect conflicts and ongoing operations, edit and stage resolutions, and expose continue, skip, and abort where applicable. (evidence: Phase 03A AGREE 99/98 on ca9ae78. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. See docs/receipts/hv/20261127T132143-phase-03-accepted.verdict.md.)
+- [x] Manage linked worktrees and submodules. Honor Git LFS configuration where installed and allow advanced Git commands in the repository-scoped integrated terminal. (evidence: Phase 03A AGREE 99/98 on ca9ae78. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. See docs/receipts/hv/20261127T132143-phase-03-accepted.verdict.md.)
 
 ## FR-RETRO-014 Language server support
 
 Use standard LSP servers in AvaloniaEdit for editing assistance, navigation, diagnostics, and refactoring across workspace roots.
 Scope: layer-1+
 **Acceptance Criteria:**
-- [ ] Configure and select installed language servers by language and workspace root. Enable supported features after the server initializes.
-- [ ] Use available completion, hover, symbols, references, definition navigation, diagnostics, formatting, rename, and code actions from the editor and Problems view.
-- [ ] Keep source editing available if a language server is missing or fails. Show server status and allow restart and resynchronization of open buffers.
+- [x] Configure and select installed language servers by language and workspace root. Enable supported features after the server initializes. (evidence: 2026-11-27 Phase 03B AGREE 99/99 on 023e0d7. Full independent verdict and passing Linux and Windows receipts. docs/receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md.)
+- [x] Use available completion, hover, symbols, references, definition navigation, diagnostics, formatting, rename, and code actions from the editor and Problems view. (evidence: 2026-11-27 Phase 03B AGREE 99/99 on 023e0d7. Full independent verdict and passing Linux and Windows receipts. docs/receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md.)
+- [x] Keep source editing available if a language server is missing or fails. Show server status and allow restart and resynchronization of open buffers. (evidence: 2026-11-27 Phase 03B AGREE 99/99 on 023e0d7. Full independent verdict and passing Linux and Windows receipts. docs/receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md.)
 
 ## FR-RETRO-015 Expose all Retro IDE features as MCP tools
 

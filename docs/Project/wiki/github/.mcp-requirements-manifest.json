@@ -1,7 +1,7 @@
 {
   "schema": "mcp-requirements-wiki/v1",
   "platform": "github",
-  "generatedAtUtc": "2026-11-26T17:08:22.3251534+00:00",
+  "generatedAtUtc": "2026-11-27T19:30:38.1130196+00:00",
   "documents": [
     "Home.md",
     "Functional-Requirements.md",
@@ -21,6 +21,7 @@
     "MCP-Tools.md",
     "Implementation-Plan.md",
     "Phase-01-Verification.md",
-    "Phase-02-Verification.md"
+    "Phase-02-Verification.md",
+    "Phase-03-Verification.md"
   ]
 }

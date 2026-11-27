@@ -1,0 +1,146 @@
+{
+  "snapshotId": "implementation-03-git-terminal-language-servers",
+  "previousSnapshot": "../implementation-02-workspace-editor-localization/manifest.json",
+  "previousImplementationSnapshot": "../implementation-02-workspace-editor-localization/manifest.json",
+  "capturedAtLocal": "2026-11-27T13:27:38.1773591-06:00",
+  "state": "Accepted Phase 03 native Git and repository terminals, synchronized language servers, and scoped background MCP operations.",
+  "workspace": {
+    "path": "workspace.dsl",
+    "sha256": "3fdaa67c6011b4212c19d698fcb9505e8c5904e9255b31c41aa2a0d7ece179c6"
+  },
+  "implementation": {
+    "plan": "../../../../plans/PLAN-RETROIDE-001.md",
+    "receipt": "../../../../receipts/phase-03-git-terminal-language-servers.md",
+    "candidate": "ca9ae78c4d90bd16caba4e448d4596b2e2a22cda",
+    "verdict": "../../../../receipts/hv/20261127T132143-phase-03-accepted.verdict.md",
+    "verdictSha256": "25ff063c53afc6607cf23fe0337c6fbe23287664bcec3cf4fcffa11803afeb46",
+    "qbrainPhase": "03",
+    "qbrainTodos": [
+      "EXEC-TODO-008",
+      "EXEC-TODO-009",
+      "EXEC-TODO-010"
+    ],
+    "accuracy": 99,
+    "completeness": 98
+  },
+  "validation": {
+    "cliImage": "structurizr/cli:2025.11.09",
+    "workspaceValidation": "passed",
+    "mermaidExport": "passed",
+    "diagramCount": 28
+  },
+  "exports": [
+    {
+      "path": "exports/mermaid/structurizr-AdapterComponents.mmd",
+      "sha256": "9087be18156c825c87137a97d02627396c0e64bec7d33ad9e30a5f8e8d104650"
+    },
+    {
+      "path": "exports/mermaid/structurizr-BuildLaunchDebug.mmd",
+      "sha256": "67f631e46a2b5385b9010302c5e9f7c830db302163aa73ae4537fd34e52f9c35"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandDispatch.mmd",
+      "sha256": "383a1e8375972b741a3447e6c8dedb7382ac1a8170e745f9d23cc23c3dddd87a"
+    },
+    {
+      "path": "exports/mermaid/structurizr-CommandLocalization.mmd",
+      "sha256": "7dceda1d9c0a49636424f09300875edbaea6c44fe5dd92e4c6d370361f920f7f"
+    },
+    {
+      "path": "exports/mermaid/structurizr-Containers.mmd",
+      "sha256": "07d986fb4b3cb9db5c5cd5f3c8dccd7b5018593f917b6f6f3600fc6d12c0f67a"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DebuggerMachineDescription.mmd",
+      "sha256": "479e58e3d42d4376903f934ed47bd071d0a19a5be4611474ba165b56ed1bfab4"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DebuggerMemoryDisplay.mmd",
+      "sha256": "9fa9a8238788a4c19a319d0c661894c0bf10ee24774b61fdad0cfb1613d64549"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DesktopComponents.mmd",
+      "sha256": "a18467cd7f885ecd44a158152f12b25a412078d19ce1e052ac960b8db9a74c11"
+    },
+    {
+      "path": "exports/mermaid/structurizr-DocumentMdiSave.mmd",
+      "sha256": "09ff8ed0bd8c0ad0852b78970f235c25df5050f9a7ca54ec5ea57067edae20db"
+    },
+    {
+      "path": "exports/mermaid/structurizr-EmulatorBundleInstall.mmd",
+      "sha256": "7270792d3e0f252e6900fa60131c1409340568920fdb03afd9810bc52d0851a5"
+    },
+    {
+      "path": "exports/mermaid/structurizr-EmulatorSessionContract.mmd",
+      "sha256": "f636ddb10ca20e0e9d2096aaced72ef6cc90edc107aa42699efdba9f884cd0d7"
+    },
+    {
+      "path": "exports/mermaid/structurizr-GitCheckoutMutation.mmd",
+      "sha256": "758cb41f28a34aff844538f7eb30151573df804b7532c945c96b9d313da25838"
+    },
+    {
+      "path": "exports/mermaid/structurizr-GitStageCommitPush.mmd",
+      "sha256": "35fb5e64abb9b469f92c0d637418faa6a293e4f530638aad773bb12bc2ad6797"
+    },
+    {
+      "path": "exports/mermaid/structurizr-LanguageServerCompletion.mmd",
+      "sha256": "3b1bc1873eca71ea4c2b7d15ecd52af799914a8284d1c4fca2e1df459e7035a8"
+    },
+    {
+      "path": "exports/mermaid/structurizr-LanguageServerDocumentSync.mmd",
+      "sha256": "87a81792b01936426d4c9e03fe92fd0e8e465848c521c255d083870ddacd0a49"
+    },
+    {
+      "path": "exports/mermaid/structurizr-LinuxDeployment.mmd",
+      "sha256": "74ce2b4f4752937a0e953b3bf8a91a9b32c128218fa280ba0664d4758ed799c8"
+    },
+    {
+      "path": "exports/mermaid/structurizr-McpOperationLifecycle.mmd",
+      "sha256": "a1203709629c39cf0866c9a81c4905e2ee4568128acea487c9c0aa7ab4b2af45"
+    },
+    {
+      "path": "exports/mermaid/structurizr-McpToolDispatch.mmd",
+      "sha256": "0346b447299a294f5526a0dd0a3d19e1fa97bff4e8872f9c5a1bbc3e9be9243e"
+    },
+    {
+      "path": "exports/mermaid/structurizr-PackageDebuggerComponents.mmd",
+      "sha256": "7255bff2ea5c04f8de11928b4228683571a89f125aa76033e129338c1e6a38b5"
+    },
+    {
+      "path": "exports/mermaid/structurizr-Phase03WorkflowComponents.mmd",
+      "sha256": "cab73171d66362b2a7cdcbe3cb6cd3453c2c99640a47d5551d7de94cd47e757f"
+    },
+    {
+      "path": "exports/mermaid/structurizr-RepositoryTerminalSession.mmd",
+      "sha256": "cadfe8a6c47e4879a085699a1b9f0fb9eaef52d86c84d0f520f6b0f85e85ad6e"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SourceEditorWorkflow.mmd",
+      "sha256": "d8ab6d06bec5fa933a379ea830e0e8efe46ace3b264992618217b9af77c96e61"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemContext.mmd",
+      "sha256": "a089010d1244170c09a3223fbff26c9e5acc86077c957a7bae68350a033b730f"
+    },
+    {
+      "path": "exports/mermaid/structurizr-SystemWaitCursor.mmd",
+      "sha256": "0e8231b924e503ccb59ed60a881d67a6bfbb36ad40354640ed65028e49dc3cba"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WindowsDeployment.mmd",
+      "sha256": "e0825858f5e742dbaf5eb78f5e8c3dbb33ec634b426c703d9b18808ba174d18f"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WorkbenchFocusParity.mmd",
+      "sha256": "7f73a5ac88cff2d42b02d304609edbce94676942a998cf844dd2ed8961238d0d"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WorkspaceExplorerOpen.mmd",
+      "sha256": "2631b264fba976879343c64b9928473be0b9cddb7f4bf9c857aec052eec87703"
+    },
+    {
+      "path": "exports/mermaid/structurizr-WorkspaceExplorerRefresh.mmd",
+      "sha256": "e2cd128d3188eeaee2f61d4a02fcb009e7e2cdbacaad387091a42302842a6236"
+    }
+  ]
+}

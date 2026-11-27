@@ -1,0 +1,56 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#62aa88,color:#62aa88
+
+        10("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 10 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        11("<div style='font-weight: bold'>IDE ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.ComponentModel and SimpleMVC]</div><div style='font-size: 80%; margin-top:10px'>Implement IView with a stable<br />ViewKey. Raise<br />CommandRequested, receive<br />correlated results on the UI<br />thread, and expose observable<br />properties through<br />ObservableObject.</div>")
+        style 11 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        24("<div style='font-weight: bold'>IDE State (Model)</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Provides observable<br />workspace, presentation<br />culture, active document and<br />target, selected session,<br />availability, operation<br />state, interaction blocks by<br />scope, and diagnostics.</div>")
+        style 24 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        26("<div style='font-weight: bold'>Session Coordinator</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Opens a versioned adapter<br />session, owns its lifetime<br />and bundle lease, routes<br />typed capability requests,<br />and projects state, control<br />events, and bounded media<br />streams.</div>")
+        style 26 fill:#275c60,stroke:#d9a669,color:#ffffff
+        28("<div style='font-weight: bold'>Debugger and Guest Inspectors</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Displays CPU-specific<br />registers, platform<br />disassembly, bounded memory<br />and bank selection, reference<br />timing, and advertised live<br />clock-phase or bus data.<br />Captures the user's<br />byte-order display choice and<br />exposes available raw and<br />guest inspection.</div>")
+        style 28 fill:#275c60,stroke:#d9a669,color:#ffffff
+        29("<div style='font-weight: bold'>Debugger Target Model</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Validates the active<br />session's descriptor, CPU and<br />map revision. Projects<br />supporting views and bounded<br />inspection scope. Applies<br />Emulator default,<br />Little-endian, or Big-endian<br />to multibyte display values.</div>")
+        style 29 fill:#275c60,stroke:#d9a669,color:#ffffff
+        5("<div style='font-weight: bold'>Predefined Command Catalog</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm and typed .NET requests]</div><div style='font-size: 80%; margin-top:10px'>Registers typed IDE commands<br />and queries with stable IDs<br />and required capabilities.<br />Pairs UI commands with<br />Toolkit bindings and<br />localized metadata. Supplies<br />the MCP tool registry.</div>")
+        style 5 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch and result<br />delivery for views registered<br />directly with it. Provides<br />the shared execution entry<br />point for typed requests from<br />all controllers into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+      end
+
+      42[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout, workspace<br />roots and Explorer state,<br />preferences, and language<br />server registrations. Bucket<br />and emulator project settings<br />are planned.</div>")]
+      style 42 fill:#235c49,stroke:#62aa88,color:#ffffff
+    end
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+    42[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout, workspace<br />roots and Explorer state,<br />preferences, and language<br />server registrations. Bucket<br />and emulator project settings<br />are planned.</div>")]
+    style 42 fill:#235c49,stroke:#62aa88,color:#ffffff
+
+    1-. "<div>1. Select an address space<br />and bank, then choose<br />Emulator default,<br />Little-endian or Big-endian</div><div style='font-size: 70%'></div>" .->28
+    28-. "<div>2. Invoke the registered<br />scoped debugger and<br />presentation commands</div><div style='font-size: 70%'></div>" .->5
+    5-. "<div>3. Capture the selected<br />instance, CPU, map revision<br />and display choice</div><div style='font-size: 70%'>[RelayCommand or AsyncRelayCommand]</div>" .->11
+    11-. "<div>4. Send the registered view<br />request and captured context</div><div style='font-size: 70%'>[IView events]</div>" .->8
+    8-. "<div>5. Dispatch the typed<br />inspection or preference<br />operation</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>6. Recheck the selected scope<br />and resolve the effective<br />display order</div><div style='font-size: 70%'></div>" .->29
+    29-. "<div>7. Save the display<br />preference for later debugger<br />views</div><div style='font-size: 70%'></div>" .->42
+    10-. "<div>8. Issue a bounded read using<br />the selected space, bank and<br />map revision</div><div style='font-size: 70%'></div>" .->26
+    26-. "<div>9. Publish the correlated raw<br />bytes with the actual map and<br />instance identity</div><div style='font-size: 70%'></div>" .->24
+    29-. "<div>10. Project multibyte display<br />values using the effective<br />display order</div><div style='font-size: 70%'></div>" .->24
+    11-. "<div>11. Read the current bytes,<br />rendered values and<br />applicable scope</div><div style='font-size: 70%'></div>" .->24
+    28-. "<div>12. Render the memory map,<br />raw bytes and effective byte<br />order</div><div style='font-size: 70%'></div>" .->11
+
+  end

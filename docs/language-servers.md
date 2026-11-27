@@ -1,6 +1,6 @@
 # Language server support
 
-Retro IDE will act as a Language Server Protocol (LSP) client for the AvaloniaEdit source editor. A workspace can use different configured servers for different languages and roots, including servers that also work with VS Code. Use LSP 3.18 as the reference and negotiate capabilities for interoperability with 3.17 servers. [LSP 3.18 specification](https://github.com/microsoft/language-server-protocol/blob/gh-pages/_specifications/lsp/3.18/specification.md) · [VS Code language server guide](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide)
+Retro IDE acts as a Language Server Protocol (LSP) client for the AvaloniaEdit source editor. A workspace can use different configured servers for different languages and roots, including servers that also work with VS Code. The client uses LSP 3.18 as the reference and negotiates capabilities for interoperability with 3.17 servers. Phase 03 verified installed clangd and rust-analyzer on Linux and Windows. [Phase 03 acceptance](receipts/phase-03-git-terminal-language-servers.md) · [LSP 3.18 specification](https://github.com/microsoft/language-server-protocol/blob/gh-pages/_specifications/lsp/3.18/specification.md) · [VS Code language server guide](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide)
 
 ## Configuration and lifecycle
 
