@@ -108,11 +108,11 @@ All seven incomplete test-first entries from `60457dc` now have criterion-specif
 
 #### Phase 03 independent review
 
-The 2026-11-27 review of `ae2199a` returned DISAGREE at 96 accuracy and 95 completeness. Both hosts passed the hook, cross-checkout include, queued cancellation, and submodule replacement cases. The review found that an editor save can still change effective Git config during a transfer and that named transfers need to rediscover the checkout after the wait. Earlier accepted slices passed regression review. [Current verdict](../receipts/hv/20261127T113256-phase-03-save-and-identity-review.verdict.md) · [Previous hook review](../receipts/hv/20261127T104314-phase-03-hook-review.verdict.md) · [Language-server acceptance](../receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md)
+The 2026-11-27 review of `60e32c1` returned DISAGREE at 97 accuracy and 96 completeness. It confirmed the editor save, named transfer identity, and index publication repairs on both hosts. The review found that branch and patch writes still need to rediscover the checkout after waiting. Earlier accepted slices passed regression review. [Current verdict](../receipts/hv/20261127T120307-phase-03-mutation-identity-review.verdict.md) · [Previous save and identity review](../receipts/hv/20261127T113256-phase-03-save-and-identity-review.verdict.md) · [Language-server acceptance](../receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md)
 
 | Task | Verdict | Accuracy | Completeness | Status |
 | --- | --- | --- | --- | --- |
-| 03A · `EXEC-TODO-008` | DISAGREE | 96 | 95 | Open. Coordinate editor saves that can change included configuration and verify checkout identity again after a named transfer waits. Preserve earlier Git concurrency and cross-platform coverage. |
+| 03A · `EXEC-TODO-008` | DISAGREE | 97 | 96 | Open. Apply post-wait checkout identity checks to branch and patch writes and verify the same guard across existing Git mutations. |
 | 03B · `EXEC-TODO-009` | AGREE | 99 | 99 | Complete. The live workbench and framed server observed successful saves on first synchronization and before editor close. The earlier coalesced save cases passed. |
 | 03C · `EXEC-TODO-010` | AGREE | 99 | 99 | Complete. Scoped native success, cancellation, failure and foreign-result denial passed across HTTP and stdio. |
 
