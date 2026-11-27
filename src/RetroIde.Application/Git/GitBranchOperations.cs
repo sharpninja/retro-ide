@@ -34,9 +34,8 @@ internal static partial class GitBranchOperations
 
         try
         {
-            var found = await NativeGit.DiscoverAsync(selection.ScopeRoot, "", token).ConfigureAwait(false);
-            if (found is null || !NativeGit.IsSameWorktree(found.Repository, repo))
-                return new("git_repository_unavailable", "The selected worktree is unavailable.");
+            if (!await GitMutationLease.IsCurrentAsync(repo, token).ConfigureAwait(false))
+                return GitMutationLease.WorktreeUnavailable();
             if (!await IsLocalNameAsync(repo, name, token).ConfigureAwait(false))
                 return InvalidName();
 
@@ -85,7 +84,9 @@ internal static partial class GitBranchOperations
         var changedCheckout = false;
         try
         {
-            using var held = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
+            using var held = await GitMutationLease.TryAcquireAsync(plan.Repository, token).ConfigureAwait(false);
+            if (held is null)
+                return GitMutationLease.WorktreeUnavailable();
             var refs = await GitHistoryOperations.ReadRefsAsync(plan.Repository, token).ConfigureAwait(false);
             var current = CurrentWorktree(refs, plan.Repository);
             if (!string.Equals(current?.Branch, plan.PreviousBranch, StringComparison.Ordinal) ||

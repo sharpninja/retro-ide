@@ -18,16 +18,18 @@ internal static class GitLfsOperations
             new FeatureOutcome("ok", "Git LFS operation authorized.")
             {
                 ExecuteAuthorizedAsync = cancellation => GitOperationRecovery.TryAsync(
-                    () => WorkspaceMutationGate.RunAsync(cancellation,
-                        () => ExecuteAsync(git, selection, input, operation, cancellation))),
+                    async () =>
+                    {
+                        using var held = await GitMutationLease.TryAcquireAsync(selection.Repository, cancellation).ConfigureAwait(false);
+                        return held is null ? SourceUnavailable() :
+                            await ExecuteAsync(git, selection, input, operation, cancellation).ConfigureAwait(false);
+                    }),
             })), token);
 
     private static async Task<FeatureOutcome> ExecuteAsync(IGitRegistration git, GitSelection selection, ActionInput input,
         Operation operation, CancellationToken token)
     {
         var repo = selection.Repository;
-        if (!await SourceAvailableAsync(repo, token).ConfigureAwait(false))
-            return SourceUnavailable();
         var status = await GitLfsState.ReadAsync(repo, token).ConfigureAwait(false);
         if (!status.IsInstalled)
             return new("git_lfs_unavailable", "Native Git LFS is unavailable on this host.");
@@ -114,12 +116,8 @@ internal static class GitLfsOperations
     private static Task<FeatureOutcome> WithSourceAsync(string path, IWorkbenchRegistration view,
         Func<IGitRegistration, GitSelection, Task<FeatureOutcome>> run, CancellationToken token) =>
         GitOperationRecovery.WithSelectionAsync(path, view, async (git, selection) =>
-            await SourceAvailableAsync(selection.Repository, token).ConfigureAwait(false)
+            await GitMutationLease.IsCurrentAsync(selection.Repository, token).ConfigureAwait(false)
                 ? await run(git, selection).ConfigureAwait(false) : SourceUnavailable(), token);
-
-    private static async Task<bool> SourceAvailableAsync(GitWorktree repo, CancellationToken token) =>
-        await NativeGit.DiscoverAsync(repo.WorktreePath, "", token).ConfigureAwait(false) is { } found &&
-            NativeGit.IsSameWorktree(found.Repository, repo);
 
     private static FeatureOutcome Publish(GitSelection selection, Func<FeatureOutcome> run) =>
         new("ok", "Git LFS operation prepared.")

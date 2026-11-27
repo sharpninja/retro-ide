@@ -65,7 +65,9 @@ internal static class GitReset
     private static async Task<FeatureOutcome> ExecuteAsync(IGitRegistration git, GitSelection selection, Review reviewed, ResetInput input,
         CancellationToken token)
     {
-        using var held = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
+        using var held = await GitMutationLease.TryAcquireAsync(selection.Repository, token).ConfigureAwait(false);
+        if (held is null)
+            return GitMutationLease.WorktreeUnavailable();
         var hard = input.Mode is "hard";
         var paths = hard ? reviewed.HardTrackedChanges.Union(reviewed.IndexChanges, StringComparer.Ordinal).ToArray() : [];
         var lease = await git.BeginIntegrationAsync(selection, paths, token).ConfigureAwait(false);

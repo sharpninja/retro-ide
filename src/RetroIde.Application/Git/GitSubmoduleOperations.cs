@@ -24,14 +24,14 @@ internal static class GitSubmoduleOperations
         Operation operation, CancellationToken token)
     {
         var repo = selection.Repository;
-        if (!await SourceAvailableAsync(repo, token).ConfigureAwait(false))
+        if (!await GitMutationLease.IsCurrentAsync(repo, token).ConfigureAwait(false))
             return SourceUnavailable();
         var (reviewed, initialFailure) = await ReviewAsync(repo, input, token).ConfigureAwait(false);
         if (initialFailure is not null)
             return initialFailure;
 
-        using var held = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
-        if (!await SourceAvailableAsync(repo, token).ConfigureAwait(false))
+        using var held = await GitMutationLease.TryAcquireAsync(repo, token).ConfigureAwait(false);
+        if (held is null)
             return SourceUnavailable();
         var (target, failure) = await ReviewAsync(repo, input, token).ConfigureAwait(false);
         if (failure is not null)
@@ -138,12 +138,8 @@ internal static class GitSubmoduleOperations
     private static Task<FeatureOutcome> WithSourceAsync(string path, IWorkbenchRegistration view,
         Func<IGitRegistration, GitSelection, Task<FeatureOutcome>> run, CancellationToken token) =>
         GitOperationRecovery.WithSelectionAsync(path, view, async (git, selection) =>
-            await SourceAvailableAsync(selection.Repository, token).ConfigureAwait(false)
+            await GitMutationLease.IsCurrentAsync(selection.Repository, token).ConfigureAwait(false)
                 ? await run(git, selection).ConfigureAwait(false) : SourceUnavailable(), token);
-
-    private static async Task<bool> SourceAvailableAsync(GitWorktree repo, CancellationToken token) =>
-        await NativeGit.DiscoverAsync(repo.WorktreePath, "", token).ConfigureAwait(false) is { } found &&
-            NativeGit.IsSameWorktree(found.Repository, repo);
 
     private static FeatureOutcome Publish(GitSelection selection, Func<FeatureOutcome> outcome) =>
         new("ok", "Git submodule operation prepared.")

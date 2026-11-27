@@ -61,7 +61,9 @@ internal static class GitPatchOperations
     private static async Task<FeatureOutcome> ExecuteAsync(IGitRegistration git, GitSelection selection, ApplyInput input, byte[] bytes,
         string[] paths, CancellationToken token)
     {
-        using var held = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
+        using var held = await GitMutationLease.TryAcquireAsync(selection.Repository, token).ConfigureAwait(false);
+        if (held is null)
+            return GitMutationLease.WorktreeUnavailable();
         var worktree = input.Layer is "worktree";
         var lease = await git.BeginIntegrationAsync(selection, worktree ? paths : [], token).ConfigureAwait(false);
         if (lease.Guard is not { } guard)
@@ -233,12 +235,9 @@ internal static class GitPatchOperations
         Func<IGitRegistration, GitSelection, Task<FeatureOutcome>> action, CancellationToken token) =>
         layer is not ("index" or "worktree") ? Task.FromResult(new FeatureOutcome("git_patch_layer_invalid", "Choose index or worktree.")) :
         GitOperationRecovery.WithSelectionAsync(path, view, async (git, selection) =>
-        {
-            var found = await NativeGit.DiscoverAsync(selection.ScopeRoot, "", token).ConfigureAwait(false);
-            return found is not null && NativeGit.IsSameWorktree(found.Repository, selection.Repository)
+            await GitMutationLease.IsCurrentAsync(selection.Repository, token).ConfigureAwait(false)
                 ? await action(git, selection).ConfigureAwait(false)
-                : new("git_repository_unavailable", "The selected Git worktree is unavailable.");
-        }, token);
+                : GitMutationLease.WorktreeUnavailable(), token);
 
     private static FeatureOutcome? Validate(Snapshot? snapshot, string expected) =>
         snapshot is null || !string.Equals(snapshot.Review.Revision, expected, StringComparison.Ordinal) ? Changed() :

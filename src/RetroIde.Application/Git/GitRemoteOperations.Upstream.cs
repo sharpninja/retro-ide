@@ -13,7 +13,7 @@ internal static partial class GitRemoteOperations
             if (problem is not null)
                 return problem;
 
-            return Authorize(selection, cancellation => RunReviewedAsync(selection, cancellation, async () =>
+            return Authorize(selection, cancellation => GitMutationLease.RunAsync(repo, cancellation, async () =>
             {
                 var current = await ValidateUpstreamAsync(repo, input, cancellation).ConfigureAwait(false);
                 if (current is not null)

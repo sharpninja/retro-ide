@@ -176,7 +176,7 @@ internal static class GitWorktreeOperations
     private static Task<FeatureOutcome> WithSourceAsync(string path, IWorkbenchRegistration view,
         Func<IGitRegistration, GitSelection, Task<FeatureOutcome>> run, CancellationToken token) =>
         GitOperationRecovery.WithSelectionAsync(path, view, async (git, selection) =>
-            await SourceAvailableAsync(selection.Repository, token).ConfigureAwait(false)
+            await GitMutationLease.IsCurrentAsync(selection.Repository, token).ConfigureAwait(false)
                 ? await run(git, selection).ConfigureAwait(false) : SourceUnavailable(), token);
 
     private static FeatureOutcome Publish(GitSelection selection, Func<IGitRegistration, FeatureOutcome> outcome) =>
@@ -192,15 +192,10 @@ internal static class GitWorktreeOperations
             ExecuteAuthorizedAsync = token => GitOperationRecovery.TryAsync(async () =>
             {
                 var repo = selection.Repository;
-                using var held = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
-                return await SourceAvailableAsync(repo, token).ConfigureAwait(false)
-                    ? await run(token).ConfigureAwait(false) : SourceUnavailable();
+                using var held = await GitMutationLease.TryAcquireAsync(repo, token).ConfigureAwait(false);
+                return held is null ? SourceUnavailable() : await run(token).ConfigureAwait(false);
             }),
         });
-
-    private static async Task<bool> SourceAvailableAsync(GitWorktree repo, CancellationToken token) =>
-        await NativeGit.DiscoverAsync(repo.WorktreePath, "", token).ConfigureAwait(false) is { } found &&
-            NativeGit.IsSameWorktree(found.Repository, repo);
 
     private static async Task<GitHistoryOperations.Worktree?> FindRowAsync(GitWorktree repo, string path, CancellationToken token) =>
         Array.Find(await GitHistoryOperations.ReadWorktreesAsync(repo, token).ConfigureAwait(false), row => Paths.Equals(row.Path, path));

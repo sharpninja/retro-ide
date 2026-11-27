@@ -29,12 +29,11 @@ internal sealed class PreparedGitIndex : IDisposable
     internal static async Task<PreparedGitIndex?> PrepareWithWorkspaceLeaseAsync(GitWorktree repository,
         Func<string, Task<bool>> update, CancellationToken token)
     {
-        IDisposable? lease = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
+        var lease = await GitMutationLease.TryAcquireAsync(repository, token).ConfigureAwait(false);
+        if (lease is null)
+            return null;
         try
         {
-            var current = await NativeGit.DiscoverAsync(repository.WorktreePath, "", token).ConfigureAwait(false);
-            if (current is null || !NativeGit.IsSameWorktree(repository, current.Repository))
-                return null;
             var prepared = await PrepareAsync(repository, update, token).ConfigureAwait(false);
             if (prepared is not null)
             {

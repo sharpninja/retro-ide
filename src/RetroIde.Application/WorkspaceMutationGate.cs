@@ -6,12 +6,6 @@ internal static class WorkspaceMutationGate
     // Git includes can point into another checkout, including files open in the editor.
     private static readonly SemaphoreSlim Gate = new(1);
 
-    internal static async Task<FeatureOutcome> RunAsync(CancellationToken token, Func<Task<FeatureOutcome>> operation)
-    {
-        using var held = await EnterAsync(token).ConfigureAwait(false);
-        return await operation().ConfigureAwait(false);
-    }
-
     internal static async Task<IDisposable> EnterAsync(CancellationToken token)
     {
         await Gate.WaitAsync(token).ConfigureAwait(false);

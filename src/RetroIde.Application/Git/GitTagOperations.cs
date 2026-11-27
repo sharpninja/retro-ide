@@ -110,9 +110,8 @@ internal static class GitTagOperations
             if (string.IsNullOrWhiteSpace(tagName) || tagName.StartsWith('-') || tagName.Contains('\0'))
                 return InvalidName();
             var repo = selection.Repository;
-            if (await NativeGit.DiscoverAsync(selection.ScopeRoot, "", token).ConfigureAwait(false) is not { } found ||
-                !NativeGit.IsSameWorktree(found.Repository, repo))
-                return new("git_repository_unavailable", "The selected Git worktree is unavailable.");
+            if (!await GitMutationLease.IsCurrentAsync(repo, token).ConfigureAwait(false))
+                return GitMutationLease.WorktreeUnavailable();
             var name = Prefix + tagName;
             if (await ReadNativeAsync(repo, token, "check-ref-format", name).ConfigureAwait(false) is null)
                 return InvalidName();
@@ -125,14 +124,8 @@ internal static class GitTagOperations
             Commit = current => GitOperationRecovery.SameSelection(current, selection)
                 ? new FeatureOutcome("ok", "Git tag operation authorized.")
                 {
-                    ExecuteAuthorizedAsync = token => GitOperationRecovery.TryAsync(async () =>
-                    {
-                        using var held = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
-                        var found = await NativeGit.DiscoverAsync(selection.ScopeRoot, "", token).ConfigureAwait(false);
-                        return found is not null && NativeGit.IsSameWorktree(found.Repository, selection.Repository)
-                            ? await execute(token).ConfigureAwait(false)
-                            : new("git_repository_unavailable", "The selected Git worktree is unavailable.");
-                    }),
+                    ExecuteAuthorizedAsync = token => GitOperationRecovery.TryAsync(
+                        () => GitMutationLease.RunAsync(selection.Repository, token, () => execute(token))),
                 }
                 : GitOperationRecovery.ChangedSelection(),
         };

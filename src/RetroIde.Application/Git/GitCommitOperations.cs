@@ -110,7 +110,9 @@ internal static class GitCommitOperations
         string? head = null;
         try
         {
-            using var configuration = await WorkspaceMutationGate.EnterAsync(token).ConfigureAwait(false);
+            using var mutation = await GitMutationLease.TryAcquireAsync(repository, token).ConfigureAwait(false);
+            if (mutation is null)
+                return GitMutationLease.WorktreeUnavailable();
             using var held = GitIndexLock.TryAcquire(index);
             if (held is null)
                 return new("git_index_busy", "Another process owns the index lock. Retry after it finishes.");
