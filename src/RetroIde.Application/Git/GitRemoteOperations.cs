@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Security.Cryptography;
 using System.Text;
@@ -8,6 +9,8 @@ namespace RetroIde.Application.Git;
 internal static partial class GitRemoteOperations
 {
     private static readonly byte[] RevisionKey = RandomNumberGenerator.GetBytes(32);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> ConfigurationWrites = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
     internal sealed record ListInput(string WorktreePath);
     internal sealed record ConfigureInput(string WorktreePath, string Name, string Revision, string? Value = null, bool Push = false);
     internal sealed record FetchInput(string WorktreePath, string Name, string Revision, bool Prune = false);
@@ -35,28 +38,38 @@ internal static partial class GitRemoteOperations
             var problem = await ValidateChangeAsync(repo, snapshot, input, change, token).ConfigureAwait(false);
             if (problem is not null)
                 return problem;
-            return Authorize(selection, async cancellation =>
-            {
-                var current = await ReadConfigAsync(repo, cancellation).ConfigureAwait(false);
-                if (!Matches(current, input.Revision))
-                    return Changed();
-
-                string[] command = change switch
-                {
-                    Change.Add => ["remote", "add", "--", input.Name, input.Value!],
-                    Change.SetUrl when input.Push => ["remote", "set-url", "--push", "--", input.Name, input.Value!],
-                    Change.SetUrl => ["remote", "set-url", "--", input.Name, input.Value!],
-                    Change.Rename => ["remote", "rename", "--", input.Name, input.Value!],
-                    _ => ["remote", "remove", "--", input.Name],
-                };
-                cancellation.ThrowIfCancellationRequested();
-                var result = await RunAsync(repo, CancellationToken.None, command).ConfigureAwait(false);
-                if (result.ExitCode != 0)
-                    return new("git_remote_config_failed", "Git could not update the selected remote.");
-                return FeatureOutcome.Success("Git remote settings updated.",
-                    (await ReadConfigAsync(repo, CancellationToken.None).ConfigureAwait(false)).Display);
-            });
+            return Authorize(selection, cancellation => ConfigureReviewedAsync(repo, input, change, cancellation));
         }, token);
+
+    private static async Task<FeatureOutcome> ConfigureReviewedAsync(GitWorktree repo, ConfigureInput input, Change change,
+        CancellationToken token)
+    {
+        // Linked worktrees share remote settings through their common Git directory.
+        var gate = ConfigurationWrites.GetOrAdd(repo.CommonDirectory, static _ => new SemaphoreSlim(1));
+        await gate.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            var current = await ReadConfigAsync(repo, token).ConfigureAwait(false);
+            if (!Matches(current, input.Revision))
+                return Changed();
+
+            string[] command = change switch
+            {
+                Change.Add => ["remote", "add", "--", input.Name, input.Value!],
+                Change.SetUrl when input.Push => ["remote", "set-url", "--push", "--", input.Name, input.Value!],
+                Change.SetUrl => ["remote", "set-url", "--", input.Name, input.Value!],
+                Change.Rename => ["remote", "rename", "--", input.Name, input.Value!],
+                _ => ["remote", "remove", "--", input.Name],
+            };
+            token.ThrowIfCancellationRequested();
+            var result = await RunAsync(repo, CancellationToken.None, command).ConfigureAwait(false);
+            if (result.ExitCode != 0)
+                return new("git_remote_config_failed", "Git could not update the selected remote.");
+            return FeatureOutcome.Success("Git remote settings updated.",
+                (await ReadConfigAsync(repo, CancellationToken.None).ConfigureAwait(false)).Display);
+        }
+        finally { gate.Release(); }
+    }
 
     internal static Task<FeatureOutcome> FetchAsync(FetchInput input, IWorkbenchRegistration view, CancellationToken token) =>
         InScopeAsync(input.WorktreePath, view, async selection =>
