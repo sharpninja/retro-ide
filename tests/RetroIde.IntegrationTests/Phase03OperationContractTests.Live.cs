@@ -19,20 +19,10 @@ public sealed partial class Phase03OperationContractTests
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
         var token = timeout.Token;
-        using var session = new WorkbenchSession(Guid.NewGuid());
-        await using var host = await LoopbackMcpHost.StartAsync(session.Registry, session.Controller, session.View.Address, token).ConfigureAwait(true);
-        var grant = host.CreateAttachment("phase03-operation-owner", canMutate: true);
-        using var client = grant.CreateHttpClient();
-        await using var direct = await ConnectAsync(grant, client, token).ConfigureAwait(true);
-
-        var tools = await direct.ListToolsAsync(cancellationToken: token).ConfigureAwait(true);
-        Assert.True(tools.Any(tool => string.Equals(tool.Name, "workbench_operation_status", StringComparison.Ordinal)),
-            "The live workbench does not expose workbench_operation_status.");
-
         var folder = Directory.CreateTempSubdirectory("retro-operation-contract-");
         try
         {
-            await VerifyLiveOperationsAsync(folder, host, direct, grant, token).ConfigureAwait(true);
+            await VerifyLiveWorkbenchAsync(folder, token).ConfigureAwait(true);
         }
         finally
         {
@@ -40,6 +30,32 @@ public sealed partial class Phase03OperationContractTests
                 foreach (var file in folder.EnumerateFiles("*", SearchOption.AllDirectories).Where(file => file.IsReadOnly))
                     file.IsReadOnly = false;
             folder.Delete(recursive: true);
+        }
+    }
+
+    private static async Task VerifyLiveWorkbenchAsync(DirectoryInfo folder, CancellationToken token)
+    {
+        var session = new WorkbenchSession(Guid.NewGuid());
+        try
+        {
+            await using var host = await LoopbackMcpHost.StartAsync(session.Registry, session.Controller, session.View.Address, token)
+                .ConfigureAwait(true);
+            var grant = host.CreateAttachment("phase03-operation-owner", canMutate: true);
+            using var client = grant.CreateHttpClient();
+            await using var direct = await ConnectAsync(grant, client, token).ConfigureAwait(true);
+
+            var tools = await direct.ListToolsAsync(cancellationToken: token).ConfigureAwait(true);
+            Assert.True(tools.Any(tool => string.Equals(tool.Name, "workbench_operation_status", StringComparison.Ordinal)),
+                "The live workbench does not expose workbench_operation_status.");
+            await VerifyLiveOperationsAsync(folder, host, direct, grant, token).ConfigureAwait(true);
+        }
+        finally
+        {
+            // Phase 02 has a synchronous lifetime. The later workbench drains its native watchers asynchronously.
+            if ((IDisposable)session is IAsyncDisposable asyncSession)
+                await asyncSession.DisposeAsync().ConfigureAwait(true);
+            else
+                session.Dispose();
         }
     }
 
