@@ -58,7 +58,7 @@ internal sealed partial class LanguageServerFeatures
             LanguageTargetFile.Resolve(registration.Explorer, input.Target.Uri, input.Document.RootId) is not { } address)
             return new("invalid_language_location", "Choose a valid file location inside an open workspace root.");
 
-        var target = await LanguageTargetFile.ReadAsync(registration, address, token).ConfigureAwait(false);
+        var target = await LanguageTargetFile.ReadAsync(registration.LanguageServers, address, token).ConfigureAwait(false);
         if (target is null)
             return new("source_unavailable", "The language location has no readable source document.");
 

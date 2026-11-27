@@ -120,6 +120,9 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor LanguageServerOutput = Create("language.server.output", "Alt+Shift+L");
     public static readonly CommandDescriptor OpenLanguageProblem = Create("language.problem.open", "Alt+Shift+G");
 
+    public static readonly CommandDescriptor LanguageApplyServerEdit = Create("language.server-edits.apply", "Ctrl+Alt+Shift+A");
+    public static readonly CommandDescriptor LanguageDeclineServerEdit = Create("language.server-edits.decline", "Alt+Shift+Escape");
+
     // A document key binding can be active inside a main or floating workbench window.
     // All commands in this catalog can share that input route, so check them together.
     private static readonly CommandDescriptor[] Commands =
@@ -139,7 +142,7 @@ internal static class WorkbenchCommands
             LanguageComplete, LanguageHover, LanguageSignature, LanguageDefinition, LanguageDeclaration, LanguageType,
             LanguageImplementation, LanguageReferences, LanguageSymbols, LanguageDiagnostics, LanguageFormat, LanguageRename,
             LanguageActions, LanguageOpenResult, LanguageApply, OpenLanguageServers, OpenProblems, LanguageConfigureServer, LanguageRefreshServers,
-            LanguageStopServer, LanguageRestartServer, LanguageRemoveServer, LanguageServerOutput, OpenLanguageProblem];
+            LanguageStopServer, LanguageRestartServer, LanguageRemoveServer, LanguageServerOutput, OpenLanguageProblem, LanguageApplyServerEdit, LanguageDeclineServerEdit];
 
     internal static void ValidateBundledResources()
     {

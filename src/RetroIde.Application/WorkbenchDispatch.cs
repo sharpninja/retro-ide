@@ -280,6 +280,7 @@ public sealed class FeatureRegistry
             Explorer.SaveDocument, Documents.GetContext, Documents.Find, Documents.Replace, Documents.Close,
             Documents.Edit, Documents.Undo, Documents.Redo, Localization.GetLanguage, Localization.SetLanguage,
             Language.Configure, Language.List, Language.Restart, Language.Stop, Language.Remove, Language.Output,
+            Language.ListServerEdits, Language.ApplyServerEdit, Language.DeclineServerEdit,
             Language.Complete, Language.PreviewCompletion, Language.Symbols, Language.Diagnostics, Language.Problems,
             Language.Hover, Language.SignatureHelp, Language.Definition, Language.Declaration, Language.TypeDefinition,
             Language.Implementation, Language.References, Language.OpenLocation,

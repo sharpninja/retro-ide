@@ -13,9 +13,11 @@ internal sealed record LanguageCodeActionList(Guid OfferId, DocumentContext Docu
 
 internal sealed record LanguageEditPlan(Guid Id, DocumentContext Origin, LanguageServerStatus Server, LanguageBufferEdit[] Documents)
 {
-    internal LanguageEditPreview Describe() => new(Id, Origin, Server, Documents.Select(item =>
+    internal LanguageEditPreview Describe() => new(Id, Origin, Server, DescribeTargets(Documents));
+
+    internal static LanguageEditTarget[] DescribeTargets(LanguageBufferEdit[] documents) => documents.Select(item =>
         new LanguageEditTarget(item.File.Address.Entry.RootId, item.File.Address.Entry.RelativePath, item.Edits.Select(edit =>
-            edit with { PreviousText = item.File.Text.Substring(edit.Offset, edit.Length) }).ToArray())).ToArray());
+            edit with { PreviousText = item.File.Text.Substring(edit.Offset, edit.Length) }).ToArray())).ToArray();
 }
 
 internal sealed record LanguageBufferEdit(LanguageTargetFile File, LanguageTextEdit[] Edits);
@@ -69,9 +71,18 @@ internal static class LanguageEditPlanner
     internal static async Task<LanguageEditPlan> PrepareAsync(LanguageQueryResult result, ILanguageRegistration registration,
         CancellationToken token, string? formattingUri = null)
     {
-        if (result.Server is not { SessionId: { } serverId, PositionEncoding: { } encoding })
+        var files = await PrepareFilesAsync(result.Result, registration.Explorer, registration.LanguageServers,
+            result.Server, result.CapturedBuffers, token, formattingUri).ConfigureAwait(false);
+        return new(Guid.NewGuid(), result.Document, result.Server, files);
+    }
+
+    internal static async Task<LanguageBufferEdit[]> PrepareFilesAsync(JsonElement edit, WorkspaceExplorer explorer,
+        LanguageServerWorkspace workspace, LanguageServerStatus server, LanguageDocument[]? buffers, CancellationToken token,
+        string? formattingUri = null, IReadOnlySet<Guid>? allowedRoots = null)
+    {
+        if (server is not { SessionId: { } serverId, PositionEncoding: { } encoding })
             throw new InvalidDataException("The edit has no active server or position encoding.");
-        var proposed = formattingUri is null ? ReadWorkspaceEdit(result.Result) : [new Proposed(formattingUri, null, result.Result)];
+        var proposed = formattingUri is null ? ReadWorkspaceEdit(edit) : [new Proposed(formattingUri, null, edit)];
         var changes = new List<LanguageBufferEdit>();
         var edited = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
         var characters = 0L;
@@ -79,17 +90,17 @@ internal static class LanguageEditPlanner
         foreach (var item in proposed)
         {
             token.ThrowIfCancellationRequested();
-            if (LanguageTargetFile.Resolve(registration.Explorer, item.Uri, result.Document.RootId) is not { } address ||
-                await LanguageTargetFile.ReadAsync(registration, address, token).ConfigureAwait(false) is not { } file)
+            if (LanguageTargetFile.Resolve(explorer, item.Uri, server.RootId, allowedRoots) is not { } address ||
+                await LanguageTargetFile.ReadAsync(workspace, address, token).ConfigureAwait(false) is not { } file)
                 throw new InvalidDataException("An edit target is outside the workspace or cannot be read.");
             if (!edited.Add(Path.GetFullPath(address.Entry.RelativePath, address.RootPath)))
                 throw new InvalidDataException("A workspace edit cannot address the same file twice.");
-            if (result.CapturedBuffers is { } buffers && buffers.FirstOrDefault(captured =>
+            if (buffers is not null && buffers.FirstOrDefault(captured =>
                 WorkspaceExplorer.AddressEquality.Equals(new(captured.Context.RootId, captured.Context.RelativePath), address.Entry))?.Context
                 != file.OpenBuffer?.Context)
                 throw new LanguageDocumentChangedException();
             if (item.Version is { } version && (file.OpenBuffer is not { } buffer ||
-                registration.LanguageServers.ReadLspVersion(buffer, serverId) != version))
+                workspace.ReadLspVersion(buffer, serverId) != version))
                 throw new LanguageDocumentChangedException();
 
             var ranges = ParseEdits(item.Edits, file.Text, encoding);
@@ -100,7 +111,20 @@ internal static class LanguageEditPlanner
             if (ranges.Length != 0)
                 changes.Add(new LanguageBufferEdit(file, ranges));
         }
-        return new(Guid.NewGuid(), result.Document, result.Server, changes.ToArray());
+        return changes.ToArray();
+    }
+
+    internal static async Task<bool> RevalidateClosedFilesAsync(LanguageBufferEdit[] documents, CancellationToken token)
+    {
+        foreach (var target in documents)
+        {
+            if (target.File.Source is not { } previous)
+                continue;
+            var actual = await WorkspaceExplorer.ReadSourceAsync(target.File.Address, token).ConfigureAwait(false);
+            if (actual is null || !string.Equals(previous.Text, actual.Text, StringComparison.Ordinal))
+                return false;
+        }
+        return true;
     }
 
     private static Proposed[] ReadWorkspaceEdit(JsonElement result)

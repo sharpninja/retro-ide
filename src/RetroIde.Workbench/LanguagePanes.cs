@@ -11,7 +11,7 @@ using RetroIde.Application.Workspaces;
 
 namespace RetroIde.Workbench;
 
-internal static class LanguagePanes
+internal static partial class LanguagePanes
 {
     internal static Control Create(LanguageServersViewModel view)
     {
@@ -47,7 +47,8 @@ internal static class LanguagePanes
         });
         locale.Observe(output, () => AutomationProperties.SetName(output, locale.Text(WorkbenchText.LanguageServerOutput)));
 
-        pane.Children.AddRange([profiles, actions, Status(pane, view), outputRegion, Configuration(pane, view)]);
+        pane.Children.AddRange([ServerEditReviews(pane, view), profiles, actions,
+            Status(pane, view), outputRegion, Configuration(pane, view)]);
         return new ScrollViewer { Content = pane };
     }
 

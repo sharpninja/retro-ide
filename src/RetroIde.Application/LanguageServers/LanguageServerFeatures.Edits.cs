@@ -167,14 +167,8 @@ internal sealed partial class LanguageServerFeatures
             plan.Origin != input.Document || !CanApply(registration, plan))
             return DocumentChanged();
 
-        foreach (var target in plan.Documents)
-        {
-            if (target.File.Source is not { } previous)
-                continue;
-            var actual = await WorkspaceExplorer.ReadSourceAsync(target.File.Address, token).ConfigureAwait(false);
-            if (actual is null || !string.Equals(previous.Text, actual.Text, StringComparison.Ordinal))
-                return DocumentChanged();
-        }
+        if (!await LanguageEditPlanner.RevalidateClosedFilesAsync(plan.Documents, token).ConfigureAwait(false))
+            return DocumentChanged();
         return new FeatureOutcome("ok", "Language edit validated.")
         {
             Commit = current => current is ILanguageRegistration active &&

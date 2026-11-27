@@ -91,10 +91,15 @@ internal sealed record LanguageEditorResult(string? Message, IReadOnlyList<Langu
         if (preview.Targets.Length == 0)
             return new(null, []);
 
+        return new(FormatPreview(preview.Targets), [], preview.PreviewId);
+    }
+
+    internal static string FormatPreview(LanguageEditTarget[] targets, Func<LanguageEditTarget, string>? displayPath = null)
+    {
         var message = new StringBuilder();
-        foreach (var target in preview.Targets)
+        foreach (var target in targets)
         {
-            message.AppendLine(target.RelativePath);
+            message.AppendLine(displayPath?.Invoke(target) ?? target.RelativePath);
             foreach (var edit in target.Edits)
             {
                 message.Append(CultureInfo.InvariantCulture, $"@@ {edit.Offset} +{edit.Length} @@").AppendLine();
@@ -102,7 +107,7 @@ internal sealed record LanguageEditorResult(string? Message, IReadOnlyList<Langu
                 AppendEditLines(message, '+', edit.NewText);
             }
         }
-        return new(message.ToString(), [], preview.PreviewId);
+        return message.ToString();
     }
 
     private static void AppendEditLines(StringBuilder message, char prefix, string text)

@@ -5,7 +5,7 @@ namespace RetroIde.LspFixture;
 
 /// <summary>Runs a deterministic language server on stdio for independent client verification.</summary>
 /// <remarks>2026-11-26 · TEST-RETRO-014#ac-test-language-session, ac-test-language-documents, ac-test-language-features. Provides negotiated encoding, in-memory text, deferred responses and controlled exits.</remarks>
-internal sealed class Program(LspConnection connection, string preferredEncoding)
+internal sealed partial class Program(LspConnection connection, string preferredEncoding)
 {
     private readonly Dictionary<string, OpenDocument> _documents = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PendingCompletion> _pending = new(StringComparer.Ordinal);
@@ -52,7 +52,10 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
             {
                 var packet = message.RootElement;
                 if (!packet.TryGetProperty("method", out var method))
+                {
+                    ObserveWorkspaceEditResponse(packet);
                     continue;
+                }
                 packet.TryGetProperty("id", out var id);
                 packet.TryGetProperty("params", out var parameters);
                 if (Dispatch(method.GetString(), id, parameters) is { } exitCode)
@@ -113,6 +116,7 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
                     Console.Error.WriteLine("Fixture exited during completion.");
                     return 17;
                 }
+                RequestWorkspaceEdit(parameters);
                 CompleteDocument(id, parameters);
                 break;
             case "$/cancelRequest":
@@ -165,6 +169,7 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
             _traceDirectory = trace.GetString();
         _crashOnFirstCompletion = options.ValueKind == JsonValueKind.Object &&
             options.TryGetProperty("crashOnFirstCompletion", out var crash) && crash.ValueKind == JsonValueKind.True;
+        ReadWorkspaceEditFixture(options, parameters);
         var folderMode = options.ValueKind == JsonValueKind.Object && options.TryGetProperty("workspaceFolderMode", out var mode)
             ? mode.GetString() : null;
         _navigation = options.ValueKind == JsonValueKind.Object && options.TryGetProperty("navigation", out var navigation)

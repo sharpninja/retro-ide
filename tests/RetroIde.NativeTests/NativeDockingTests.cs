@@ -50,6 +50,7 @@ internal static class NativeDockingTests
         {
             await RemoteControlLanguageEditorTests.RunAsync().ConfigureAwait(true);
             await RemoteControlLanguageEditorTests.RunPanesAsync().ConfigureAwait(true);
+            await RemoteControlLanguageEditorTests.RunServerEditsAsync().ConfigureAwait(true);
         }
         finally { finished.Cancel(); }
     }

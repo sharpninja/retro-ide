@@ -18,6 +18,12 @@ The profiles list includes its root, process state, and negotiated position enco
 
 **View → Problems** shows language diagnostics from current open documents across workspace roots. Select an entry and open it to activate its source tab at the reported location. Diagnostics from closed or superseded documents and stopped or replaced servers clear automatically.
 
+### Reviewing edits proposed by a server
+
+When a server requests `workspace/applyEdit`, **Review server edits** opens its pending proposal in **Language Servers**. The preview shows original and replacement text for each target. **Apply Server Edit** updates the current source buffers, including opening any affected closed files as unsaved tabs. Each affected buffer has a single undo step. **Decline Server Edit** leaves the files and buffers unchanged.
+
+Only existing text files in roots served by the requesting session can be edited. The workbench revalidates the session, document revisions, and contents of closed files before applying the edit. An invalid, stale, declined, cancelled, or expired request receives an unsuccessful reply. A server may have one pending review for up to two minutes, and ordinary language requests continue during review. [LSP workspace/applyEdit](https://github.com/microsoft/language-server-protocol/blob/gh-pages/_specifications/lsp/3.17/workspace/applyEdit.md)
+
 ### Running a server from MCP
 
 Use `language_configure_server` with a live workspace `rootId`, an installed executable's absolute path, an argument array, and one or more language associations. Each association provides `languageId` and an array of file extensions including the leading dot. The call accepts optional JSON initialization options, settings, and a `profileId`. Omitting `profileId` configures the `default` profile. Named profiles let a root use different servers for different extensions. Two profiles in one root cannot claim the same extension.
@@ -34,7 +40,9 @@ Use the public context returned by `editor_get_document` with `language_complete
 
 `language_format` and `language_rename` prepare previews without editing buffers. Use `language_code_actions` to get an action offer, then pass its ID and an action index to `language_preview_code_action`. Send the preview ID and the original document context to `language_apply_edit`. The controller validates every target and applies text edits in one dispatcher operation, with one undo group per affected editor. Closed source files open as dirty editor tabs. Save through the normal editor command to write the changes to disk.
 
-A preview expires after five minutes. A changed or closed buffer, changed target file, retired server, invalid range, or out-of-workspace destination invalidates the preview. Current preview support covers text edits to existing files. Resource operations and command-only code actions require separate support.
+`language_list_server_edits` returns pending server proposals with their review IDs and changes. Use the review ID with `language_apply_server_edit` or `language_decline_server_edit` from an attachment with mutation permission.
+
+An editor-initiated preview expires after five minutes. A changed or closed buffer, changed target file, retired server, invalid range, or out-of-workspace destination invalidates the preview. Current preview support covers text edits to existing files. Resource operations and command-only code actions require separate support.
 
 ## Editor features
 

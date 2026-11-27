@@ -28,6 +28,9 @@ internal static class WorkbenchText
     internal const string LanguageServerOutput = "language.server-output";
     internal const string LanguageProblemSource = "language.problem-source";
     internal const string LanguageProblemLimit = "language.problem-limit";
+    internal const string LanguageServerEditReviews = "language.server-edits.reviews";
+    internal const string LanguageServerEditPreview = "language.server-edits.preview";
+    internal const string LanguageServerEditIndicator = "language.server-edits.indicator";
     internal const string GitMenu = "menu.git";
     internal const string GitStaged = "git.status.group.staged";
     internal const string GitWorking = "git.status.group.working";
@@ -186,6 +189,7 @@ internal static class WorkbenchText
             LanguageProfiles, LanguageRoot, LanguageProfileId, LanguageExecutable, LanguageAssociations, LanguageArguments,
             LanguageInitialization, LanguageSettings, LanguageAdvanced, LanguageConfiguration, LanguageInvalidFields,
             LanguageNoOutput, LanguageServerOutput, LanguageProblemSource, LanguageProblemLimit,
+            LanguageServerEditReviews, LanguageServerEditPreview, LanguageServerEditIndicator,
             LanguageState("starting"), LanguageState("running"), LanguageState("stopped"), LanguageState("faulted"), LanguageState(""),
             LanguageSeverity(1), LanguageSeverity(2), LanguageSeverity(3), LanguageSeverity(4), LanguageSeverity(null), LanguageNewSymbol, LanguageTools, LanguageNoResults, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
             ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts, GitDiffStaged, GitDiffWorking, GitDiffHunks,

@@ -464,7 +464,7 @@ public sealed partial class WorkbenchWindow : Window
             Orientation = Orientation.Horizontal,
             Spacing = 8,
             Margin = new Thickness(10, 6),
-            Children = { picker, focusButton },
+            Children = { picker, focusButton, LanguagePanes.CreateServerEditIndicator(session.LanguageServersView) },
         };
 
         var status = new TextBlock { Margin = new Thickness(12, 4), TextTrimming = TextTrimming.CharacterEllipsis };

@@ -19,7 +19,7 @@ internal sealed partial class LanguageServerWorkspace
                     return _servers[configuration.Key].Status;
             }
 
-            var own = await LanguageServerSession.StartAsync([configuration], _logger, NotifyChanged, token).ConfigureAwait(false);
+            var own = await LanguageServerSession.StartAsync([configuration], _logger, NotifyChanged, ReviewServerEditAsync, token).ConfigureAwait(false);
             await PublishAsync(own, [configuration], token).ConfigureAwait(false);
             return _servers[configuration.Key].Status;
         }
@@ -74,6 +74,7 @@ internal sealed partial class LanguageServerWorkspace
     {
         var configuration = slot.Configuration;
         _servers[configuration.Key] = new(configuration, null, "stopped");
+        RejectUnservedEdits();
         if (slot.Session is not { } session)
             return;
 
@@ -118,7 +119,7 @@ internal sealed partial class LanguageServerWorkspace
                 _servers[configuration.Key] = new(configuration, null, "starting");
                 try
                 {
-                    var process = await LanguageServerSession.StartAsync([configuration], _logger, NotifyChanged, token).ConfigureAwait(false);
+                    var process = await LanguageServerSession.StartAsync([configuration], _logger, NotifyChanged, ReviewServerEditAsync, token).ConfigureAwait(false);
                     await PublishAsync(process, [configuration], token).ConfigureAwait(false);
                 }
                 catch (Exception error) when (RuntimeFailures.CanRecover(error) && !token.IsCancellationRequested)
@@ -147,7 +148,7 @@ internal sealed partial class LanguageServerWorkspace
     private async Task<bool> TryStartGroupAsync(LanguageServerConfiguration[] members, CancellationToken token)
     {
         LanguageServerSession session;
-        try { session = await LanguageServerSession.StartAsync(members, _logger, NotifyChanged, token).ConfigureAwait(false); }
+        try { session = await LanguageServerSession.StartAsync(members, _logger, NotifyChanged, ReviewServerEditAsync, token).ConfigureAwait(false); }
         catch (Exception error) when (RuntimeFailures.CanRecover(error) && !token.IsCancellationRequested)
         {
             RuntimeFailures.Report(_logger, error, "Start shared language server; trying separate processes");
@@ -172,6 +173,7 @@ internal sealed partial class LanguageServerWorkspace
     {
         foreach (var configuration in members)
             _servers[configuration.Key] = new(configuration, session, "running");
+        RejectUnservedEdits();
         foreach (var configuration in members)
             foreach (var document in _documents.Values.Where(item => item.Context.RootId == configuration.RootId))
                 await SynchronizeAsync(_servers[configuration.Key], document, token).ConfigureAwait(false);

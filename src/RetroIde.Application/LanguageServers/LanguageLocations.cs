@@ -39,7 +39,8 @@ internal sealed record LanguageTargetFile(WorkspaceExplorer.SourceAddress Addres
 {
     internal string Text => OpenBuffer?.Text ?? Source!.Text;
 
-    internal static WorkspaceExplorer.SourceAddress? Resolve(WorkspaceExplorer explorer, string uri, Guid preferredRoot)
+    internal static WorkspaceExplorer.SourceAddress? Resolve(WorkspaceExplorer explorer, string uri, Guid preferredRoot,
+        IReadOnlySet<Guid>? allowedRoots = null)
     {
         if (!System.Uri.TryCreate(uri, UriKind.Absolute, out var parsed) || !parsed.IsFile ||
             parsed.Query.Length != 0 || parsed.Fragment.Length != 0 || !Path.IsPathFullyQualified(parsed.LocalPath))
@@ -47,7 +48,8 @@ internal sealed record LanguageTargetFile(WorkspaceExplorer.SourceAddress Addres
         try
         {
             var path = Path.GetFullPath(parsed.LocalPath);
-            var roots = explorer.Roots.Where(root => NativeGit.ContainsPath(root.Path, path))
+            var roots = explorer.Roots.Where(root => (allowedRoots is null || allowedRoots.Contains(root.Id)) &&
+                NativeGit.ContainsPath(root.Path, path))
                 .OrderByDescending(root => root.Id == preferredRoot).ThenByDescending(root => root.Path.Length);
             var root = roots.FirstOrDefault();
             return root is null ? null : explorer.ResolveSource(new(root.Id, Path.GetRelativePath(root.Path, path)));
@@ -55,10 +57,10 @@ internal sealed record LanguageTargetFile(WorkspaceExplorer.SourceAddress Addres
         catch (Exception error) when (error is ArgumentException or IOException or NotSupportedException) { return null; }
     }
 
-    internal static async Task<LanguageTargetFile?> ReadAsync(ILanguageRegistration registration,
+    internal static async Task<LanguageTargetFile?> ReadAsync(LanguageServerWorkspace workspace,
         WorkspaceExplorer.SourceAddress address, CancellationToken token)
     {
-        if (registration.LanguageServers.ReadObserved(address.Entry) is { } open)
+        if (workspace.ReadObserved(address.Entry) is { } open)
             return new(address, open, null);
 
         var source = await WorkspaceExplorer.ReadSourceAsync(address, token).ConfigureAwait(false);

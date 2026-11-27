@@ -28,16 +28,22 @@ internal sealed class LspProcess : IAsyncDisposable
     private readonly Task _errors;
     private readonly Action<string, JsonElement> _notify;
     private readonly Func<string, JsonElement, (bool Handled, object? Result)> _request;
+    private readonly Func<JsonElement, CancellationToken, Task<LanguageServerEditReply>> _reviewEdit;
+    private Task _serverEdit = Task.CompletedTask;
+    private CancellationTokenSource? _serverEditCancellation;
+    private JsonElement _serverEditId;
     private long _nextId;
     private Task? _disposed;
 
     internal LspProcess(Process process, ILogger logger, Action<string, JsonElement> notify,
-        Func<string, JsonElement, (bool Handled, object? Result)> request)
+        Func<string, JsonElement, (bool Handled, object? Result)> request,
+        Func<JsonElement, CancellationToken, Task<LanguageServerEditReply>> reviewEdit)
     {
         _process = process;
         _logger = logger;
         _notify = notify;
         _request = request;
+        _reviewEdit = reviewEdit;
         ProcessId = process.Id;
         _reader = Task.Run(ReadMessagesAsync);
         _errors = Task.Run(ReadErrorsAsync);
@@ -161,7 +167,18 @@ internal sealed class LspProcess : IAsyncDisposable
             var method = name.GetString() ?? throw new InvalidDataException("The language server method has no name.");
             message.TryGetProperty("params", out var parameters);
             if (id.ValueKind is JsonValueKind.Number or JsonValueKind.String)
-                await RespondAsync(method, id, parameters).ConfigureAwait(false);
+            {
+                if (string.Equals(method, "workspace/applyEdit", StringComparison.Ordinal))
+                    await StartServerEditAsync(id, parameters).ConfigureAwait(false);
+                else
+                    await RespondAsync(method, id, parameters).ConfigureAwait(false);
+            }
+            else if (string.Equals(method, "$/cancelRequest", StringComparison.Ordinal) &&
+                parameters.ValueKind == JsonValueKind.Object && parameters.TryGetProperty("id", out var pendingId) &&
+                !_serverEdit.IsCompleted && JsonElement.DeepEquals(_serverEditId, pendingId))
+            {
+                await CancelServerEditAsync().ConfigureAwait(false);
+            }
             else
                 _notify(method, parameters);
         }
@@ -182,6 +199,49 @@ internal sealed class LspProcess : IAsyncDisposable
         return handled
             ? WriteAsync(new { jsonrpc = "2.0", id, result }, _lifetime.Token)
             : WriteAsync(new { jsonrpc = "2.0", id, error = new { code = -32601, message = "The client method is unavailable." } }, _lifetime.Token);
+    }
+
+    private Task StartServerEditAsync(JsonElement id, JsonElement parameters)
+    {
+        if (!_serverEdit.IsCompleted)
+            return WriteAsync(new { jsonrpc = "2.0", id, result = new LanguageServerEditReply(false, "Another edit from this server is pending.") },
+                _lifetime.Token);
+
+        var request = parameters.ValueKind == JsonValueKind.Undefined ? default : parameters.Clone();
+        _serverEditId = id.Clone();
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        _serverEditCancellation = cancellation;
+        var requestId = _serverEditId;
+        // Keep the pipe reader available for replies, diagnostics and shutdown while the user reviews this request.
+        _serverEdit = Task.Run(() => RespondToServerEditAsync(requestId, request, cancellation));
+        return Task.CompletedTask;
+    }
+
+    private async Task RespondToServerEditAsync(JsonElement id, JsonElement request, CancellationTokenSource cancellation)
+    {
+        using (cancellation)
+        {
+            try
+            {
+                var result = await _reviewEdit(request, cancellation.Token).ConfigureAwait(false);
+                await WriteAsync(new { jsonrpc = "2.0", id, result }, _lifetime.Token).ConfigureAwait(false);
+            }
+            catch (Exception error) when (RuntimeFailures.CanRecover(error) && _lifetime.IsCancellationRequested) { }
+            catch (Exception error) when (RuntimeFailures.CanRecover(error))
+            {
+                RuntimeFailures.Report(_logger, error, "Respond to language server workspace edit");
+            }
+        }
+    }
+
+    private async Task CancelServerEditAsync()
+    {
+        try
+        {
+            if (_serverEditCancellation is { } pending)
+                await pending.CancelAsync().ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException) { }
     }
 
     private async Task CancelRequestAsync(long id)
@@ -229,6 +289,7 @@ internal sealed class LspProcess : IAsyncDisposable
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await _process.WaitForExitAsync(deadline.Token).ConfigureAwait(false);
             await Task.WhenAll(_reader, _errors).WaitAsync(deadline.Token).ConfigureAwait(false);
+            await _serverEdit.WaitAsync(deadline.Token).ConfigureAwait(false);
         }
         finally { _process.Dispose(); }
     }

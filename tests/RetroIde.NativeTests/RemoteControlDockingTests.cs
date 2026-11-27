@@ -23,6 +23,7 @@ internal static class RemoteControlDockingTests
             await RemoteControlWorkflowTests.RunAsync().ConfigureAwait(true);
             await RemoteControlLanguageEditorTests.RunAsync().ConfigureAwait(true);
             await RemoteControlLanguageEditorTests.RunPanesAsync().ConfigureAwait(true);
+            await RemoteControlLanguageEditorTests.RunServerEditsAsync().ConfigureAwait(true);
             await RemoteControlGitTests.RunAsync().ConfigureAwait(true);
             using var session = new WorkbenchSession(Guid.NewGuid());
             var window = new WorkbenchWindow(session);

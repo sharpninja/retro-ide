@@ -122,18 +122,18 @@ internal static partial class RemoteControlLanguageEditorTests
 
     private static async Task ClickAsync(Window window, string id, CancellationToken token)
     {
-        await FindAsync<Button>(window, id, token).ConfigureAwait(true);
+        await FindAsync<Button>(window, id, token, requireEnabled: true).ConfigureAwait(true);
         await WorkbenchRemoteControl.ClickAsync(window, id).ConfigureAwait(true);
     }
 
-    private static async Task<T> FindAsync<T>(Window window, string id, CancellationToken token) where T : Control
+    private static async Task<T> FindAsync<T>(Window window, string id, CancellationToken token, bool requireEnabled = false) where T : Control
     {
         T? control = null;
         await WaitAsync(() =>
         {
             window.UpdateLayout();
             control = window.GetVisualDescendants().OfType<T>().FirstOrDefault(candidate => candidate.IsEffectivelyVisible &&
-                string.Equals(AutomationProperties.GetAutomationId(candidate), id, StringComparison.Ordinal));
+                (!requireEnabled || candidate.IsEffectivelyEnabled) && string.Equals(AutomationProperties.GetAutomationId(candidate), id, StringComparison.Ordinal));
             return control is not null;
         }, id, token).ConfigureAwait(true);
         return control!;

@@ -87,6 +87,7 @@ public sealed partial class WorkbenchController
             return;
         var roots = _workspaceExplorer.Roots.ToArray();
         _languageServersView?.Update(roots, LanguageServers.List());
+        _languageServersView?.UpdateServerEdits(LanguageServers.ServerEditPreviews());
         _problemsView?.Update(LanguageServers.Problems(), roots);
     }
 
@@ -109,6 +110,8 @@ public sealed partial class WorkbenchController
             LanguageServerFeatures.RootInput root when view == _languageServersView => Route(language.Restart, root, useLiveWorkbench: true) ||
                 Route(language.Stop, root, useLiveWorkbench: true) || Route(language.Remove, root, useLiveWorkbench: true) || Route(language.Output, root),
             GetContextInput list when view == _languageServersView => Route(language.List, list),
+            LanguageServerFeatures.DecideServerEditInput edit when view == _languageServersView =>
+                Route(language.ApplyServerEdit, edit, useLiveWorkbench: true) || Route(language.DeclineServerEdit, edit, useLiveWorkbench: true),
             LanguageServerFeatures.OpenLocationInput open when view == _problemsView => Route(language.OpenLocation, open),
             _ => false,
         };

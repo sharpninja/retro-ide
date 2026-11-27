@@ -12,6 +12,9 @@ internal sealed partial class LanguageServersViewModel(WorkbenchViewModel workbe
 {
     internal const string PaneId = "language-servers";
 
+    private LanguageServerFeatures LanguageFeatures => registry.Language;
+    private InteractionBlocks Interaction => interaction;
+
     private WorkspaceExplorer.Root[] _workspaceRoots = [];
     private LanguageServerStatus[] _profiles = [];
 
@@ -61,6 +64,7 @@ internal sealed partial class LanguageServersViewModel(WorkbenchViewModel workbe
             var root = SelectedRoot?.Id;
             Roots = roots;
             SelectedRoot = roots.FirstOrDefault(candidate => candidate.Id == root) ?? roots.FirstOrDefault();
+            RefreshServerEditText();
         }
 
         if (!rootsChanged && _profiles.SequenceEqual(profiles, ProfileStateEquality.Instance))
