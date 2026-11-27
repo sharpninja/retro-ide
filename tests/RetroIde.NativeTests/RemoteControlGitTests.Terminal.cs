@@ -1,7 +1,6 @@
 using System.Text;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
-using Avalonia.RemoteControl.Protocol.V1;
 using Avalonia.RemoteControl.Server;
 using Avalonia.RemoteControl.Server.Input;
 using Avalonia.RemoteControl.Server.Threading;
@@ -51,13 +50,7 @@ internal static partial class RemoteControlGitTests
             Console.WriteLine("The terminal renderer emitted a PowerShell cursor-position reply before input.");
             await Task.Delay(200, token).ConfigureAwait(true);
         }
-        var sent = await input.SendInputAsync(
-            [new RemoteInputEvent { Kind = RemoteInputKind.Text, Text = command },
-                new RemoteInputEvent { Kind = RemoteInputKind.KeyDown, Key = "Enter" },
-                new RemoteInputEvent { Kind = RemoteInputKind.KeyUp, Key = "Enter" }],
-            "retro-ide-tests").ConfigureAwait(true);
-        if (!sent.Succeeded)
-            throw new InvalidOperationException(sent.Message);
+        await SendTerminalLineAsync(input, command, token).ConfigureAwait(true);
         try
         {
             while (!rendered.ToString().Contains(head, StringComparison.Ordinal))
@@ -74,6 +67,7 @@ internal static partial class RemoteControlGitTests
                 $"cursor position requested={observed.Contains("\u001b[6n", StringComparison.Ordinal)}; PTY bytes={snapshot.Bytes.Length}.", error);
         }
 
+        await VerifyInteractiveGitPromptAsync(input, sample, rendered, token).ConfigureAwait(true);
         session.Layout.Factory.CloseDockable(document);
         await view.Terminal.WaitForExitAsync(token).ConfigureAwait(true);
         if (session.Documents.FindTerminal(view.ViewKey) is not null)

@@ -4,6 +4,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../RetroIde.IntegrationTests/AuthenticatedGitRemote.cs" Link="AuthenticatedGitRemote.cs" />
     <Compile Include="../Support/WorkbenchRemoteControl.cs" Link="WorkbenchRemoteControl.cs" />
     <Compile Include="../Support/GitWorktreeFixture.cs" Link="GitWorktreeFixture.cs" />
     <PackageReference Include="SharpNinja.Avalonia.RemoteControl.Runtime" />
