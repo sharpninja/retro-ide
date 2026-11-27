@@ -28,7 +28,21 @@ public sealed partial class AdapterConformanceTests
         var values = await control.ReadRegistersAsync(new(adapter.Scope("desktop"), new("cpu", ["D0"])), cancellation).ConfigureAwait(true);
         Assert.Equal(32, Assert.Single(values.Value!.Values).WidthBits);
         var changed = values.Value.Values[0] with { Value = [0, 0, 0, 0x40] };
-        Assert.True((await control.WriteRegistersAsync(new(adapter.Scope("desktop"), new("cpu", [changed])), cancellation).ConfigureAwait(true)).Succeeded);
+        var writeScope = adapter.Scope("desktop");
+        adapter.DropNextPortReply = true;
+        var unknown = await control.WriteRegistersAsync(new(writeScope, new("cpu", [changed])), cancellation).ConfigureAwait(true);
+        Assert.Equal(AdapterErrorCodes.UnknownOutcome, unknown.Error?.Code, StringComparer.Ordinal);
+        adapter.Disposition = MutationDisposition.Applied;
+        var resolved = await control.ReconcileAsync(writeScope, cancellation).ConfigureAwait(true);
+        Assert.Equal(MutationDisposition.Applied, resolved.Value?.Disposition);
+
+        var different = changed with { Value = [0, 0, 0, 0x41] };
+        var conflict = await control.WriteRegistersAsync(new(writeScope, new("cpu", [different])), cancellation).ConfigureAwait(true);
+        Assert.Equal(AdapterErrorCodes.InvalidArgument, conflict.Error?.Code, StringComparer.Ordinal);
+        Assert.Equal(writeScope.OperationId, conflict.Error?.OperationId);
+        var equivalent = changed with { Value = [0, 0, 0, 0x40] };
+        var repeated = await control.WriteRegistersAsync(new(writeScope, new("cpu", [equivalent])), cancellation).ConfigureAwait(true);
+        Assert.Equal(new MutationReceipt(writeScope, resolved.Value!.StateRevision), repeated.Value);
         values = await control.ReadRegistersAsync(new(adapter.Scope("desktop"), new("cpu", [])), cancellation).ConfigureAwait(true);
         Assert.Equal(changed, Assert.Single(values.Value!.Values));
 

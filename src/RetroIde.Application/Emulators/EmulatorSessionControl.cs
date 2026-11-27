@@ -12,7 +12,7 @@ internal sealed partial class EmulatorSessionControl
     private readonly SessionClosePolicy _closePolicy;
     private SessionState _state;
     private PendingMutation? _uncertain;
-    private (PendingMutation Request, ulong StateRevision)? _lastAppliedResolution;
+    private (PendingMutation Request, MutationResolution Receipt)? _lastResolution;
 
     internal EmulatorSessionControl(IEmulatorSession connection, SessionState initialState, ILogger logger)
     {

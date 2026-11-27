@@ -14,7 +14,7 @@ internal sealed partial class EmulatorSessionControl
                 request.Payload.Count != 1))
             return ValueTask.FromResult(Fail<MutationReceipt>(AdapterErrorCodes.InvalidArgument, "The execution action or count is invalid.", scope.OperationId));
 
-        var target = new PendingMutation(scope, IExecutionPort.Capability, request.Payload.SubjectId, request.Payload.Operation);
+        var target = new PendingMutation(scope, IExecutionPort.Capability, request.Payload.SubjectId, request.Payload.Operation, request.Payload);
         return MutatePortAsync<IExecutionPort>(target, (port, cancellation) => port.ExecuteAsync(request, cancellation),
             (capability, _) => ValueTask.FromResult<AdapterError?>(capability.Limits.TryGetValue("max-count", out var max) && request.Payload.Count > max
                 ? new(AdapterErrorCodes.InvalidArgument, "The execution count exceeds the advertised limit.", scope.OperationId) : null),
@@ -34,13 +34,23 @@ internal sealed partial class EmulatorSessionControl
 
         try
         {
-            if (_lastAppliedResolution is { } previous && previous.Request.Scope.OperationId == scope.OperationId)
-                return previous.Request == target
-                    ? AdapterResult<MutationReceipt>.Success(new(scope, previous.StateRevision))
-                    : Fail<MutationReceipt>(AdapterErrorCodes.PermissionDenied, "The operation ID belongs to another scope.", scope.OperationId);
             if (_uncertain is not null)
                 return Fail<MutationReceipt>(AdapterErrorCodes.UnknownOutcome,
                     "Reconcile the outstanding emulator mutation before issuing another.", scope.OperationId);
+
+            var retry = false;
+            if (_lastResolution is { } previous && previous.Request.Scope.OperationId == scope.OperationId)
+            {
+                if (previous.Request.Scope != scope)
+                    return Fail<MutationReceipt>(AdapterErrorCodes.PermissionDenied, "The operation ID belongs to another scope.", scope.OperationId);
+                if (!previous.Request.MatchesOperation(target))
+                    return Fail<MutationReceipt>(AdapterErrorCodes.InvalidArgument,
+                        "A changed emulator operation must use a new operation ID.", scope.OperationId);
+                if (previous.Receipt.Disposition == MutationDisposition.Applied)
+                    return AdapterResult<MutationReceipt>.Success(new(scope, previous.Receipt.StateRevision));
+
+                retry = true;
+            }
 
             var snapshot = await ReadAsync(token).ConfigureAwait(false);
             if (!snapshot.Succeeded)
@@ -60,7 +70,10 @@ internal sealed partial class EmulatorSessionControl
             if (check is not null && await check(capability, token).ConfigureAwait(false) is { } rejected)
                 return AdapterResult<MutationReceipt>.Failure(rejected);
 
-            return await DispatchAsync(target, cancellation => invoke(port, cancellation), token).ConfigureAwait(false);
+            var result = await DispatchAsync(target, cancellation => invoke(port, cancellation), token).ConfigureAwait(false);
+            if (retry && result.Succeeded)
+                _lastResolution = (target, new(scope, MutationDisposition.Applied, result.Value.StateRevision));
+            return result;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -104,9 +117,10 @@ internal sealed partial class EmulatorSessionControl
                 result.Value.StateRevision < scope.ExpectedRevision.GetValueOrDefault())
                 return Fail<MutationResolution>(AdapterErrorCodes.Incompatible, "The emulator returned an invalid operation resolution.", scope.OperationId);
             if (result.Value.Disposition != MutationDisposition.Unknown)
+            {
                 _uncertain = null;
-            if (result.Value.Disposition == MutationDisposition.Applied)
-                _lastAppliedResolution = (pending, result.Value.StateRevision);
+                _lastResolution = (pending, result.Value);
+            }
             return result;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -159,5 +173,36 @@ internal sealed partial class EmulatorSessionControl
         return true;
     }
 
-    private sealed record PendingMutation(SessionOperation Scope, CapabilityId Capability, string? SubjectId, string Operation);
+    private sealed record PendingMutation(SessionOperation Scope, CapabilityId Capability, string? SubjectId, string Operation, object Payload)
+    {
+        internal bool MatchesOperation(PendingMutation other) => Capability == other.Capability &&
+            string.Equals(SubjectId, other.SubjectId, StringComparison.Ordinal) &&
+            string.Equals(Operation, other.Operation, StringComparison.Ordinal) &&
+            EqualPayload(Payload, other.Payload);
+
+        private static bool EqualPayload(object left, object right) => (left, right) switch
+        {
+            (MemoryWriteRequest a, MemoryWriteRequest b) =>
+                a.Address == b.Address && a.Data.AsSpan().SequenceEqual(b.Data.AsSpan()),
+            (IConsolePort.ChannelInput a, IConsolePort.ChannelInput b) =>
+                string.Equals(a.ChannelId, b.ChannelId, StringComparison.Ordinal) && a.Data.AsSpan().SequenceEqual(b.Data.AsSpan()),
+            (IRegisterPort.Update a, IRegisterPort.Update b) =>
+                string.Equals(a.CpuId, b.CpuId, StringComparison.Ordinal) && a.Values.Length == b.Values.Length &&
+                a.Values.Zip(b.Values).All(static pair => EqualRegisterValue(pair.First, pair.Second)),
+            (IInputPort.Batch a, IInputPort.Batch b) =>
+                a.Target == b.Target && a.FirstSequence == b.FirstSequence && a.Events.Length == b.Events.Length &&
+                a.Events.Zip(b.Events).All(static pair => EqualInput(pair.First, pair.Second)),
+            _ => Equals(left, right),
+        };
+
+        private static bool EqualRegisterValue(IRegisterPort.RegisterValue left, IRegisterPort.RegisterValue right) =>
+            string.Equals(left.Id, right.Id, StringComparison.Ordinal) && left.WidthBits == right.WidthBits &&
+            left.Writable == right.Writable && left.Value.AsSpan().SequenceEqual(right.Value.AsSpan());
+
+        private static bool EqualInput(IInputPort.InputEvent left, IInputPort.InputEvent right) =>
+            left is IInputPort.InputEvent.Controller a && right is IInputPort.InputEvent.Controller b
+                ? a.Buttons == b.Buttons && a.Axes.OrderBy(static pair => pair.Key, StringComparer.Ordinal)
+                    .SequenceEqual(b.Axes.OrderBy(static pair => pair.Key, StringComparer.Ordinal))
+                : left == right;
+    }
 }

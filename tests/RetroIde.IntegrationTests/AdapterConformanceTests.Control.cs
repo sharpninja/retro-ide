@@ -49,7 +49,7 @@ public sealed partial class AdapterConformanceTests
         var adapter = new ControlAdapter();
         var control = adapter.StartControl();
         var scope = adapter.Scope("desktop");
-        var request = new MutationRequest<ExecutionCommand>(scope, new(ExecutionAction.Pause));
+        var request = new MutationRequest<ExecutionCommand>(scope, new(ExecutionAction.StepInstruction, "cpu"));
         adapter.OnExecute = (command, _) =>
         {
             if (disposition == MutationDisposition.Applied)
@@ -73,6 +73,12 @@ public sealed partial class AdapterConformanceTests
         Assert.Single(adapter.Dispatched);
 
         adapter.OnExecute = null;
+        var changedRequest = request with { Payload = request.Payload with { Count = 2 } };
+        var changed = await control.ExecuteAsync(changedRequest, token);
+        Assert.False(changed.Succeeded);
+        Assert.Equal(AdapterErrorCodes.InvalidArgument, changed.Error.Code, StringComparer.Ordinal);
+        Assert.Equal(scope.OperationId, changed.Error.OperationId);
+
         var retry = await control.ExecuteAsync(request, token);
         if (disposition == MutationDisposition.Applied)
         {

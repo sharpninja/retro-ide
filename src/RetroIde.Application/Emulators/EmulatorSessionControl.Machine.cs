@@ -123,7 +123,7 @@ internal sealed partial class EmulatorSessionControl
             return InvalidPortInput<MutationReceipt>(request.Scope);
         var bytes = request.Payload.Data.Length;
 
-        return MutatePortAsync<IMemoryPort>(new(request.Scope, IMemoryPort.Capability, address.SpaceId, IMemoryPort.WriteMapped),
+        return MutatePortAsync<IMemoryPort>(new(request.Scope, IMemoryPort.Capability, address.SpaceId, IMemoryPort.WriteMapped, request.Payload),
             (port, cancellation) => port.WriteAsync(request, cancellation), async (descriptor, cancellation) =>
             {
                 if (!descriptor.Limits.TryGetValue("max-write-bytes", out var max) || (ulong)bytes > max)

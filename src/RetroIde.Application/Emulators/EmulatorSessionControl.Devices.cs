@@ -11,7 +11,7 @@ internal sealed partial class EmulatorSessionControl
             batch.FirstSequence > ulong.MaxValue - (ulong)(batch.Events.Length - 1) || !batch.Events.All(ValidInput))
             return InvalidPortInput<MutationReceipt>(request.Scope);
 
-        return MutatePortAsync<IInputPort>(new(request.Scope, IInputPort.Capability, batch.Target.DeviceId, IInputPort.Send),
+        return MutatePortAsync<IInputPort>(new(request.Scope, IInputPort.Capability, batch.Target.DeviceId, IInputPort.Send, batch),
             (port, cancellation) => port.SendAsync(request, cancellation),
             (capability, _) => CheckAdvertisedLimit(capability, request.Scope, "max-events", (ulong)batch.Events.Length, "input batch"),
             token, requireRevision: false);
@@ -19,7 +19,7 @@ internal sealed partial class EmulatorSessionControl
 
     internal ValueTask<AdapterResult<MutationReceipt>> ReleaseInputAsync(MutationRequest<IInputPort.Capture> request, CancellationToken token) =>
         ValidCapture(request.Payload)
-            ? MutatePortAsync<IInputPort>(new(request.Scope, IInputPort.Capability, request.Payload.DeviceId, IInputPort.Release),
+            ? MutatePortAsync<IInputPort>(new(request.Scope, IInputPort.Capability, request.Payload.DeviceId, IInputPort.Release, request.Payload),
                 (port, cancellation) => port.ReleaseAsync(request, cancellation), null, token, requireRevision: false)
             : InvalidPortInput<MutationReceipt>(request.Scope);
 
@@ -36,7 +36,7 @@ internal sealed partial class EmulatorSessionControl
             _ => null,
         };
         return operation is not null && MachineMap.Identifier(request.Payload.SlotId)
-            ? MutatePortAsync<IMediaStoragePort>(new(request.Scope, IMediaStoragePort.Capability, request.Payload.SlotId, operation),
+            ? MutatePortAsync<IMediaStoragePort>(new(request.Scope, IMediaStoragePort.Capability, request.Payload.SlotId, operation, request.Payload),
                 (port, cancellation) => port.ChangeAsync(request, cancellation), null, token)
             : InvalidPortInput<MutationReceipt>(request.Scope);
     }
@@ -60,7 +60,7 @@ internal sealed partial class EmulatorSessionControl
             _ => null,
         };
         return operation is null ? InvalidPortInput<MutationReceipt>(request.Scope)
-            : MutatePortAsync<ISnapshotReplayPort>(new(request.Scope, ISnapshotReplayPort.Capability, null, operation),
+            : MutatePortAsync<ISnapshotReplayPort>(new(request.Scope, ISnapshotReplayPort.Capability, null, operation, request.Payload),
                 (port, cancellation) => port.ChangeAsync(request, cancellation), null, token);
     }
 

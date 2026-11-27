@@ -32,6 +32,7 @@ public sealed partial class AdapterConformanceTests
         private readonly Dictionary<IInputPort.Capture, ulong> _next = [];
         internal ImmutableArray<CapabilityDescriptor> AdditionalCapabilities { get; private set; } = [];
         internal List<CapabilityId> PortRequests { get; } = [];
+        internal bool DropNextPortReply { get; set; }
 
         internal void EnableAdditionalPorts()
         {
@@ -103,6 +104,11 @@ public sealed partial class AdapterConformanceTests
 
             apply();
             Current = Current with { StateRevision = Current.StateRevision + 1, Cursor = new(Identity, Current.Cursor.Sequence + 1) };
+            if (DropNextPortReply)
+            {
+                DropNextPortReply = false;
+                return ValueTask.FromResult(AdapterResult<MutationReceipt>.Failure(new(AdapterErrorCodes.Timeout, "Host reply lost.")));
+            }
             return Success(new MutationReceipt(scope, Current.StateRevision));
         }
 

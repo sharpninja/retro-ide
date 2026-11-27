@@ -26,7 +26,7 @@ internal sealed partial class EmulatorSessionControl
     {
         var input = request.Payload;
         return MachineMap.Identifier(input.ChannelId) && !input.Data.IsDefaultOrEmpty && input.Data.Length <= 4096
-            ? MutatePortAsync<IConsolePort>(new(request.Scope, IConsolePort.Capability, input.ChannelId, IConsolePort.Send),
+            ? MutatePortAsync<IConsolePort>(new(request.Scope, IConsolePort.Capability, input.ChannelId, IConsolePort.Send, input),
                 (port, cancellation) => port.SendAsync(request, cancellation),
                 (capability, _) => CheckAdvertisedLimit(capability, request.Scope, "max-input-bytes", (ulong)input.Data.Length, "console input"), token)
             : InvalidPortInput<MutationReceipt>(request.Scope);
@@ -45,7 +45,7 @@ internal sealed partial class EmulatorSessionControl
     {
         var run = request.Payload;
         return MachineMap.Identifier(run.FixtureId) && run.Iterations is > 0 and <= 1000
-            ? MutatePortAsync<ITestAutomationPort>(new(request.Scope, ITestAutomationPort.Capability, run.FixtureId, ITestAutomationPort.Run),
+            ? MutatePortAsync<ITestAutomationPort>(new(request.Scope, ITestAutomationPort.Capability, run.FixtureId, ITestAutomationPort.Run, run),
                 (port, cancellation) => port.RunAsync(request, cancellation),
                 (capability, _) => CheckAdvertisedLimit(capability, request.Scope, "max-iterations", (ulong)run.Iterations, "iteration"), token)
             : InvalidPortInput<MutationReceipt>(request.Scope);

@@ -26,7 +26,7 @@ internal sealed partial class EmulatorSessionControl
     {
         var change = request.Payload;
         return MachineMap.Identifier(change.Clock.Id) && MachineMap.Identifier(change.ModeId) && change.SpeedRatio is not <= 0
-            ? MutatePortAsync<ITimingPort>(new(request.Scope, ITimingPort.Capability, change.Clock.Id, ITimingPort.SetThrottle),
+            ? MutatePortAsync<ITimingPort>(new(request.Scope, ITimingPort.Capability, change.Clock.Id, ITimingPort.SetThrottle, change),
                 (port, cancellation) => port.SetThrottleAsync(request, cancellation), null, token)
             : InvalidPortInput<MutationReceipt>(request.Scope);
     }
@@ -78,7 +78,7 @@ internal sealed partial class EmulatorSessionControl
     {
         var update = request.Payload;
         return MachineMap.Identifier(update.CpuId) && ValidRegisters(update.Values, allowEmpty: false)
-            ? MutatePortAsync<IRegisterPort>(new(request.Scope, IRegisterPort.Capability, update.CpuId, IRegisterPort.Write),
+            ? MutatePortAsync<IRegisterPort>(new(request.Scope, IRegisterPort.Capability, update.CpuId, IRegisterPort.Write, update),
                 (port, cancellation) => port.WriteAsync(request, cancellation), null, token)
             : InvalidPortInput<MutationReceipt>(request.Scope);
     }
@@ -99,7 +99,7 @@ internal sealed partial class EmulatorSessionControl
             (rule.When & ~knownTriggers) != IDebuggerPort.Trigger.None)
             return InvalidPortInput<MutationReceipt>(request.Scope);
 
-        return MutatePortAsync<IDebuggerPort>(new(request.Scope, IDebuggerPort.Capability, rule.Address.CpuId, IDebuggerPort.ChangeRule),
+        return MutatePortAsync<IDebuggerPort>(new(request.Scope, IDebuggerPort.Capability, rule.Address.CpuId, IDebuggerPort.ChangeRule, request.Payload),
             (port, cancellation) => port.ChangeRuleAsync(request, cancellation),
             request.Payload.Action == IDebuggerPort.RuleAction.Put
                 ? (_, cancellation) => ValidateStopAddressAsync(request.Scope, rule, cancellation) : null, token);
