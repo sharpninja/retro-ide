@@ -9,6 +9,7 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
 {
     private readonly Dictionary<string, OpenDocument> _documents = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PendingCompletion> _pending = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _workspaceFolders = new(StringComparer.Ordinal);
     private string _encoding = "utf-16";
     private bool _initialized;
     private bool _shutDown;
@@ -84,6 +85,9 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
             case "initialized":
             case "textDocument/didSave":
                 break;
+            case "workspace/didChangeWorkspaceFolders":
+                ChangeFolders(parameters.GetProperty("event"));
+                break;
             case "textDocument/didOpen":
                 var opened = parameters.GetProperty("textDocument");
                 var uri = opened.GetProperty("uri").GetString()!;
@@ -150,16 +154,34 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
             _traceDirectory = trace.GetString();
         _crashOnFirstCompletion = options.ValueKind == JsonValueKind.Object &&
             options.TryGetProperty("crashOnFirstCompletion", out var crash) && crash.ValueKind == JsonValueKind.True;
+        var folderMode = options.ValueKind == JsonValueKind.Object && options.TryGetProperty("workspaceFolderMode", out var mode)
+            ? mode.GetString() : null;
+        foreach (var folder in parameters.GetProperty("workspaceFolders").EnumerateArray())
+            _workspaceFolders.Add(folder.GetProperty("uri").GetString()!);
         _initialized = true;
         connection.Send(new
         {
             jsonrpc = "2.0", id,
             result = new
             {
-                capabilities = new { positionEncoding = _encoding, textDocumentSync = new { openClose = true, change = 2, save = true }, completionProvider = new { } },
+                capabilities = new
+                {
+                    positionEncoding = _encoding,
+                    textDocumentSync = new { openClose = true, change = 2, save = true },
+                    completionProvider = new { },
+                    workspace = new { workspaceFolders = new { supported = folderMode is "initial" or "dynamic", changeNotifications = folderMode is "dynamic" } },
+                },
                 serverInfo = new { name = "Retro IDE LSP test fixture" },
             },
         });
+    }
+
+    private void ChangeFolders(JsonElement folders)
+    {
+        foreach (var folder in folders.GetProperty("removed").EnumerateArray())
+            _workspaceFolders.Remove(folder.GetProperty("uri").GetString()!);
+        foreach (var folder in folders.GetProperty("added").EnumerateArray())
+            _workspaceFolders.Add(folder.GetProperty("uri").GetString()!);
     }
 
     /// <summary>Applies ordered full or ranged content changes to the current in-memory document.</summary>
@@ -242,7 +264,7 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
     {
         jsonrpc = "2.0", id = completion.Id,
         result = new[] { new { label = "fixture completion", detail = completion.Document.Text,
-            data = new { uri = completion.Uri, version = completion.Document.Version, offset = completion.Offset } } },
+            data = new { uri = completion.Uri, version = completion.Document.Version, offset = completion.Offset, workspaceFolders = _workspaceFolders.Order(StringComparer.Ordinal).ToArray() } } },
     });
 
     /// <summary>Publishes a deterministic first-line diagnostic when the fixture text has the error marker.</summary>

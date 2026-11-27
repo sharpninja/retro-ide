@@ -162,14 +162,19 @@ internal sealed partial class LanguageServerSession
         {
             if (item.ValueKind != JsonValueKind.Object || !item.TryGetProperty("id", out var id) || id.ValueKind != JsonValueKind.String ||
                 !item.TryGetProperty("method", out var member) || member.ValueKind != JsonValueKind.String ||
-                id.GetString() is not { Length: > 0 } name || member.GetString() is not "workspace/didChangeConfiguration")
+                id.GetString() is not { Length: > 0 } name ||
+                member.GetString() is not ("workspace/didChangeConfiguration" or FolderChange))
                 return false;
             changes.Add((name, member.GetString()!));
         }
         foreach (var change in changes)
         {
             if (remove)
+            {
                 _registrations.TryRemove(change.Id, out _);
+                if (string.Equals(_folderRegistrationId, change.Id, StringComparison.Ordinal))
+                    _folderRegistrationId = null;
+            }
             else
                 _registrations[change.Id] = change.Method;
         }

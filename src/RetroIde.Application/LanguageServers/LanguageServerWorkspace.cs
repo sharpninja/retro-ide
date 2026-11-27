@@ -1,48 +1,126 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
+using RetroIde.Application.Workspaces;
 
 namespace RetroIde.Application.LanguageServers;
 
-internal sealed class LanguageServerWorkspace(ILogger logger) : IAsyncDisposable
+internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
 {
-    private readonly ConcurrentDictionary<Guid, Slot> _servers = new();
+    private readonly WorkspaceExplorer _explorer;
+    private readonly ILogger _logger;
+    private readonly ConcurrentDictionary<LanguageProfileKey, Slot> _servers = new();
     private readonly ConcurrentDictionary<Guid, LanguageDocument> _documents = new();
     private readonly SemaphoreSlim _configuration = new(1);
     private readonly CancellationTokenSource _shutdown = new();
     private readonly Lock _disposeGate = new();
+    private readonly Slot[] _restore;
     private Task? _dispose;
 
-    internal LanguageServerStatus[] List() => _servers.Values.Select(slot => slot.Status).OrderBy(item => item.RootId).ToArray();
+    internal LanguageServerWorkspace(WorkspaceExplorer explorer, ILogger logger)
+    {
+        _explorer = explorer;
+        _logger = logger;
+        var state = explorer.Snapshot();
+        var pending = new List<Slot>();
+        foreach (var saved in state.LanguageProfiles ?? [])
+        {
+            var root = state.Roots.Single(item => item.Id == saved.RootId);
+            var slot = new Slot(saved.Bind(root), null, saved.Enabled ? "starting" : "stopped");
+            _servers[saved.Key] = slot;
+            if (saved.Enabled)
+                pending.Add(slot);
+        }
+        _restore = pending.ToArray();
+    }
 
-    internal bool Contains(Guid rootId) => _servers.ContainsKey(rootId);
+    internal LanguageServerStatus[] List()
+    {
+        var roots = _explorer.Roots.Select(root => root.Id).ToHashSet();
+        return _servers.Values.Where(slot => roots.Contains(slot.Configuration.RootId)).Select(slot => slot.Status)
+            .OrderBy(item => item.RootId).ThenBy(item => item.ProfileId, StringComparer.Ordinal).ToArray();
+    }
 
-    internal LanguageServerOutput? ReadOutput(Guid rootId) =>
-        _servers.TryGetValue(rootId, out var slot) ? new(slot.Status, slot.Session?.Output ?? "") : null;
+    internal LanguageProfileKey? Resolve(Guid rootId, string? profileId, out bool ambiguous)
+    {
+        ambiguous = false;
+        var key = new LanguageProfileKey(rootId, profileId ?? LanguageProfileKey.DefaultProfile);
+        if (_servers.ContainsKey(key))
+            return key;
+        if (profileId is not null)
+            return null;
+        var matches = _servers.Keys.Where(item => item.RootId == rootId).Take(2).ToArray();
+        ambiguous = matches.Length > 1;
+        return matches.Length == 1 ? matches[0] : null;
+    }
 
-    internal async Task<LanguageServerStatus> ConfigureAsync(LanguageServerConfiguration settings, CancellationToken token)
+    internal LanguageServerOutput? ReadOutput(LanguageProfileKey key) =>
+        _servers.TryGetValue(key, out var slot) ? new(slot.Status, slot.Session?.Output ?? "") : null;
+
+    internal async Task RestoreAsync()
+    {
+        try
+        {
+            await _configuration.WaitAsync(_shutdown.Token).ConfigureAwait(false);
+            try
+            {
+                foreach (var slot in _restore)
+                {
+                    if (!_servers.TryGetValue(slot.Configuration.Key, out var current) || !ReferenceEquals(slot, current))
+                        continue;
+                    try { await AttachAsync(slot.Configuration, _shutdown.Token).ConfigureAwait(false); }
+                    catch (Exception error) when (RuntimeFailures.CanRecover(error) && !_shutdown.IsCancellationRequested)
+                    {
+                        RuntimeFailures.Report(_logger, error, "Restore language server profile");
+                    }
+                }
+            }
+            finally { _configuration.Release(); }
+        }
+        catch (OperationCanceledException) when (_shutdown.IsCancellationRequested) { }
+    }
+
+    internal async Task<LanguageServerStatus?> ConfigureAsync(WorkspaceExplorer.Root root, SavedLanguageProfile profile, CancellationToken token)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, _shutdown.Token);
         await _configuration.WaitAsync(linked.Token).ConfigureAwait(false);
         try
         {
-            if (_servers.TryGetValue(settings.RootId, out var installed))
-                await StopAsync(installed).ConfigureAwait(false);
-            return await StartAsync(settings, linked.Token).ConfigureAwait(false);
+            linked.Token.ThrowIfCancellationRequested();
+            if (!_explorer.RememberLanguageProfile(profile))
+                return null;
+            if (_servers.TryGetValue(profile.Key, out var installed))
+                await DetachAsync(installed, _shutdown.Token).ConfigureAwait(false);
+            return await AttachAsync(profile.Bind(root), _shutdown.Token).ConfigureAwait(false);
         }
         finally { _configuration.Release(); }
     }
 
-    internal async Task<LanguageServerStatus?> SetRunningAsync(Guid rootId, bool running, CancellationToken token)
+    internal async Task<LanguageServerStatus?> ChangeProfileAsync(LanguageProfileKey key, ProfileAction action, CancellationToken token)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, _shutdown.Token);
         await _configuration.WaitAsync(linked.Token).ConfigureAwait(false);
         try
         {
-            if (!_servers.TryGetValue(rootId, out var slot))
+            linked.Token.ThrowIfCancellationRequested();
+            if (!_servers.TryGetValue(key, out var slot) || !_explorer.SetLanguageProfileEnabled(key, action == ProfileAction.Restart))
                 return null;
-            await StopAsync(slot).ConfigureAwait(false);
-            return running ? await StartAsync(slot.Configuration, linked.Token).ConfigureAwait(false) : _servers[rootId].Status;
+
+            if (action == ProfileAction.Restart)
+            {
+                await RestartAsync(slot, _shutdown.Token).ConfigureAwait(false);
+            }
+            else
+            {
+                await DetachAsync(slot, _shutdown.Token).ConfigureAwait(false);
+                if (action == ProfileAction.Remove)
+                {
+                    _explorer.RemoveLanguageProfile(key);
+                    _servers.TryRemove(key, out _);
+                    return slot.Status with { State = "removed", SessionId = null, ProcessId = null, WorkspaceRootIds = null };
+                }
+            }
+            return _servers[key].Status;
         }
         finally { _configuration.Release(); }
     }
@@ -51,70 +129,78 @@ internal sealed class LanguageServerWorkspace(ILogger logger) : IAsyncDisposable
         [NotNullWhen(true)] out Task<LanguageQueryResult>? pending)
     {
         pending = null;
-        if (!_servers.TryGetValue(document.Context.RootId, out var slot) || slot.Session is not { IsRunning: true } session ||
+        if (FindDocumentSlot(document) is not { Session: { IsRunning: true } session } slot ||
             slot.Configuration.GetLanguage(document.Path) is not { } language)
             return false;
-        pending = Task.Run(() => session.QueryAsync(document, language, method, provider, offset,
-            () => _documents.TryGetValue(document.Context.ViewKey, out var latest) && latest.Context == document.Context,
-            token), token);
+        pending = Task.Run(() => session.QueryAsync(document, slot.Configuration, language, method, provider, offset,
+            () => _documents.TryGetValue(document.Context.ViewKey, out var latest) && latest.Context == document.Context &&
+                IsCurrent(slot.Configuration.Key, session.Id), token), token);
         return true;
     }
 
-    internal LanguageDiagnosticResult Diagnostics(LanguageDocument document)
-    {
-        if (_servers.TryGetValue(document.Context.RootId, out var slot) && slot.Session is { IsRunning: true } session)
-            return session.Diagnostics(document);
-        return new(document.Context, null, []);
-    }
+    internal LanguageDiagnosticResult Diagnostics(LanguageDocument document) =>
+        FindDocumentSlot(document)?.Session is { IsRunning: true } session
+            ? session.Diagnostics(document) : new(document.Context, null, []);
 
-    internal bool IsCurrent(Guid rootId, Guid? sessionId) =>
-        _servers.TryGetValue(rootId, out var slot) && slot.Session is { IsRunning: true } session && session.Id == sessionId;
+    internal bool IsCurrent(LanguageProfileKey key, Guid? sessionId) =>
+        _servers.TryGetValue(key, out var slot) && slot.Session is { IsRunning: true } session && session.Id == sessionId &&
+        _explorer.Roots.Any(root => root.Id == key.RootId);
 
     internal void Observe(LanguageDocument document)
     {
         if (_shutdown.IsCancellationRequested)
             return;
         _documents[document.Context.ViewKey] = document;
-        if (_servers.TryGetValue(document.Context.RootId, out var slot))
+        if (FindDocumentSlot(document) is { } slot)
             _ = Task.Run(() => SynchronizeAsync(slot, document, _shutdown.Token));
     }
 
     internal void Closed(LanguageDocument document)
     {
         _documents.TryRemove(document.Context.ViewKey, out _);
-        if (_servers.TryGetValue(document.Context.RootId, out var slot) && slot.Session is { IsRunning: true } session)
+        if (FindDocumentSlot(document)?.Session is { IsRunning: true } session)
             _ = CloseDocumentAsync(session, document);
     }
 
-    private async Task<LanguageServerStatus> StartAsync(LanguageServerConfiguration settings, CancellationToken token)
+    internal void ReconcileRoots()
     {
-        _servers[settings.RootId] = new Slot(settings, null, "starting");
-        LanguageServerSession? session = null;
+        var roots = _explorer.Roots.Select(root => root.Id).ToHashSet();
+        if (!_shutdown.IsCancellationRequested && _servers.Keys.Any(key => !roots.Contains(key.RootId)))
+            _ = Task.Run(PruneAsync);
+    }
+
+    private async Task PruneAsync()
+    {
         try
         {
-            session = await LanguageServerSession.StartAsync(settings, logger, token).ConfigureAwait(false);
-            var slot = new Slot(settings, session, "running");
-            _servers[settings.RootId] = slot;
-            foreach (var document in _documents.Values.Where(item => item.Context.RootId == settings.RootId))
-                await SynchronizeAsync(slot, document, token).ConfigureAwait(false);
-            token.ThrowIfCancellationRequested();
-            _ = ReapAsync(session);
-            return slot.Status;
+            await _configuration.WaitAsync(_shutdown.Token).ConfigureAwait(false);
+            try
+            {
+                var roots = _explorer.Roots.Select(root => root.Id).ToHashSet();
+                foreach (var slot in _servers.Values.Where(slot => !roots.Contains(slot.Configuration.RootId)))
+                {
+                    await DetachAsync(slot, _shutdown.Token).ConfigureAwait(false);
+                    _servers.TryRemove(slot.Configuration.Key, out _);
+                }
+                foreach (var document in _documents.Values.Where(document => !roots.Contains(document.Context.RootId)))
+                    _documents.TryRemove(document.Context.ViewKey, out _);
+            }
+            finally { _configuration.Release(); }
         }
-        catch
+        catch (OperationCanceledException) when (_shutdown.IsCancellationRequested) { }
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
         {
-            _servers[settings.RootId] = new(settings, null, token.IsCancellationRequested ? "stopped" : "faulted");
-            if (session is not null)
-                await DisposeSessionAsync(session).ConfigureAwait(false);
-            throw;
+            RuntimeFailures.Report(_logger, error, "Remove language server profile for closed workspace root");
         }
     }
 
-    private async Task StopAsync(Slot slot)
+    private Slot? FindDocumentSlot(LanguageDocument document)
     {
-        _servers[slot.Configuration.RootId] = new(slot.Configuration, null, "stopped");
-        if (slot.Session is not null)
-            await DisposeSessionAsync(slot.Session).ConfigureAwait(false);
+        var rootId = document.Context.RootId;
+        if (!_explorer.Roots.Any(root => root.Id == rootId))
+            return null;
+        return _servers.Values.FirstOrDefault(slot => slot.Configuration.RootId == rootId &&
+            slot.Configuration.GetLanguage(document.Path) is not null);
     }
 
     private async Task SynchronizeAsync(Slot slot, LanguageDocument document, CancellationToken token)
@@ -125,7 +211,8 @@ internal sealed class LanguageServerWorkspace(ILogger logger) : IAsyncDisposable
         try
         {
             await session.SynchronizeAsync(document, language, () =>
-                _documents.TryGetValue(document.Context.ViewKey, out var current) && ReferenceEquals(document, current), token).ConfigureAwait(false);
+                _documents.TryGetValue(document.Context.ViewKey, out var current) && ReferenceEquals(document, current) &&
+                IsCurrent(slot.Configuration.Key, session.Id), token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (LanguageDocumentChangedException) { }
@@ -133,7 +220,7 @@ internal sealed class LanguageServerWorkspace(ILogger logger) : IAsyncDisposable
         catch (Exception error) when (RuntimeFailures.CanRecover(error))
         {
             if (session.IsRunning)
-                RuntimeFailures.Report(logger, error, "Synchronize language server document");
+                RuntimeFailures.Report(_logger, error, "Synchronize language server document");
         }
     }
 
@@ -143,7 +230,7 @@ internal sealed class LanguageServerWorkspace(ILogger logger) : IAsyncDisposable
         catch (Exception error) when (RuntimeFailures.CanRecover(error))
         {
             if (session.IsRunning && !_shutdown.IsCancellationRequested)
-                RuntimeFailures.Report(logger, error, "Close language server document");
+                RuntimeFailures.Report(_logger, error, "Close language server document");
         }
     }
 
@@ -158,7 +245,7 @@ internal sealed class LanguageServerWorkspace(ILogger logger) : IAsyncDisposable
         try { await session.DisposeAsync().ConfigureAwait(false); }
         catch (Exception error) when (RuntimeFailures.CanRecover(error))
         {
-            RuntimeFailures.Report(logger, error, "Dispose language server session");
+            RuntimeFailures.Report(_logger, error, "Dispose language server session");
         }
     }
 
@@ -174,16 +261,19 @@ internal sealed class LanguageServerWorkspace(ILogger logger) : IAsyncDisposable
         await _configuration.WaitAsync().ConfigureAwait(false);
         try
         {
-            foreach (var slot in _servers.Values)
-                await StopAsync(slot).ConfigureAwait(false);
+            foreach (var session in _servers.Values.Select(slot => slot.Session).OfType<LanguageServerSession>().Distinct())
+                await DisposeSessionAsync(session).ConfigureAwait(false);
             _servers.Clear();
             _documents.Clear();
         }
         finally { _configuration.Release(); }
     }
 
+    internal enum ProfileAction { Stop, Restart, Remove }
+
     private sealed record Slot(LanguageServerConfiguration Configuration, LanguageServerSession? Session, string State)
     {
-        internal LanguageServerStatus Status => Session?.Status ?? new(Configuration.RootId, Configuration.Executable, State);
+        internal LanguageServerStatus Status => Session?.StatusFor(Configuration) ??
+            new(Configuration.RootId, Configuration.Executable, State, ProfileId: Configuration.ProfileId);
     }
 }

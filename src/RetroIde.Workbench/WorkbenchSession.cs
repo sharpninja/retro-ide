@@ -58,6 +58,7 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
         Controller.RegisterExplorer(ExplorerView, View, Documents);
         Controller.RegisterSourceControl(SourceControl, View);
         GitRestoration = Controller.RestoreGitAsync(View);
+        _ = Task.Run(Controller.LanguageServers.RestoreAsync);
     }
 
     internal WorkspaceExplorer Explorer { get; }

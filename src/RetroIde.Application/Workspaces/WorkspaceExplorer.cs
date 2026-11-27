@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using RetroIde.Application.Git;
+using RetroIde.Application.LanguageServers;
 
 namespace RetroIde.Application.Workspaces;
 
@@ -16,12 +17,13 @@ internal sealed class WorkspaceExplorer
     internal sealed record SourceFile(SourceAddress Address, string Text, Encoding Encoding);
 
     internal sealed record State(int Version, Guid WorkspaceId, Root[] Roots, Address[] Expanded, Address? Selection = null,
-        GitWorkspaceLocation? GitSelection = null);
+        GitWorkspaceLocation? GitSelection = null, SavedLanguageProfile[]? LanguageProfiles = null);
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
     private readonly Lock _gate = new();
     private readonly Dictionary<Guid, Root> _roots = [];
     private readonly HashSet<Address> _expanded = new(AddressEquality);
+    private readonly Dictionary<LanguageProfileKey, SavedLanguageProfile> _languageProfiles = [];
     private Address? _selection;
     private GitWorkspaceLocation? _gitSelection;
 
@@ -74,6 +76,8 @@ internal sealed class WorkspaceExplorer
 
             foreach (var rootId in removed)
                 _roots.Remove(rootId);
+            foreach (var profile in _languageProfiles.Keys.Where(key => removed.Contains(key.RootId)).ToArray())
+                _languageProfiles.Remove(profile);
             _expanded.RemoveWhere(address => removed.Contains(address.RootId));
             if (_selection is { } selected && removed.Contains(selected.RootId))
                 _selection = null;
@@ -109,13 +113,44 @@ internal sealed class WorkspaceExplorer
     public State Snapshot()
     {
         lock (_gate)
-            return new State(1, WorkspaceId, _roots.Values.ToArray(), _expanded.ToArray(), _selection, _gitSelection);
+            return new State(1, WorkspaceId, _roots.Values.ToArray(), _expanded.ToArray(), _selection, _gitSelection,
+                _languageProfiles.Count == 0 ? null : _languageProfiles.Values.ToArray());
     }
 
     internal void RememberGitSelection(GitWorkspaceLocation location)
     {
         lock (_gate)
             _gitSelection = location with { Address = NormalizeAddress(location.Address) };
+    }
+
+    internal bool RememberLanguageProfile(SavedLanguageProfile profile)
+    {
+        lock (_gate)
+        {
+            if (!_roots.ContainsKey(profile.RootId))
+                return false;
+            if (_languageProfiles.Values.Any(other => other.RootId == profile.RootId && other.Key != profile.Key && other.Overlaps(profile)))
+                throw new LanguageProfileConflictException();
+            _languageProfiles[profile.Key] = profile;
+            return true;
+        }
+    }
+
+    internal bool SetLanguageProfileEnabled(LanguageProfileKey key, bool enabled)
+    {
+        lock (_gate)
+        {
+            if (!_languageProfiles.TryGetValue(key, out var profile))
+                return false;
+            _languageProfiles[key] = profile with { Enabled = enabled };
+            return true;
+        }
+    }
+
+    internal void RemoveLanguageProfile(LanguageProfileKey key)
+    {
+        lock (_gate)
+            _languageProfiles.Remove(key);
     }
 
     public static WorkspaceExplorer Restore(State state)
@@ -131,6 +166,13 @@ internal sealed class WorkspaceExplorer
         {
             try { explorer.RememberGitSelection(git); }
             catch (Exception error) when (error is ArgumentException or IOException or NotSupportedException) { }
+        }
+        foreach (var profile in state.LanguageProfiles ?? [])
+        {
+            if (profile is null || !profile.IsValid())
+                continue;
+            try { explorer.RememberLanguageProfile(profile); }
+            catch (LanguageProfileConflictException) { }
         }
         return explorer;
     }

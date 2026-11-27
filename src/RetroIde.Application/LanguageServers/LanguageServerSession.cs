@@ -8,19 +8,20 @@ namespace RetroIde.Application.LanguageServers;
 
 internal sealed record LanguageAssociation(string LanguageId, string[] Extensions);
 
-internal sealed record LanguageServerConfiguration(Guid RootId, string Directory, string Executable, string[] Arguments,
-    LanguageAssociation[] Languages, JsonElement? InitializationOptions, JsonElement? Settings)
+internal sealed partial record LanguageServerConfiguration(Guid RootId, string Directory, string Executable, string[] Arguments,
+    LanguageAssociation[] Languages, JsonElement? InitializationOptions, JsonElement? Settings,
+    string ProfileId = LanguageProfileKey.DefaultProfile)
 {
-    internal string? GetLanguage(string path)
-    {
-        var extension = Path.GetExtension(path);
-        return Languages.FirstOrDefault(item => item.Extensions.Contains(extension, StringComparer.OrdinalIgnoreCase))?.LanguageId;
-    }
+    internal string? GetLanguage(string path) => MatchExtension(Path.GetExtension(path));
+
+    private string? MatchExtension(string extension) =>
+        Languages.FirstOrDefault(item => item.Extensions.Contains(extension, StringComparer.OrdinalIgnoreCase))?.LanguageId;
 }
 
 internal sealed record LanguageDocument(DocumentContext Context, string Path, string Text, long SavedRevision, string SavedText);
 internal sealed record LanguageServerStatus(Guid RootId, string Executable, string State, Guid? SessionId = null,
-    string? PositionEncoding = null, int? ProcessId = null, string? Name = null);
+    string? PositionEncoding = null, int? ProcessId = null, string? Name = null,
+    string ProfileId = LanguageProfileKey.DefaultProfile, Guid[]? WorkspaceRootIds = null);
 internal sealed record LanguageQueryResult(DocumentContext Document, LanguageServerStatus Server, JsonElement Result);
 internal sealed record LanguageDiagnosticResult(DocumentContext Document, Guid? SessionId, JsonElement[] Items);
 internal sealed record LanguageServerOutput(LanguageServerStatus Server, string StandardError);
@@ -46,11 +47,12 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
     private int _change;
     private JsonElement _capabilities;
 
-    private LanguageServerSession(LanguageServerConfiguration configuration, Process process, ILogger logger)
+    private LanguageServerSession(LanguageServerConfiguration[] roots, Process process, ILogger logger)
     {
-        _configuration = configuration;
+        _configuration = roots[0];
         _logger = logger;
-        _rootUri = FileUri(configuration.Directory);
+        _rootUri = FileUri(_configuration.Directory);
+        _folders = roots.Select(Folder.For).ToArray();
         _rpc = new LspProcess(process, logger, OnNotification, OnRequest);
     }
 
@@ -61,13 +63,15 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
     internal string Output => _rpc.Output;
     internal Task Completion => _rpc.Completion;
 
-    internal LanguageServerStatus Status => new(_configuration.RootId, _configuration.Executable,
-        IsRunning ? "running" : "faulted", Id, Encoding, _rpc.ProcessId, Name);
+    internal LanguageServerStatus StatusFor(LanguageServerConfiguration configuration) => new(configuration.RootId, configuration.Executable,
+        IsRunning ? "running" : "faulted", Id, Encoding, _rpc.ProcessId, Name, configuration.ProfileId,
+        Volatile.Read(ref _folders).Select(folder => folder.RootId).ToArray());
 
-    internal static async Task<LanguageServerSession> StartAsync(LanguageServerConfiguration configuration, ILogger logger,
+    internal static async Task<LanguageServerSession> StartAsync(LanguageServerConfiguration[] roots, ILogger logger,
         CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
+        var configuration = roots[0];
         var start = new ProcessStartInfo(configuration.Executable)
         {
             WorkingDirectory = configuration.Directory,
@@ -80,7 +84,7 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
         foreach (var argument in configuration.Arguments)
             start.ArgumentList.Add(argument);
         var process = Process.Start(start) ?? throw new IOException("The language server did not start.");
-        var session = new LanguageServerSession(configuration, process, logger);
+        var session = new LanguageServerSession(roots, process, logger);
         try
         {
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -123,6 +127,7 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
         if (reply.TryGetProperty("serverInfo", out var serverInfo) && serverInfo.TryGetProperty("name", out var name))
             Name = name.GetString();
         ReadSynchronization(_capabilities);
+        ReadFolderSupport(_capabilities);
         await _rpc.NotifyAsync("initialized", new { }, token).ConfigureAwait(false);
         _initialized = true;
     }
@@ -155,7 +160,7 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
         _capabilities.ValueKind == JsonValueKind.Object && _capabilities.TryGetProperty(provider, out var value) &&
         value.ValueKind is JsonValueKind.True or JsonValueKind.Object;
 
-    internal async Task<LanguageQueryResult> QueryAsync(LanguageDocument document, string language, string method,
+    internal async Task<LanguageQueryResult> QueryAsync(LanguageDocument document, LanguageServerConfiguration configuration, string language, string method,
         string provider, int? offset, Func<bool> currentDocument, CancellationToken token)
     {
         if (!Supports(method, provider))
@@ -168,7 +173,7 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
         await _updates.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (!currentDocument())
+            if (!ContainsRoot(document.Context.RootId) || !currentDocument())
                 throw new LanguageDocumentChangedException();
             var tracked = await SynchronizeCoreAsync(uri, document, language, token).ConfigureAwait(false);
             object arguments = offset is { } at
@@ -190,7 +195,7 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
                     throw new IOException("The language server disconnected during the document request.");
                 if (!IsRunning || !_documents.TryGetValue(uri, out var current) || current.Context != document.Context)
                     throw new LanguageDocumentChangedException();
-                return new LanguageQueryResult(document.Context, Status, result);
+                return new LanguageQueryResult(document.Context, StatusFor(configuration), result);
             }
             catch (OperationCanceledException) when (!token.IsCancellationRequested && !_rpc.IsRunning)
             {
@@ -212,7 +217,7 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
         await _updates.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (currentDocument())
+            if (ContainsRoot(document.Context.RootId) && currentDocument())
                 _ = await SynchronizeCoreAsync(FileUri(document.Path), document, language, token).ConfigureAwait(false);
         }
         finally { _updates.Release(); }
@@ -268,8 +273,6 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
             finally { _updates.Release(); }
         }
     }
-
-    private object[] Folders() => [new { uri = _rootUri, name = new DirectoryInfo(_configuration.Directory).Name }];
 
     private static bool TryTrue(JsonElement value, string property) =>
         value.TryGetProperty(property, out var member) && member.ValueKind == JsonValueKind.True;

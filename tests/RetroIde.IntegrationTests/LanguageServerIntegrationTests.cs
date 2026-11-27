@@ -63,7 +63,15 @@ public sealed partial class LanguageServerIntegrationTests
         finally { root.Delete(recursive: true); }
     }
 
-    private static async Task ConfigureAsync(Connection http, Guid rootId, object? initializationOptions = null, string encoding = "utf-8")
+    private static async Task ConfigureAsync(Connection http, Guid rootId, object? initializationOptions = null,
+        string encoding = "utf-8", string? profileId = null, string extension = ".c", object? settings = null)
+    {
+        await http.ChangeAsync("language_configure_server", ConfigurationArguments(rootId, initializationOptions, encoding,
+            profileId, extension, settings)).ConfigureAwait(true);
+    }
+
+    private static Dictionary<string, object?> ConfigurationArguments(Guid rootId, object? initializationOptions = null,
+        string encoding = "utf-8", string? profileId = null, string extension = ".c", object? settings = null)
     {
         var host = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH");
         if (string.IsNullOrEmpty(host) || !Path.IsPathFullyQualified(host) || !File.Exists(host))
@@ -75,16 +83,16 @@ public sealed partial class LanguageServerIntegrationTests
         var fixture = Path.Combine(AppContext.BaseDirectory, "RetroIde.LspFixture.dll");
         Assert.True(File.Exists(host));
         Assert.True(File.Exists(fixture));
-        var configured = await http.CallAsync("language_list_servers").ConfigureAwait(true);
-        Assert.Equal("ok", Code(configured));
-        await http.ChangeAsync("language_configure_server", new(StringComparer.Ordinal)
+        return new(StringComparer.Ordinal)
         {
             ["rootId"] = rootId,
             ["executable"] = host,
             ["arguments"] = new[] { fixture, encoding },
-            ["languages"] = new[] { new { languageId = "c", extensions = new[] { ".c" } } },
+            ["languages"] = new[] { new { languageId = extension[1..], extensions = new[] { extension } } },
+            ["profileId"] = profileId,
             ["initializationOptions"] = initializationOptions,
-        }).ConfigureAwait(true);
+            ["settings"] = settings,
+        };
     }
 
     private static async Task<JsonElement> OpenAsync(Connection http, Guid root) =>

@@ -14,8 +14,8 @@ internal interface ILanguageRegistration
 internal sealed class LanguageServerFeatures
 {
     internal sealed record ConfigureInput(Guid RootId, string Executable, LanguageAssociation[] Languages,
-        string[]? Arguments = null, JsonElement? InitializationOptions = null, JsonElement? Settings = null);
-    internal sealed record RootInput(Guid RootId);
+        string[]? Arguments = null, JsonElement? InitializationOptions = null, JsonElement? Settings = null, string? ProfileId = null);
+    internal sealed record RootInput(Guid RootId, string? ProfileId = null);
     internal sealed record CompleteInput(DocumentContext Document, int Offset);
     internal sealed record DocumentInput(DocumentContext Document);
 
@@ -31,17 +31,22 @@ internal sealed class LanguageServerFeatures
 
     internal Feature<RootInput> Restart { get; } = new("language.server.restart", "language_restart_server",
         "Restart a configured language server and reopen the live editor buffers.",
-        static (input, view, _) => PrepareControl(input, view, running: true), typeof(LanguageServerStatus), mutation: true);
+        static (input, view, _) => PrepareControl(input, view, LanguageServerWorkspace.ProfileAction.Restart),
+        typeof(LanguageServerStatus), mutation: true);
 
     internal Feature<RootInput> Stop { get; } = new("language.server.stop", "language_stop_server",
         "Stop a configured language server and retain the root configuration.",
-        static (input, view, _) => PrepareControl(input, view, running: false), typeof(LanguageServerStatus), mutation: true);
+        static (input, view, _) => PrepareControl(input, view, LanguageServerWorkspace.ProfileAction.Stop),
+        typeof(LanguageServerStatus), mutation: true);
+
+    internal Feature<RootInput> Remove { get; } = new("language.server.remove", "language_remove_server",
+        "Stop and forget a language server profile for the selected root.",
+        static (input, view, _) => PrepareControl(input, view, LanguageServerWorkspace.ProfileAction.Remove),
+        typeof(LanguageServerStatus), mutation: true);
 
     internal Feature<RootInput> Output { get; } = new("language.server.output", "language_get_server_output",
         "Read the retained standard error of the language server for the specified root.", false,
-        static (input, view) => view is ILanguageRegistration registration && RootExists(registration, input.RootId, out _) &&
-            registration.LanguageServers.ReadOutput(input.RootId) is { } output
-            ? FeatureOutcome.Success("Language server output read.", output) : Unavailable(), typeof(LanguageServerOutput));
+        ReadOutput, typeof(LanguageServerOutput));
 
     internal Feature<CompleteInput> Complete { get; } = new("language.document.complete", "language_complete",
         "Request completions at a UTF-16 editor offset in the live document revision.",
@@ -64,29 +69,37 @@ internal sealed class LanguageServerFeatures
         token.ThrowIfCancellationRequested();
         if (view is not ILanguageRegistration registration || !RootExists(registration, input.RootId, out var root))
             return Task.FromResult(RootUnavailable());
-        if (!Valid(input))
+        var profile = new SavedLanguageProfile(root.Id, input.ProfileId ?? LanguageProfileKey.DefaultProfile, input.Executable,
+            input.Arguments ?? [], input.Languages, Enabled: true, input.InitializationOptions, input.Settings);
+        if (!profile.IsValid() || !File.Exists(profile.Executable))
             return Task.FromResult(new FeatureOutcome("invalid_language_configuration", "Use an installed executable and valid root language associations."));
-        var configuration = new LanguageServerConfiguration(root.Id, root.Path, input.Executable, input.Arguments ?? [],
-            input.Languages, input.InitializationOptions, input.Settings);
         return PrepareRoot(root, async (current, cancellation) =>
         {
-            var status = await current.LanguageServers.ConfigureAsync(configuration, cancellation).ConfigureAwait(false);
-            return FeatureOutcome.Success("Language server configured.", status);
+            var status = await current.LanguageServers.ConfigureAsync(root, profile, cancellation).ConfigureAwait(false);
+            return status is not null ? FeatureOutcome.Success("Language server configured.", status) : RootUnavailable();
         });
     }
 
-    private static Task<FeatureOutcome> PrepareControl(RootInput input, IWorkbenchRegistration view, bool running)
+    private static FeatureOutcome ReadOutput(RootInput input, IWorkbenchRegistration view)
+    {
+        if (view is not ILanguageRegistration registration || !RootExists(registration, input.RootId, out _))
+            return RootUnavailable();
+        var key = registration.LanguageServers.Resolve(input.RootId, input.ProfileId, out var ambiguous);
+        return key is { } known && registration.LanguageServers.ReadOutput(known) is { } output
+            ? FeatureOutcome.Success("Language server output read.", output) : MissingProfile(ambiguous);
+    }
+
+    private static Task<FeatureOutcome> PrepareControl(RootInput input, IWorkbenchRegistration view,
+        LanguageServerWorkspace.ProfileAction action)
     {
         if (view is not ILanguageRegistration registration || !RootExists(registration, input.RootId, out var root))
             return Task.FromResult(RootUnavailable());
-        if (!registration.LanguageServers.Contains(root.Id))
-            return Task.FromResult(Unavailable());
+        if (registration.LanguageServers.Resolve(root.Id, input.ProfileId, out var ambiguous) is not { } key)
+            return Task.FromResult(MissingProfile(ambiguous));
         return PrepareRoot(root, async (current, token) =>
         {
-            var status = await current.LanguageServers.SetRunningAsync(root.Id, running, token).ConfigureAwait(false);
-            return status is not null
-                ? FeatureOutcome.Success(running ? "Language server restarted." : "Language server stopped.", status)
-                : Unavailable();
+            var status = await current.LanguageServers.ChangeProfileAsync(key, action, token).ConfigureAwait(false);
+            return status is not null ? FeatureOutcome.Success("Language server profile updated.", status) : Unavailable();
         });
     }
 
@@ -107,6 +120,10 @@ internal sealed class LanguageServerFeatures
     {
         try { return await action(registration, token).ConfigureAwait(false); }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+        catch (LanguageProfileConflictException)
+        {
+            return new("language_profile_conflict", "Choose extensions that another profile in this root does not claim.");
+        }
         catch (Exception error) when (RuntimeFailures.CanRecover(error))
         {
             registration.ReportLanguageFailure(error, "Manage language server process");
@@ -127,7 +144,7 @@ internal sealed class LanguageServerFeatures
             return new FeatureOutcome("ok", "Language server result prepared.")
             {
                 Commit = current => current is ILanguageRegistration active && active.ReadLanguageDocument(context) is not null &&
-                    active.LanguageServers.IsCurrent(context.RootId, result.Server.SessionId)
+                    active.LanguageServers.IsCurrent(new LanguageProfileKey(context.RootId, result.Server.ProfileId), result.Server.SessionId)
                     ? FeatureOutcome.Success("Language server result read.", result) : DocumentChanged(),
             };
         }
@@ -149,17 +166,9 @@ internal sealed class LanguageServerFeatures
         return root is not null;
     }
 
-    private static bool Valid(ConfigureInput input) =>
-        Path.IsPathFullyQualified(input.Executable) && File.Exists(input.Executable) &&
-        (input.Arguments is null || input.Arguments.Length <= 64 && input.Arguments.All(arg => arg is not null && !arg.Contains('\0'))) &&
-        input.Languages is { Length: > 0 and <= 32 } &&
-        input.Languages.All(language => language is not null && !string.IsNullOrWhiteSpace(language.LanguageId) &&
-            language.Extensions is { Length: > 0 and <= 32 } && language.Extensions.All(extension =>
-                extension is { Length: > 1 and <= 32 } && extension[0] == '.' && !extension.Contains('/') && !extension.Contains('\\'))) &&
-        input.Languages.SelectMany(language => language.Extensions).Distinct(StringComparer.OrdinalIgnoreCase).Count() ==
-            input.Languages.Sum(language => language.Extensions.Length);
-
     private static FeatureOutcome RootUnavailable() => new("root_unavailable", "The selected workspace root is unavailable.");
     private static FeatureOutcome Unavailable() => new("language_server_unavailable", "No running language server matches the selected document or root.");
+    private static FeatureOutcome MissingProfile(bool ambiguous) => ambiguous
+        ? new("language_profile_required", "Select the profile within this workspace root.") : Unavailable();
     private static FeatureOutcome DocumentChanged() => new("document_changed", "The source document or its language server session changed.");
 }

@@ -39,7 +39,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
         _workspaceExplorer = explorer;
         _localization = localization;
         _logger = logger;
-        LanguageServers = new LanguageServerWorkspace(logger);
+        LanguageServers = new LanguageServerWorkspace(explorer, logger);
         _workspaceId = explorer.WorkspaceId;
         _registry = registry;
         _layout = layout;
@@ -264,6 +264,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
         _explorerSelection = state.Selection;
         _explorerView?.ReplaceState(state);
         _explorerWatch?.UpdateRoots(state.Roots);
+        LanguageServers.ReconcileRoots();
         RefreshSourceControl();
     }
 
