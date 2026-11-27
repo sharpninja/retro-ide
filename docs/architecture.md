@@ -134,11 +134,11 @@ Use a Git repository with one JSON manifest per emulator at `bucket/<id>.json`. 
 
 | Manifest field | Contract |
 | --- | --- |
-| `schemaVersion`, `id`, `version` | Manifest format, stable bundle ID, and immutable bundle release version. Publish a new version when an archive or its entry points change. |
+| `schemaVersion`, `id`, `version` | Format `1`, stable lowercase bundle ID, and immutable SemVer release version. Publish a new version when an archive or its entry points change. |
 | `name`, `description`, `homepage`, `license` | Catalog display and publisher-provided release metadata. |
-| `adapterId`, `adapterApi` | Adapter identity and compatible Retro IDE adapter contract versions. |
-| `targets` | Map from host runtime identifier, such as `win-x64` or `linux-x64`, to the release archive URL, SHA-256 digest, and relative entry points for the binding library and any emulator or worker the adapter launches. [Portable .NET runtime identifiers](https://learn.microsoft.com/en-us/dotnet/core/rid-catalog) |
-| `debuggerProfiles` | Optional versioned profile IDs and archive-relative declarative display definitions. The selected package version pins these definitions. The active adapter supplies the machine description and map revision when it opens a session. [Debugger machine description](emulator-adapter-contract.md#debugger-machine-description) |
+| `adapterId`, `adapterApi` | Stable lowercase adapter ID and a list of compatible contract versions written as `major.minor` strings. |
+| `targets` | Map from each host runtime identifier to `url`, `sha256`, and `entryPoints`. Each target includes a `binding` entry point and any emulator or worker entry points it needs. Entry-point paths are archive-relative and use forward slashes on every host. [Portable .NET runtime identifiers](https://learn.microsoft.com/en-us/dotnet/core/rid-catalog) |
+| `debuggerProfiles` | Optional map from a profile ID to its `schemaVersion` and archive-relative `path`. The selected package version pins these definitions. The active adapter supplies the machine description and map revision when it opens a session. [Debugger machine description](emulator-adapter-contract.md#debugger-machine-description) |
 
 ### Installing and running a bundle
 
