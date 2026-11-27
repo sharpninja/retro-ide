@@ -111,8 +111,28 @@ internal sealed partial class EmulatorSessionControl
         }
 
         var machine = await DescribeMachineAsync(RefreshScope(request.Scope), token).ConfigureAwait(false);
-        return machine.Succeeded ? MachineMap.CheckMappedRead(machine.Value, request)
+        return machine.Succeeded ? MachineMap.CheckMappedAccess(machine.Value, request.Scope, request.Address, request.ByteCount, MemoryAccess.Inspect)
             : machine.Error with { OperationId = id };
+    }
+
+    internal ValueTask<AdapterResult<MutationReceipt>> WriteMemoryAsync(MutationRequest<MemoryWriteRequest> request, CancellationToken token)
+    {
+        var address = request.Payload.Address;
+        if (!MachineMap.Identifier(address.SpaceId) || address.MapRevision is null || request.Payload.Data.IsDefaultOrEmpty ||
+            request.Payload.Data.Length > MaximumInspectionBytes)
+            return InvalidPortInput<MutationReceipt>(request.Scope);
+        var bytes = request.Payload.Data.Length;
+
+        return MutatePortAsync<IMemoryPort>(new(request.Scope, IMemoryPort.Capability, address.SpaceId, IMemoryPort.WriteMapped),
+            (port, cancellation) => port.WriteAsync(request, cancellation), async (descriptor, cancellation) =>
+            {
+                if (!descriptor.Limits.TryGetValue("max-write-bytes", out var max) || (ulong)bytes > max)
+                    return PortLimit(request.Scope, "write size");
+                var machine = await DescribeMachineAsync(RefreshScope(request.Scope), cancellation).ConfigureAwait(false);
+                return machine.Succeeded
+                    ? MachineMap.CheckMappedAccess(machine.Value, request.Scope, address, bytes, MemoryAccess.Write)
+                    : machine.Error with { OperationId = request.Scope.OperationId };
+            }, token);
     }
 
     private bool ObserveMapRevision(ulong revision)

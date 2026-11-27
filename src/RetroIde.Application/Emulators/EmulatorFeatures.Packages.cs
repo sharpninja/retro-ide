@@ -33,7 +33,7 @@ internal sealed partial class EmulatorFeatures
             "Emulator bundle removed.", "bundle"), typeof(EmulatorWorkspace.RemovalState), mutation: true);
 
     internal Feature<ProjectInput> Selection { get; } = new("emulator.project.read", "emulator_get_project_bundle",
-        "Read a project root's selected emulator bundle and previous pins.",
+        "Read a project root's selected emulator bundle, previous pins, and resolved binding for the current host.",
         static (input, view, token) => view is not IEmulatorRegistration { Emulators: { } workspace } ? Task.FromResult(Unavailable()) :
             ResolveProject(view, input.RootId) is { } project
                 ? RunAsync(workspace, (emulators, ct) => Task.Run(() => emulators.ReadSelection(project), ct), "Project selection read.", token, "project")

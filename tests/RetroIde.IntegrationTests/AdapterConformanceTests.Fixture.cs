@@ -59,8 +59,10 @@ public sealed partial class AdapterConformanceTests
 
         public bool TryGetPort<TPort>(CapabilityId capability, [NotNullWhen(true)] out TPort? port) where TPort : class, IEmulatorPort
         {
+            PortRequests.Add(capability);
             port = capability == IExecutionPort.Capability || capability == IOperationReceiptPort.Capability ||
-                capability == IVideoPort.Capability || capability == IAudioPort.Capability ? this as TPort : null;
+                capability == IVideoPort.Capability || capability == IAudioPort.Capability || capability == FutureCapability.Id ||
+                AdditionalCapabilities.Any(item => item.Id == capability) ? this as TPort : null;
             return port is not null;
         }
 

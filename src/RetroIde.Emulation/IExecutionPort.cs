@@ -1,6 +1,7 @@
 namespace RetroIde.Emulation;
 
 /// <summary>Controls guest execution through the host's negotiated operations and permissions.</summary>
+/// <remarks>TEST-RETRO-010#ac-test-control-semantics.</remarks>
 public interface IExecutionPort : IEmulatorPort
 {
     /// <summary>Gets the capability ID for version 1.0 of the execution port.</summary>

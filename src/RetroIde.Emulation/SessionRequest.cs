@@ -8,6 +8,7 @@ namespace RetroIde.Emulation;
 /// <param name="BundleId">Verified package identifier to report in the session identity.</param>
 /// <param name="BundleVersion">Pinned release version to report in the session identity.</param>
 /// <param name="Target">Mode-specific settings whose references the host has validated.</param>
+/// <remarks>TEST-RETRO-010#ac-test-session-contract.</remarks>
 public sealed record SessionRequest(Version ContractVersion, string TargetProfileId, string BundleId, string BundleVersion, SessionTarget Target)
 {
     /// <summary>Gets optional provider-specific settings from the captured, validated profile.</summary>

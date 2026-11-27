@@ -1,6 +1,7 @@
 namespace RetroIde.Emulation;
 
 /// <summary>Agrees on an exact .NET contract version between the IDE, installed bundle and adapter.</summary>
+/// <remarks>TEST-RETRO-010#ac-test-session-contract.</remarks>
 public static class AdapterContract
 {
     /// <summary>Gets the current core contract version supported by Retro IDE.</summary>

@@ -1,6 +1,7 @@
 namespace RetroIde.Emulation;
 
 /// <summary>Publishes an adapter's compatibility and opens a negotiated emulator session.</summary>
+/// <remarks>TEST-RETRO-010#ac-test-session-contract.</remarks>
 public interface IEmulatorAdapterFactory
 {
     /// <summary>Returns local compatibility information without opening the emulator.</summary>

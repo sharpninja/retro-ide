@@ -1,6 +1,7 @@
 namespace RetroIde.Emulation;
 
 /// <summary>Exposes independent frame capture and continuous video capabilities.</summary>
+/// <remarks>TEST-RETRO-010#ac-test-media-ports.</remarks>
 public interface IVideoPort : IEmulatorPort
 {
     /// <summary>Gets the versioned video capability ID.</summary>

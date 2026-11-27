@@ -1,6 +1,7 @@
 namespace RetroIde.Emulation;
 
 /// <summary>Defines shared adapter error codes. Optional capabilities may add their own namespaced codes.</summary>
+/// <remarks>TEST-RETRO-010#ac-test-control-semantics.</remarks>
 public static class AdapterErrorCodes
 {
     /// <summary>The capability or negotiated version is unsupported.</summary>

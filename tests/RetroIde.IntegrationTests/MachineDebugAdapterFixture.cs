@@ -10,8 +10,9 @@ internal sealed class MachineDebugAdapterFixture : IEmulatorSession, IMachineDes
 {
     internal static CapabilityDescriptor DescriptorCapability { get; } = new(IMachineDescriptorPort.Capability,
         null, [IMachineDescriptorPort.Describe], ImmutableDictionary<string, ulong>.Empty);
-    private static readonly CapabilityDescriptor MainMemory = new(IMemoryPort.Capability, "main", [IMemoryPort.InspectMapped, IMemoryPort.InspectRaw],
-        ImmutableDictionary<string, ulong>.Empty.Add("address-bits", 16).Add("max-read-bytes", 256));
+    private static readonly CapabilityDescriptor MainMemory = new(IMemoryPort.Capability, "main",
+        [IMemoryPort.InspectMapped, IMemoryPort.InspectRaw, IMemoryPort.WriteMapped],
+        ImmutableDictionary<string, ulong>.Empty.Add("address-bits", 16).Add("max-read-bytes", 256).Add("max-write-bytes", 2));
     private static readonly CapabilityDescriptor AuxMemory = new(IMemoryPort.Capability, "aux", [IMemoryPort.InspectMapped],
         ImmutableDictionary<string, ulong>.Empty.Add("max-read-bytes", 64));
 
@@ -28,6 +29,7 @@ internal sealed class MachineDebugAdapterFixture : IEmulatorSession, IMachineDes
     internal Action<SessionEvent>? OnEvent { get; set; }
     internal int DescriptionRequests { get; private set; }
     internal List<MemoryReadRequest> Reads { get; } = [];
+    internal List<MutationRequest<MemoryWriteRequest>> Writes { get; } = [];
     internal Dictionary<ulong, SessionEvent[]> Events { get; } = [];
     internal List<ulong> Subscriptions { get; } = [];
     internal EmulatorSessionControl OpenControl() => new(this, State, NullLogger.Instance);
@@ -98,6 +100,16 @@ internal sealed class MachineDebugAdapterFixture : IEmulatorSession, IMachineDes
 
         var data = ImmutableArray.CreateRange(Enumerable.Repeat((byte)0xA5, request.ByteCount));
         return ValueTask.FromResult(AdapterResult<MemoryBlock>.Success(new(request.Scope, request.Address, State.StateRevision, data)));
+    }
+
+    public ValueTask<AdapterResult<MutationReceipt>> WriteAsync(MutationRequest<MemoryWriteRequest> request, CancellationToken cancellationToken)
+    {
+        if (request.Payload.Address.MapRevision != Machine.MapRevision || request.Scope.ExpectedRevision != State.StateRevision)
+            return ValueTask.FromResult(AdapterResult<MutationReceipt>.Failure(new(AdapterErrorCodes.RevisionConflict,
+                "The fixture state or map changed.", request.Scope.OperationId)));
+        Writes.Add(request);
+        State = State with { StateRevision = State.StateRevision + 1, Cursor = new(Identity, State.Cursor.Sequence + 1) };
+        return ValueTask.FromResult(AdapterResult<MutationReceipt>.Success(new(request.Scope, State.StateRevision)));
     }
 
     public IAsyncEnumerable<SessionEvent> ReadEventsAsync(EventCursor? after, CancellationToken cancellationToken)

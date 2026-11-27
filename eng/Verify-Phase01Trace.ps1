@@ -12,6 +12,9 @@ $productProjects = @(
     'src/RetroIde.Mcp.Stdio'
     'src/RetroIde.Workbench'
 )
+if ($ThroughPhase -eq '04') {
+    $productProjects += 'src/RetroIde.Emulation'
+}
 $nativeEntryPoints = @(
     'M:RetroIde.NativeTests.NativeDockingTests.RunAsync'
     'M:RetroIde.NativeTests.ProductionAttachmentTests.RunAsync'

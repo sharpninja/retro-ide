@@ -18,7 +18,7 @@
 | `RetroIde.Workbench` | Avalonia and Dock.Avalonia, ViewModels and controllers, composition, window/MDI routing, persisted layout, and dispatcher adapter. |
 | `RetroIde.Mcp` | Official MCP C# SDK tool discovery, schemas, scope, transport policy, operation tracking, and request/response mapping. Resolve ViewModel contexts through a registration port provided by the workbench. |
 | `RetroIde.Mcp.Stdio` | CLI attachment to a selected running IDE instance through its local endpoint. Use a per-launch attachment descriptor. Standard output carries only MCP messages. |
-| `RetroIde.Adapters.Abstractions` and provider projects | Versioned .NET bundle/adapter contracts and backend mappings as each provider lands. Keep desktop dependencies outside adapter hosts. |
+| `RetroIde.Emulation` and provider projects | Versioned .NET adapter contracts and backend mappings as each provider lands. Keep desktop dependencies outside adapter hosts. |
 | `RetroIde.UnitTests`, `RetroIde.IntegrationTests`, and `RetroIde.NativeTests` | Criterion-linked tests and negative controls. Use managed, rendered Avalonia, native window, SDK client, and provider tests through the appropriate production entry points. |
 | `RetroIde.AdapterFixture` | Test-only independent session process and runtime assembly evidence for shell layout persistence. |
 

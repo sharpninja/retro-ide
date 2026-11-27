@@ -39,6 +39,7 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
     [ObservableProperty] public partial Project[] Projects { get; private set; } = [];
     [ObservableProperty] public partial Project? SelectedProject { get; set; }
     [ObservableProperty] public partial Pin? ActivePin { get; private set; }
+    [ObservableProperty] public partial EmulatorWorkspace.ProjectBinding? ActiveBinding { get; private set; }
     [ObservableProperty] public partial Pin[] PreviousPins { get; private set; } = [];
     [ObservableProperty] public partial Pin? SelectedPrevious { get; set; }
     [ObservableProperty] public partial string? BucketId { get; set; } = "official";
@@ -164,6 +165,7 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
             return;
         var previous = SelectedPrevious;
         ActivePin = read?.Selection?.Active;
+        ActiveBinding = read?.Binding;
         PreviousPins = read?.Selection?.Previous.ToArray() ?? [];
         SelectedPrevious = PreviousPins.FirstOrDefault(pin => pin == previous) ?? PreviousPins.FirstOrDefault();
     }

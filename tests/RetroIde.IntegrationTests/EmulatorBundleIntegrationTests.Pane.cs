@@ -52,6 +52,7 @@ public sealed partial class EmulatorBundleIntegrationTests
             await ClickEmulatorButtonAsync(window, "emulator.project.select.toolbar", deadline.Token);
             while (await SelectedPinAsync(http, rootId) != pin)
                 await Task.Delay(25, deadline.Token);
+            await AssertBindingDisplayedAsync(window, http, rootId, deadline.Token);
             var picker = Assert.Single(window.GetVisualDescendants().OfType<ComboBox>(), control =>
                 string.Equals(AutomationProperties.GetAutomationId(control), "emulator.projects.items", StringComparison.Ordinal));
             Assert.Contains(picker.GetVisualDescendants().OfType<TextBlock>(), text =>
@@ -62,6 +63,21 @@ public sealed partial class EmulatorBundleIntegrationTests
             window.Close();
             await closed.Task.WaitAsync(token);
         }
+    }
+
+    private static async Task AssertBindingDisplayedAsync(WorkbenchWindow window, GitWorkspaceStateTests.WorkspaceConnection http,
+        Guid project, CancellationToken token)
+    {
+        var result = await http.CallAsync("emulator_get_project_bundle", new(StringComparer.Ordinal) { ["rootId"] = project }).ConfigureAwait(true);
+        var binding = result.GetProperty("data").GetProperty("binding");
+        Assert.Equal("ready", binding.GetProperty("status").GetString(), StringComparer.Ordinal);
+        Assert.Equal("uae", binding.GetProperty("adapterId").GetString(), StringComparer.Ordinal);
+        Assert.Equal("1.0", binding.GetProperty("contractVersion").GetString(), StringComparer.Ordinal);
+        var expected = $"Binding verified · uae · {binding.GetProperty("runtimeIdentifier").GetString()} · 1.0";
+        while (!window.GetVisualDescendants().OfType<TextBlock>().Any(text =>
+            string.Equals(AutomationProperties.GetAutomationId(text), "emulator.project.binding", StringComparison.Ordinal) &&
+            string.Equals(text.Text, expected, StringComparison.Ordinal)))
+            await Task.Delay(25, token).ConfigureAwait(true);
     }
 
     /// <summary>Checks that the desktop closing path releases a stalled native Git operation.</summary>

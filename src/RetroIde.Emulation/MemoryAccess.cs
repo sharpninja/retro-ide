@@ -1,6 +1,7 @@
 namespace RetroIde.Emulation;
 
 /// <summary>Identifies the independently supported accesses to a memory region.</summary>
+/// <remarks>TEST-RETRO-017#ac-test-machine-descriptor-contract.</remarks>
 [Flags]
 public enum MemoryAccess
 {

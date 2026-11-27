@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 namespace RetroIde.Emulation;
 
 /// <summary>Describes adapter identity, supported .NET contract versions, modes and known machine families.</summary>
+/// <remarks>TEST-RETRO-010#ac-test-session-contract.</remarks>
 public sealed record AdapterDescriptor(
     string AdapterId,
     ImmutableArray<Version> ContractVersions,

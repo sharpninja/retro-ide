@@ -7,6 +7,7 @@ namespace RetroIde.Emulation;
 /// <param name="SubjectId">Stable target identifier within the session, when the capability applies to a specific device or CPU.</param>
 /// <param name="Operations">The operation identifiers supported for this subject and feature.</param>
 /// <param name="Limits">Feature-defined bounds with units specified by the feature contract.</param>
+/// <remarks>TEST-RETRO-010#ac-test-port-conformance.</remarks>
 public sealed record CapabilityDescriptor(
     CapabilityId Id,
     string? SubjectId,

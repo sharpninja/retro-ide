@@ -56,7 +56,7 @@ A bundle pin has `bucket`, `bundle`, `version`, and `manifestRevision` fields. P
 | `emulator_install_bundle` | `pin`, workbench `context`, optional `background` | The verified host installation or an operation handle. |
 | `emulator_update_bundle` | Installed `current` pin, reviewed catalog `target` pin, workbench `context`, optional `background` | Installs the current catalog release alongside the original. Returns the installation or an operation handle. |
 | `emulator_remove_bundle` | `pin`, workbench `context` | Removes the exact installation. A live session lease protects its release. |
-| `emulator_get_project_bundle` | `rootId` | The active emulator pin and selection history for that project. |
+| `emulator_get_project_bundle` | `rootId` | The active emulator pin, selection history, and binding resolution for this host. When ready, the result includes the adapter ID, runtime identifier, and contract version. |
 | `emulator_select_bundle`, `emulator_rollback_bundle` | `rootId`, `pin`, workbench `context` | Persists the reviewed installed release as the project selection. Rollback chooses a compatible installed pin from that project's history. |
 
 ## Phase 03 Git tools

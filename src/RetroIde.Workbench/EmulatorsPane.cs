@@ -17,10 +17,14 @@ internal static class EmulatorsPane
     private const string Project = "emulator.pane.project";
     private const string Previous = "emulator.pane.previous";
     private const string Active = "emulator.pane.active";
+    private const string BindingReady = "emulator.pane.binding-ready";
+    private const string BindingUnavailable = "emulator.pane.binding-unavailable";
+    private const string BindingIncompatible = "emulator.pane.binding-incompatible";
     private const string Incompatible = "emulator.pane.incompatible";
 
     internal static readonly string[] TextSlugs =
         [Buckets, BucketId, Repository, Configuration, Releases, Installed, Project, Previous, Active, Incompatible,
+         BindingReady, BindingUnavailable, BindingIncompatible,
          "emulator.pane.result-invalid"];
 
     internal static Control Create(EmulatorsViewModel view)
@@ -97,6 +101,23 @@ internal static class EmulatorsPane
         var activeSection = Labelled(active, locale, Active);
         Watch(pane, view, () => activeSection.IsVisible = view.ActivePin is not null);
         pane.Children.Add(activeSection);
+        var binding = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        Avalonia.Automation.AutomationProperties.SetAutomationId(binding, "emulator.project.binding");
+        void ShowBinding()
+        {
+            binding.IsVisible = view.ActiveBinding is not null;
+            binding.Text = view.ActiveBinding switch
+            {
+                { Status: "ready" } value =>
+                    $"{locale.Text(BindingReady)} · {value.AdapterId} · {value.RuntimeIdentifier} · {value.ContractVersion}",
+                { Status: "incompatible" } => locale.Text(BindingIncompatible),
+                not null => locale.Text(BindingUnavailable),
+                _ => null,
+            };
+        }
+        Watch(pane, view, ShowBinding);
+        locale.Observe(binding, ShowBinding);
+        pane.Children.Add(binding);
         pane.Children.Add(Picker(pane, view, Previous, "emulator.previous.items",
             () => view.PreviousPins, () => view.SelectedPrevious, value => view.SelectedPrevious = value,
             value => (DisplayPin(value), value.ManifestRevision)));

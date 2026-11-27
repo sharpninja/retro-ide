@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace RetroIde.Emulation;
 
 /// <summary>Represents the connection to one emulator instance, independent of its transport.</summary>
+/// <remarks>TEST-RETRO-010#ac-test-session-contract.</remarks>
 public interface IEmulatorSession : IAsyncDisposable
 {
     /// <summary>Gets the stable identity for the lifetime of this emulator instance.</summary>

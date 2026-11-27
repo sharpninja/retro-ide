@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace RetroIde.Emulation;
 
 /// <summary>A typed adapter outcome containing exactly one value or structured error.</summary>
+/// <remarks>TEST-RETRO-010#ac-test-control-semantics.</remarks>
 public sealed class AdapterResult<T> where T : class
 {
     private AdapterResult(T? value, AdapterError? error)

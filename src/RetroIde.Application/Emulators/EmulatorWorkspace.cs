@@ -102,13 +102,15 @@ internal sealed class EmulatorWorkspace
         };
     }
 
-    internal SelectionState ReadSelection(Project project) => new(project.Id, Selection(project).Read());
+    internal SelectionState ReadSelection(Project project) => ProjectSelection(project.Id, Selection(project).Read());
 
     internal async Task<AdapterResult<PinnedEmulatorSession>> OpenSelectedAsync(Project project, EmulatorSessionPlan plan,
         Func<string, IEmulatorAdapterFactory> activateBinding, CancellationToken token)
     {
+        if (token.IsCancellationRequested)
+            return AdapterResult<PinnedEmulatorSession>.Failure(new(AdapterErrorCodes.Cancelled, "Opening the emulator session was cancelled."));
         Pin? pin;
-        try { pin = ReadSelection(project).Selection?.Active; }
+        try { pin = Selection(project).Read()?.Active; }
         catch (Exception error) when (RuntimeFailures.CanRecover(error))
         {
             ReportFailure(error);
@@ -119,8 +121,11 @@ internal sealed class EmulatorWorkspace
         if (pin is null)
             return AdapterResult<PinnedEmulatorSession>.Failure(new(AdapterErrorCodes.Unavailable, "Select an emulator bundle for this project."));
 
-        var coordinator = new EmulatorSessionCoordinator(_store, RuntimeInformation.RuntimeIdentifier, activateBinding, _logger);
-        return await coordinator.OpenAsync(pin, plan, token).ConfigureAwait(false);
+        var binding = ResolveBinding(pin);
+        if (!binding.Succeeded)
+            return AdapterResult<PinnedEmulatorSession>.Failure(binding.Error);
+        var coordinator = new EmulatorSessionCoordinator(activateBinding, _logger);
+        return await coordinator.OpenAsync(binding.Value, plan, token).ConfigureAwait(false);
     }
 
     internal async Task<SelectionState> SelectAsync(Project project, Pin pin, bool rollback, CancellationToken token)
@@ -130,7 +135,38 @@ internal sealed class EmulatorWorkspace
         var result = rollback
             ? await selection.RollbackAsync(pin, RuntimeInformation.RuntimeIdentifier, AdapterApi, token).ConfigureAwait(false)
             : await selection.SelectAsync(pin, RuntimeInformation.RuntimeIdentifier, AdapterApi, token).ConfigureAwait(false);
-        return new SelectionState(project.Id, result);
+        return ProjectSelection(project.Id, result);
+    }
+
+    private SelectionState ProjectSelection(Guid projectId, EmulatorProjectSelectionStore.Snapshot? selection) =>
+        new(projectId, selection, selection?.Active is { } pin ? BindingDetails(pin) : null);
+
+    private ProjectBinding BindingDetails(Pin pin)
+    {
+        var resolved = ResolveBinding(pin);
+        if (!resolved.Succeeded)
+            return new(resolved.Error.Code);
+        using var binding = resolved.Value;
+        var install = binding.Installation;
+        return new("ready", install.Manifest.AdapterId, install.Receipt.RuntimeIdentifier, AdapterApi.ToString());
+    }
+
+    private AdapterResult<EmulatorBundleStore.BundleLease> ResolveBinding(Pin pin)
+    {
+        try
+        {
+            var binding = _store.Acquire(pin, RuntimeInformation.RuntimeIdentifier, AdapterApi);
+            return binding is null
+                ? AdapterResult<EmulatorBundleStore.BundleLease>.Failure(new(AdapterErrorCodes.Unavailable,
+                    "The project's pinned emulator bundle is unavailable on this host."))
+                : AdapterResult<EmulatorBundleStore.BundleLease>.Success(binding);
+        }
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
+        {
+            ReportFailure(error);
+            return AdapterResult<EmulatorBundleStore.BundleLease>.Failure(new(AdapterErrorCodes.Incompatible,
+                "The project's pinned emulator binding could not be verified."));
+        }
     }
 
     internal void ReportFailure(Exception error) => RuntimeFailures.Report(_logger, error, "Emulator management operation", LogLevel.Warning);
@@ -167,8 +203,10 @@ internal sealed class EmulatorWorkspace
     internal sealed record BucketChange(string BucketId);
     internal sealed record InstalledState(Pin Pin, string Name, string AdapterId, string RuntimeIdentifier, bool IsCompatible);
     internal sealed record RemovalState(Pin Pin);
+    internal sealed record ProjectBinding(string Status, string? AdapterId = null, string? RuntimeIdentifier = null, string? ContractVersion = null);
     internal sealed record SelectionState(Guid RootId,
-        [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] EmulatorProjectSelectionStore.Snapshot? Selection);
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] EmulatorProjectSelectionStore.Snapshot? Selection,
+        ProjectBinding? Binding = null);
 
     internal sealed class Rejected(string code, string message) : Exception(message)
     {

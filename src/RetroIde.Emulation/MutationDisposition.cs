@@ -1,6 +1,7 @@
 namespace RetroIde.Emulation;
 
 /// <summary>Identifies what the host can establish about a previous mutation.</summary>
+/// <remarks>TEST-RETRO-010#ac-test-control-semantics.</remarks>
 public enum MutationDisposition
 {
     /// <summary>The host cannot establish whether the operation was applied.</summary>

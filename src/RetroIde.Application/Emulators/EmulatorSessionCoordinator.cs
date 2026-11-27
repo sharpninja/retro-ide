@@ -1,26 +1,21 @@
 using Microsoft.Extensions.Logging;
 using RetroIde.Emulation;
 using InstalledBundle = RetroIde.Application.Emulators.EmulatorBundleStore.InstalledBundle;
-using Pin = RetroIde.Application.Emulators.EmulatorBundleStore.Pin;
 using OpenResult = RetroIde.Emulation.AdapterResult<RetroIde.Application.Emulators.PinnedEmulatorSession>;
 
 namespace RetroIde.Application.Emulators;
 
-internal sealed class EmulatorSessionCoordinator(EmulatorBundleStore store, string runtimeIdentifier,
-    Func<string, IEmulatorAdapterFactory> activateBinding, ILogger logger)
+internal sealed class EmulatorSessionCoordinator(Func<string, IEmulatorAdapterFactory> activateBinding, ILogger logger)
 {
-    internal async Task<OpenResult> OpenAsync(Pin pin, EmulatorSessionPlan plan, CancellationToken token)
+    internal async Task<OpenResult> OpenAsync(EmulatorBundleStore.BundleLease binding, EmulatorSessionPlan plan, CancellationToken token)
     {
-        EmulatorBundleStore.BundleLease? lease = null;
+        EmulatorBundleStore.BundleLease? lease = binding;
         IEmulatorSession? pending = null;
         try
         {
             token.ThrowIfCancellationRequested();
-            lease = store.Acquire(pin, runtimeIdentifier, AdapterContract.CurrentVersion);
-            if (lease is null)
-                return Failure(AdapterErrorCodes.Unavailable, "The project's pinned emulator bundle is unavailable.");
-
             var installed = lease.Installation;
+            var pin = installed.Receipt.Pin;
             var target = ResolveTarget(installed, plan.Connection);
             if (target is null)
                 return Failure(AdapterErrorCodes.InvalidArgument, "The project target does not match the installed emulator bundle.");

@@ -117,6 +117,29 @@ public sealed partial class EmulatorBundleIntegrationTests
         Assert.Equal(EmulatorBundleStore.Removal.Removed, root.Store.Remove(FirstPin, RuntimeInformation.RuntimeIdentifier, token));
     }
 
+    /// <summary>Checks that project inspection and opening resolve the same verified bundle and report when it is removed.</summary>
+    /// <remarks>TEST-RETRO-010#ac-test-session-contract.</remarks>
+    [Fact]
+    public async Task Removing_the_pinned_installation_retains_the_selection_and_prevents_session_activation()
+    {
+        using var root = new BundleStoreFixture();
+        var token = root.CancellationToken;
+        var (workspace, project, installation) = await PrepareSelectedBindingAsync(root).ConfigureAwait(true);
+        var selected = workspace.ReadSelection(project);
+        Assert.Equal(FirstPin, selected.Selection?.Active);
+        Assert.Equal(new EmulatorWorkspace.ProjectBinding("ready", installation.Manifest.AdapterId, RuntimeInformation.RuntimeIdentifier, "1.0"),
+            selected.Binding);
+
+        Assert.Equal(EmulatorBundleStore.Removal.Removed, root.Store.Remove(FirstPin, RuntimeInformation.RuntimeIdentifier, token));
+        var missing = workspace.ReadSelection(project);
+        Assert.Equal(FirstPin, missing.Selection?.Active);
+        Assert.Equal(AdapterErrorCodes.Unavailable, missing.Binding?.Status, StringComparer.Ordinal);
+        var launch = new EmulatorConnection.Launch("emulator", [], SessionClosePolicy.StopOwnedHost);
+        var result = await workspace.OpenSelectedAsync(project, new("fixture-profile", launch),
+            _ => throw new InvalidOperationException("An unavailable bundle must not activate."), token).ConfigureAwait(true);
+        Assert.Equal(AdapterErrorCodes.Unavailable, result.Error?.Code, StringComparer.Ordinal);
+    }
+
     private static async Task<(EmulatorWorkspace Workspace, WorkspaceExplorer.Root Project, EmulatorBundleStore.InstalledBundle Installation)>
         PrepareSelectedBindingAsync(BundleStoreFixture root)
     {

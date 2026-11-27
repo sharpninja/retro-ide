@@ -1,6 +1,7 @@
 namespace RetroIde.Emulation;
 
 /// <summary>Exposes independent authenticated audio subscriptions.</summary>
+/// <remarks>TEST-RETRO-010#ac-test-media-ports.</remarks>
 public interface IAudioPort : IEmulatorPort
 {
     /// <summary>Gets the versioned audio capability ID.</summary>

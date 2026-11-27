@@ -94,4 +94,27 @@ public sealed class MachineMemoryMapTests
         Assert.Equal(AdapterErrorCodes.InvalidArgument, wrapped.Error?.Code, StringComparer.Ordinal);
         Assert.Equal(request, Assert.Single(adapter.Reads));
     }
+
+    /// <summary>Checks that negotiated writes use the active map permissions and both revisions.</summary>
+    /// <remarks>TEST-RETRO-010#ac-test-port-conformance; TEST-RETRO-017#ac-test-machine-descriptor-contract.</remarks>
+    [Fact]
+    public async Task A_memory_write_cannot_reach_rom_raw_space_or_exceed_the_negotiated_limit()
+    {
+        var adapter = new MachineDebugAdapterFixture();
+        var control = adapter.OpenControl();
+        var token = TestContext.Current.CancellationToken;
+        var scope = adapter.NewScope() with { ExpectedRevision = adapter.State.StateRevision };
+        var request = new MutationRequest<MemoryWriteRequest>(scope, new(new("main", 0x0100, "cpu", "boot-rom", 7), [1]));
+
+        var rom = await control.WriteMemoryAsync(request, token).ConfigureAwait(true);
+        Assert.Equal(AdapterErrorCodes.PermissionDenied, rom.Error?.Code, StringComparer.Ordinal);
+        var raw = await control.WriteMemoryAsync(request with { Payload = new(new("main", 0), [1]) }, token).ConfigureAwait(true);
+        Assert.Equal(AdapterErrorCodes.InvalidArgument, raw.Error?.Code, StringComparer.Ordinal);
+        var ram = request with { Payload = new(new("main", 0, "cpu", MapRevision: 7), [1, 2]) };
+        var oversize = await control.WriteMemoryAsync(ram with { Payload = ram.Payload with { Data = [1, 2, 3] } }, token).ConfigureAwait(true);
+        Assert.Equal(AdapterErrorCodes.InvalidArgument, oversize.Error?.Code, StringComparer.Ordinal);
+        Assert.Empty(adapter.Writes);
+        Assert.Equal(new MutationReceipt(scope, 2), (await control.WriteMemoryAsync(ram, token).ConfigureAwait(true)).Value);
+        Assert.Equal(ram, Assert.Single(adapter.Writes));
+    }
 }

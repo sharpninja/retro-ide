@@ -1,6 +1,7 @@
 namespace RetroIde.Emulation;
 
 /// <summary>Reports an authoritative, optional debugger description of the current target.</summary>
+/// <remarks>TEST-RETRO-017#ac-test-machine-descriptor-contract.</remarks>
 public interface IMachineDescriptorPort : IEmulatorPort
 {
     /// <summary>Gets the capability ID for the version 1.0 descriptor format.</summary>
