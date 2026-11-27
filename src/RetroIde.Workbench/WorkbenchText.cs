@@ -53,6 +53,14 @@ internal static class WorkbenchText
     internal const string GitSubmoduleDirty = "git.submodule.state.dirty";
     internal const string GitSubmoduleIndexCommit = "git.submodule.index-commit";
     internal const string GitSubmoduleHead = "git.submodule.head";
+    internal const string GitLfsTitle = "git.lfs.title";
+    internal const string GitLfsUnavailable = "git.lfs.unavailable";
+    internal const string GitLfsFilterConfigured = "git.lfs.filter.configured";
+    internal const string GitLfsFilterMissing = "git.lfs.filter.missing";
+    internal const string GitLfsRemote = "git.lfs.remote";
+    internal const string GitLfsMaterialized = "git.lfs.materialized";
+    internal const string GitLfsCached = "git.lfs.cached";
+    internal const string GitLfsPointer = "git.lfs.pointer";
     internal const string GitPatchIndex = "git.patch.index";
     internal const string GitPatchWorktree = "git.patch.worktree";
     internal const string GitPatchLayer = "git.patch.layer";
@@ -153,6 +161,7 @@ internal static class WorkbenchText
             GitPatchTitle, GitPatchIndex, GitPatchWorktree, GitPatchLayer, GitPatchPaths, GitPatchEmpty, GitPatchFileError,
             GitSubmodulesTitle, GitSubmoduleEmpty, GitSubmoduleConflicted, GitSubmoduleUnavailable, GitSubmoduleUnconfigured,
             GitSubmoduleConfigured, GitSubmoduleDifferentHead, GitSubmoduleCurrent, GitSubmoduleDirty, GitSubmoduleIndexCommit, GitSubmoduleHead,
+            GitLfsTitle, GitLfsUnavailable, GitLfsFilterConfigured, GitLfsFilterMissing, GitLfsRemote, GitLfsMaterialized, GitLfsCached, GitLfsPointer,
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupBrowseError, GitSetupCancel,
             GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,
             GitHistoryTitle, GitHistoryRefs, GitHistoryGraph, GitHistoryWorktrees,

@@ -108,6 +108,7 @@ public sealed partial class WorkbenchWindow : Window
         session.SourceControl.PromptStashesAsync = ShowGitStashesAsync;
         session.SourceControl.PromptPatchesAsync = ShowGitPatchesAsync;
         session.SourceControl.PromptSubmodulesAsync = ShowGitSubmodulesAsync;
+        session.SourceControl.PromptLfsAsync = ShowGitLfsAsync;
         session.Layout.Factory.DefaultHostWindowLocator = () =>
         {
             var floating = new HostWindow { Icon = BrandingPanel.CreateIcon() };
@@ -140,6 +141,7 @@ public sealed partial class WorkbenchWindow : Window
             session.SourceControl.PromptStashesAsync = null;
             session.SourceControl.PromptPatchesAsync = null;
             session.SourceControl.PromptSubmodulesAsync = null;
+            session.SourceControl.PromptLfsAsync = null;
             session.Controller.Unregister(session.View);
         };
 
@@ -229,24 +231,21 @@ public sealed partial class WorkbenchWindow : Window
         return await dialog.ShowDialog<bool>(this).ConfigureAwait(true);
     }
 
-    private async Task ShowGitStashesAsync(CancellationToken token)
-    {
-        if (token.IsCancellationRequested || _closed)
-            return;
-        var dialog = new GitStashDialog(_session.SourceControl) { FlowDirection = FlowDirection };
-        using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
-        {
-            if (dialog.IsVisible)
-                dialog.Close();
-        }));
-        await dialog.ShowDialog(this).ConfigureAwait(true);
-    }
+    private Task ShowGitStashesAsync(CancellationToken token) =>
+        ShowGitDialogAsync(() => new GitStashDialog(_session.SourceControl), token);
 
-    private async Task ShowGitSubmodulesAsync(CancellationToken token)
+    private Task ShowGitSubmodulesAsync(CancellationToken token) =>
+        ShowGitDialogAsync(() => new GitSubmoduleDialog(_session.SourceControl), token);
+
+    private Task ShowGitLfsAsync(CancellationToken token) =>
+        ShowGitDialogAsync(() => new GitLfsDialog(_session.SourceControl), token);
+
+    private async Task ShowGitDialogAsync(Func<Window> create, CancellationToken token)
     {
         if (token.IsCancellationRequested || _closed)
             return;
-        var dialog = new GitSubmoduleDialog(_session.SourceControl) { FlowDirection = FlowDirection };
+        var dialog = create();
+        dialog.FlowDirection = FlowDirection;
         using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
         {
             if (dialog.IsVisible)

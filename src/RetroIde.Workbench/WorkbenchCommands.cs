@@ -58,6 +58,11 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor InitGitSubmodule = Create("git.submodule.init", "Ctrl+Shift+F8");
     public static readonly CommandDescriptor UpdateGitSubmodule = Create("git.submodule.update", "Alt+Shift+F8");
     public static readonly CommandDescriptor SyncGitSubmodule = Create("git.submodule.sync", "Ctrl+Shift+F9");
+    public static readonly CommandDescriptor OpenGitLfs = Create("git.lfs.open", "Ctrl+Shift+F2");
+    public static readonly CommandDescriptor RefreshGitLfs = Create("git.lfs.status", "Alt+Shift+F2");
+    public static readonly CommandDescriptor FetchGitLfs = Create("git.lfs.fetch", "Ctrl+Shift+F3");
+    public static readonly CommandDescriptor CheckoutGitLfs = Create("git.lfs.checkout", "Alt+Shift+F3");
+    public static readonly CommandDescriptor PullGitLfs = Create("git.lfs.pull", "Alt+Shift+F5");
     public static readonly CommandDescriptor OpenGitHistory = Create("git.history.open", "Ctrl+Alt+L");
     public static readonly CommandDescriptor CurrentGitHistory = Create("git.history.current", "Ctrl+Alt+Shift+L");
     public static readonly CommandDescriptor ShowGitRefHistory = Create("git.history.ref", "Ctrl+Alt+Shift+B");
@@ -97,6 +102,7 @@ internal static class WorkbenchCommands
             StartGitOperation, ResetToGitCommit, OpenGitStashes, RefreshGitStashes, InspectGitStash, CreateGitStash, ApplyGitStash,
             PopGitStash, DropGitStash, OpenGitPatches, ExportGitPatch, ReviewGitPatch, ApplyGitPatch,
             OpenGitSubmodules, RefreshGitSubmodules, InitGitSubmodule, UpdateGitSubmodule, SyncGitSubmodule,
+            OpenGitLfs, RefreshGitLfs, FetchGitLfs, CheckoutGitLfs, PullGitLfs,
             OpenGitHistory, CurrentGitHistory,
             ShowGitRefHistory, PreviousGitHistoryPage, NextGitHistoryPage, InspectGitCommit, CreateGitBranch, SwitchGitBranch,
             CreateGitTag, InspectGitTag, DeleteGitTag,

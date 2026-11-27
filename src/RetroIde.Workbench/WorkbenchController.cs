@@ -342,6 +342,14 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                     DispatchToViewAsync(git, registration, _registry.Git.UpdateSubmodule, updateModule, request),
                 GitSubmoduleOperations.TargetInput syncModule when string.Equals(request.CommandId, _registry.Git.SyncSubmodule.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.SyncSubmodule, syncModule, request),
+                GitLfsOperations.StatusInput lfsStatus when string.Equals(request.CommandId, _registry.Git.LfsStatus.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.LfsStatus, lfsStatus, request),
+                GitLfsOperations.ActionInput fetchLfs when string.Equals(request.CommandId, _registry.Git.FetchLfs.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.FetchLfs, fetchLfs, request),
+                GitLfsOperations.ActionInput checkoutLfs when string.Equals(request.CommandId, _registry.Git.CheckoutLfs.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.CheckoutLfs, checkoutLfs, request),
+                GitLfsOperations.ActionInput pullLfs when string.Equals(request.CommandId, _registry.Git.PullLfs.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.PullLfs, pullLfs, request),
                 GitStash.CreateInput createStash when string.Equals(request.CommandId, _registry.Git.CreateStash.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.CreateStash, createStash, request),
                 GitStash.EntryInput inspect when string.Equals(request.CommandId, _registry.Git.InspectStash.Id, StringComparison.Ordinal) =>

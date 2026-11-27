@@ -43,6 +43,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
     [NotifyCanExecuteChangedFor(nameof(OpenStashesCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenPatchesCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenSubmodulesCommand), nameof(RefreshSubmodulesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenLfsCommand), nameof(RefreshLfsCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenBlameCommand))]
     [NotifyPropertyChangedFor(nameof(HasRepository))]
     public partial GitWorktree? Repository { get; private set; }
@@ -78,6 +79,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         SetStashes(null);
         Submodules = null;
         SelectedSubmodule = null;
+        SetLfs(null);
         Repository = repository;
         SelectFile(null, "working");
         LastResult = null;
@@ -132,6 +134,7 @@ internal sealed partial class SourceControlViewModel(WorkbenchViewModel workbenc
         OpenStashesCommand.NotifyCanExecuteChanged();
         OpenPatchesCommand.NotifyCanExecuteChanged();
         NotifySubmoduleCommands();
+        NotifyLfsCommands();
         ContinueOperationCommand.NotifyCanExecuteChanged();
         AbortOperationCommand.NotifyCanExecuteChanged();
         SkipOperationCommand.NotifyCanExecuteChanged();
