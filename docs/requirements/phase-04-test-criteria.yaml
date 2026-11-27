@@ -18,4 +18,5 @@ payload:
     - id: TEST-RETRO-017
       acceptanceCriteria:
       - id: ac-test-machine-descriptor-contract
+      - id: ac-test-live-machine-maps
       - id: ac-test-machine-descriptor-compatibility

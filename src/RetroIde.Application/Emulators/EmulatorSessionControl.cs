@@ -38,8 +38,8 @@ internal sealed partial class EmulatorSessionControl
             if (!Matches(state) || IsOlder(state, previous))
                 return Fail<SessionState>(AdapterErrorCodes.Incompatible, "The state snapshot belongs to a different or incompatible session.");
 
-            Publish(state);
-            return result;
+            var published = Publish(state);
+            return ReferenceEquals(published, state) ? result : AdapterResult<SessionState>.Success(published);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -56,13 +56,15 @@ internal sealed partial class EmulatorSessionControl
         state.Identity == _identity && state.Cursor.Session == state.Identity &&
         state.ClosePolicy == _closePolicy && !state.Capabilities.Items.IsDefault;
 
-    private void Publish(SessionState incoming)
+    private SessionState Publish(SessionState incoming)
     {
         while (true)
         {
             var current = State;
-            if (IsOlder(incoming, current) || ReferenceEquals(Interlocked.CompareExchange(ref _state, incoming, current), current))
-                return;
+            if (IsOlder(incoming, current))
+                return current;
+            if (ReferenceEquals(Interlocked.CompareExchange(ref _state, incoming, current), current))
+                return incoming;
         }
     }
 

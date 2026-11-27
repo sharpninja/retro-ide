@@ -8,7 +8,7 @@ namespace RetroIde.IntegrationTests;
 public sealed class MachineMemoryMapTests
 {
     /// <summary>Proves that a mapped read cannot cross an overlay, hit a device, or reuse another CPU's map.</summary>
-    /// <remarks>TEST-RETRO-017#ac-test-machine-descriptor-contract.</remarks>
+    /// <remarks>TEST-RETRO-017#ac-test-machine-descriptor-contract; TEST-RETRO-017#ac-test-live-machine-maps.</remarks>
     [Fact]
     public async Task Mapped_reads_enforce_active_regions_permissions_units_and_cpu_scope()
     {
@@ -46,7 +46,7 @@ public sealed class MachineMemoryMapTests
     }
 
     /// <summary>Checks pre-dispatch validation and the host's final check if a bank changes before the read.</summary>
-    /// <remarks>TEST-RETRO-017#ac-test-machine-descriptor-contract.</remarks>
+    /// <remarks>TEST-RETRO-017#ac-test-machine-descriptor-contract; TEST-RETRO-017#ac-test-live-machine-maps.</remarks>
     [Fact]
     public async Task The_host_checks_map_revision_again_after_workbench_validation()
     {
@@ -72,7 +72,7 @@ public sealed class MachineMemoryMapTests
     }
 
     /// <summary>Checks inclusive limits and overflow at the highest valid 64-bit address.</summary>
-    /// <remarks>TEST-RETRO-017#ac-test-machine-descriptor-contract.</remarks>
+    /// <remarks>TEST-RETRO-017#ac-test-machine-descriptor-contract; TEST-RETRO-017#ac-test-live-machine-maps.</remarks>
     [Fact]
     public async Task Reads_can_end_at_the_final_64_bit_address_and_cannot_wrap_around()
     {
@@ -96,7 +96,7 @@ public sealed class MachineMemoryMapTests
     }
 
     /// <summary>Checks that negotiated writes use the active map permissions and both revisions.</summary>
-    /// <remarks>TEST-RETRO-010#ac-test-port-conformance; TEST-RETRO-017#ac-test-machine-descriptor-contract.</remarks>
+    /// <remarks>TEST-RETRO-010#ac-test-port-conformance; TEST-RETRO-017#ac-test-machine-descriptor-contract; TEST-RETRO-017#ac-test-live-machine-maps.</remarks>
     [Fact]
     public async Task A_memory_write_cannot_reach_rom_raw_space_or_exceed_the_negotiated_limit()
     {

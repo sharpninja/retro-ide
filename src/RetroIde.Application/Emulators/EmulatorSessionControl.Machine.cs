@@ -39,8 +39,9 @@ internal sealed partial class EmulatorSessionControl
             yield break;
         }
 
-        yield return await DescribeMachineAsync(scope, token).ConfigureAwait(false);
-        SessionLifecycle? lifecycle = State.Lifecycle;
+        var initial = await DescribeMachineAsync(scope, token).ConfigureAwait(false);
+        var previous = State;
+        yield return initial;
         var gap = false;
         await foreach (var item in WatchAsync(cursor, token).ConfigureAwait(false))
         {
@@ -55,17 +56,31 @@ internal sealed partial class EmulatorSessionControl
                     gap = true;
                     break;
                 case MachineMapChanged:
-                    yield return await DescribeMachineAsync(RefreshScope(scope), token).ConfigureAwait(false);
+                    var mapped = await DescribeMachineAsync(RefreshScope(scope), token).ConfigureAwait(false);
+                    previous = State;
+                    yield return mapped;
                     break;
-                case SessionStateChanged changed:
-                    if (gap || lifecycle != changed.State.Lifecycle)
-                        yield return await DescribeMachineAsync(RefreshScope(scope), token).ConfigureAwait(false);
-                    lifecycle = changed.State.Lifecycle;
+                case SessionStateChanged:
+                    var current = State;
+                    var refresh = gap || current.Lifecycle != previous.Lifecycle || CanDescribe(current) != CanDescribe(previous);
                     gap = false;
+                    if (refresh)
+                    {
+                        var description = await DescribeMachineAsync(RefreshScope(scope), token).ConfigureAwait(false);
+                        previous = State;
+                        yield return description;
+                    }
+                    else
+                    {
+                        previous = current;
+                    }
                     break;
             }
         }
     }
+
+    private static bool CanDescribe(SessionState state) =>
+        Advertised(state, IMachineDescriptorPort.Capability, subject: null, IMachineDescriptorPort.Describe) is not null;
 
     private static SessionOperation RefreshScope(SessionOperation scope) =>
         scope with { OperationId = Guid.NewGuid(), ExpectedRevision = null };

@@ -33,6 +33,7 @@ public sealed partial class AdapterConformanceTests
         internal int StateReads { get; private set; }
         internal MutationDisposition Disposition { get; set; }
         internal Func<MutationRequest<ExecutionCommand>, CancellationToken, ValueTask<AdapterResult<MutationReceipt>>>? OnExecute { get; set; }
+        internal Func<CancellationToken, ValueTask<AdapterResult<SessionState>>>? OnReadState { get; set; }
 
         internal EmulatorSessionControl StartControl() => new(this, Current, NullLogger.Instance);
 
@@ -47,7 +48,7 @@ public sealed partial class AdapterConformanceTests
         public ValueTask<AdapterResult<SessionState>> GetStateAsync(CancellationToken cancellationToken)
         {
             StateReads++;
-            return ValueTask.FromResult(AdapterResult<SessionState>.Success(Current));
+            return OnReadState is { } read ? read(cancellationToken) : ValueTask.FromResult(AdapterResult<SessionState>.Success(Current));
         }
 
         public IAsyncEnumerable<SessionEvent> ReadEventsAsync(EventCursor? after, CancellationToken cancellationToken)

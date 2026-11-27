@@ -74,4 +74,39 @@ public sealed class MachineDescriptorConformanceTests
         var stale = await control.DescribeMachineAsync(adapter.NewScope(), token).ConfigureAwait(true);
         Assert.Equal(AdapterErrorCodes.Incompatible, stale.Error?.Code, StringComparer.Ordinal);
     }
+
+    /// <summary>Checks withdrawal and restoration of the live descriptor port while raw reads stay available.</summary>
+    /// <remarks>TEST-RETRO-017#ac-test-machine-descriptor-contract.</remarks>
+    [Fact]
+    public async Task A_connected_machine_watch_reports_withdrawal_and_restoration_of_description()
+    {
+        var adapter = new MachineDebugAdapterFixture();
+        var control = adapter.OpenControl();
+        var withoutDescriptor = adapter.MakeState(2, 2, advertised: false);
+        var restored = adapter.MakeState(3, 3);
+        withoutDescriptor = withoutDescriptor with { Capabilities = withoutDescriptor.Capabilities with { Revision = 2 } };
+        restored = restored with { Capabilities = restored.Capabilities with { Revision = 3 } };
+        adapter.Events[1] = [new SessionStateChanged(withoutDescriptor), new SessionStateChanged(restored)];
+        adapter.OnEvent = item =>
+        {
+            adapter.State = ((SessionStateChanged)item).State;
+            if (item.Cursor == restored.Cursor)
+                adapter.Machine = MachineDebugAdapterFixture.DescribeTarget(adapter.Identity, 8, upperBank: true);
+        };
+        var token = TestContext.Current.CancellationToken;
+        await using var watch = control.WatchMachineAsync(adapter.NewScope(), null, token).GetAsyncEnumerator(token);
+
+        Assert.True(await watch.MoveNextAsync());
+        Assert.Equal(7UL, watch.Current.Value?.MapRevision);
+        Assert.True(await watch.MoveNextAsync());
+        Assert.Equal(AdapterErrorCodes.Unsupported, watch.Current.Error?.Code, StringComparer.Ordinal);
+        Assert.Equal(1, adapter.DescriptionRequests);
+        var raw = await control.ReadMemoryAsync(new(adapter.NewScope(), new("main", 0x20), 1), token);
+        Assert.True(raw.Succeeded, raw.Error?.Message);
+        Assert.True(await watch.MoveNextAsync());
+        Assert.Equal(8UL, watch.Current.Value?.MapRevision);
+        Assert.Equal("upper", watch.Current.Value?.MemorySpaces[0].ActiveMappings["window"], StringComparer.Ordinal);
+        Assert.Equal(2, adapter.DescriptionRequests);
+        Assert.False(await watch.MoveNextAsync());
+    }
 }

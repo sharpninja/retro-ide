@@ -64,5 +64,46 @@ public sealed partial class AdapterConformanceTests
         Assert.True((await control.ExecuteAsync(new(adapter.Scope("desktop"), new(ExecutionAction.Pause)), token)).Succeeded);
     }
 
+    /// <summary>Prevents an in-flight state read from routing against a revision the event stream has superseded.</summary>
+    /// <remarks>TEST-RETRO-010#ac-test-control-semantics.</remarks>
+    [Theory]
+    [InlineData(true, AdapterErrorCodes.Unsupported)]
+    [InlineData(false, AdapterErrorCodes.RevisionConflict)]
+    public async Task A_late_state_reply_cannot_restore_superseded_capabilities_or_revisions(bool withdrawn, string error)
+    {
+        var token = TestContext.Current.CancellationToken;
+        var adapter = new ControlAdapter();
+        var control = adapter.StartControl();
+        var stale = adapter.Current;
+        var latest = adapter.MakeState(2, 2, SessionLifecycle.Connected, includeExecution: !withdrawn);
+        var reading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var reply = new TaskCompletionSource<AdapterResult<SessionState>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        adapter.OnReadState = cancellation =>
+        {
+            reading.SetResult();
+            return new(reply.Task.WaitAsync(cancellation));
+        };
+        var scope = adapter.Scope("desktop") with { ExpectedRevision = withdrawn ? latest.StateRevision : stale.StateRevision };
+        var operation = control.ExecuteAsync(new(scope, new(ExecutionAction.Pause)), token).AsTask();
+        try
+        {
+            await reading.Task.WaitAsync(token);
+            adapter.Current = latest;
+            adapter.Events[stale.Cursor.Sequence] = [new SessionStateChanged(latest)];
+            Assert.Equal(latest, Assert.IsType<SessionStateChanged>(Assert.Single(await control.WatchAsync(stale.Cursor, token)
+                .ToArrayAsync(token)).Value).State);
+        }
+        finally
+        {
+            reply.TrySetResult(AdapterResult<SessionState>.Success(stale));
+        }
+
+        var result = await operation;
+        Assert.Equal(error, result.Error?.Code, StringComparer.Ordinal);
+        Assert.Equal(scope.OperationId, result.Error?.OperationId);
+        Assert.Empty(adapter.Dispatched);
+        Assert.Equal(latest, control.State);
+    }
+
     private sealed record FutureEvent(EventCursor Cursor, ulong StateRevision) : SessionEvent(Cursor, StateRevision);
 }
