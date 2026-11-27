@@ -10,11 +10,19 @@ Start the selected process asynchronously in its workspace context. The initial 
 
 The first conformance targets are standalone clangd for C and C++ and rust-analyzer for Rust. Registrations can support additional languages and assembly dialects. A file without a configured server opens with the editor's local syntax highlighting or plain text. [clangd client setup](https://clangd.llvm.org/installation) · [rust-analyzer manual](https://rust-analyzer.github.io/book/other_editors.html)
 
+### Managing servers in the workbench
+
+Open **View → Language Servers** to configure an installed executable for a workspace root. Give each profile an ID and list its language and extensions one association per line, for example `c: .c, .h`. Enter process arguments as a JSON array so spaces in one argument stay together. **Advanced** accepts JSON initialization options and workspace settings. Configure and start activates the profile for matching documents in that root.
+
+The profiles list includes its root, process state, and negotiated position encoding. Stop retains the configuration. Restart also reopens the current unsaved buffers. Remove forgets the selected profile. **Server Output** displays retained standard error for that profile. An exited process is shown as faulted and the source editor remains available.
+
+**View → Problems** shows language diagnostics from current open documents across workspace roots. Select an entry and open it to activate its source tab at the reported location. Diagnostics from closed or superseded documents and stopped or replaced servers clear automatically.
+
 ### Running a server from MCP
 
 Use `language_configure_server` with a live workspace `rootId`, an installed executable's absolute path, an argument array, and one or more language associations. Each association provides `languageId` and an array of file extensions including the leading dot. The call accepts optional JSON initialization options, settings, and a `profileId`. Omitting `profileId` configures the `default` profile. Named profiles let a root use different servers for different extensions. Two profiles in one root cannot claim the same extension.
 
-`language_list_servers` returns profile IDs, process states, negotiated position encodings, and the roots served by each running process. Use `language_get_server_output` for its standard error. A root-only lifecycle or output call selects the default profile, or the sole profile when a root has only one. Send `profileId` to select a specific profile.
+`language_list_servers` returns profile IDs, process states, negotiated position encodings, and the roots served by each running process. `language_list_problems` returns the same workspace diagnostics as Problems, including the document context, server session, and navigation location. It returns up to 1,000 entries and reports truncation. Use `language_get_server_output` for its standard error. A root-only lifecycle or output call selects the default profile, or the sole profile when a root has only one. Send `profileId` to select a specific profile.
 
 Normal workbench close saves profiles and their enabled state with the workspace. Reopening starts the enabled profiles. `language_stop_server` detaches the selected profile and keeps its configuration. `language_remove_server` also removes the saved registration. `language_restart_server` starts a stopped profile or restarts the current process and reopens its assigned buffers.
 

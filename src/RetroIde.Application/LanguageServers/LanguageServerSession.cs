@@ -35,6 +35,7 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
 {
     private readonly LanguageServerConfiguration _configuration;
     private readonly ILogger _logger;
+    private readonly Action _diagnosticsChanged;
     private readonly LspProcess _rpc;
     private readonly SemaphoreSlim _updates = new(1);
     private readonly Lock _closeGate = new();
@@ -50,10 +51,11 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
     private int _change;
     private JsonElement _capabilities;
 
-    private LanguageServerSession(LanguageServerConfiguration[] roots, Process process, ILogger logger)
+    private LanguageServerSession(LanguageServerConfiguration[] roots, Process process, ILogger logger, Action diagnosticsChanged)
     {
         _configuration = roots[0];
         _logger = logger;
+        _diagnosticsChanged = diagnosticsChanged;
         _rootUri = FileUri(_configuration.Directory);
         _folders = roots.Select(Folder.For).ToArray();
         _rpc = new LspProcess(process, logger, OnNotification, OnRequest);
@@ -71,7 +73,7 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
         Volatile.Read(ref _folders).Select(folder => folder.RootId).ToArray());
 
     internal static async Task<LanguageServerSession> StartAsync(LanguageServerConfiguration[] roots, ILogger logger,
-        CancellationToken token)
+        Action diagnosticsChanged, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
         var configuration = roots[0];
@@ -87,7 +89,7 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
         foreach (var argument in configuration.Arguments)
             start.ArgumentList.Add(argument);
         var process = Process.Start(start) ?? throw new IOException("The language server did not start.");
-        var session = new LanguageServerSession(roots, process, logger);
+        var session = new LanguageServerSession(roots, process, logger, diagnosticsChanged);
         try
         {
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);

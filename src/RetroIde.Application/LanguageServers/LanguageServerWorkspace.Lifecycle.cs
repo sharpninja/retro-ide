@@ -7,6 +7,7 @@ internal sealed partial class LanguageServerWorkspace
     private async Task<LanguageServerStatus> AttachAsync(LanguageServerConfiguration configuration, CancellationToken token)
     {
         _servers[configuration.Key] = new(configuration, null, "starting");
+        NotifyChanged();
         try
         {
             foreach (var session in _servers.Values.Select(slot => slot.Session)
@@ -18,7 +19,7 @@ internal sealed partial class LanguageServerWorkspace
                     return _servers[configuration.Key].Status;
             }
 
-            var own = await LanguageServerSession.StartAsync([configuration], _logger, token).ConfigureAwait(false);
+            var own = await LanguageServerSession.StartAsync([configuration], _logger, NotifyChanged, token).ConfigureAwait(false);
             await PublishAsync(own, [configuration], token).ConfigureAwait(false);
             return _servers[configuration.Key].Status;
         }
@@ -117,7 +118,7 @@ internal sealed partial class LanguageServerWorkspace
                 _servers[configuration.Key] = new(configuration, null, "starting");
                 try
                 {
-                    var process = await LanguageServerSession.StartAsync([configuration], _logger, token).ConfigureAwait(false);
+                    var process = await LanguageServerSession.StartAsync([configuration], _logger, NotifyChanged, token).ConfigureAwait(false);
                     await PublishAsync(process, [configuration], token).ConfigureAwait(false);
                 }
                 catch (Exception error) when (RuntimeFailures.CanRecover(error) && !token.IsCancellationRequested)
@@ -146,7 +147,7 @@ internal sealed partial class LanguageServerWorkspace
     private async Task<bool> TryStartGroupAsync(LanguageServerConfiguration[] members, CancellationToken token)
     {
         LanguageServerSession session;
-        try { session = await LanguageServerSession.StartAsync(members, _logger, token).ConfigureAwait(false); }
+        try { session = await LanguageServerSession.StartAsync(members, _logger, NotifyChanged, token).ConfigureAwait(false); }
         catch (Exception error) when (RuntimeFailures.CanRecover(error) && !token.IsCancellationRequested)
         {
             RuntimeFailures.Report(_logger, error, "Start shared language server; trying separate processes");

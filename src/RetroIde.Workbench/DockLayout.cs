@@ -22,7 +22,8 @@ public sealed class DockLayout : IDisposable
     private bool _disposed;
 
     internal DockLayout(IWorkbenchWorkspaceContext workspace, WorkbenchLayoutState? state, InteractionBlocks interaction,
-        ExplorerViewModel explorer, SourceControlViewModel sourceControl, WorkbenchLocalization localization)
+        ExplorerViewModel explorer, SourceControlViewModel sourceControl, LanguageServersViewModel languageServers, ProblemsViewModel problems,
+        WorkbenchLocalization localization)
     {
         _workspace = workspace;
         _localization = localization;
@@ -36,8 +37,10 @@ public sealed class DockLayout : IDisposable
             new ShellTool(SourceControlViewModel.PaneId, "Source Control", "No Git worktree selected.", "left", interaction) { SourceControl = sourceControl },
             new ShellTool("registers", "Registers", "No debugger session connected.", "right", interaction),
             new ShellTool("call-stack", "Call Stack", "No debugger session connected.", "right", interaction),
+            new ShellTool(LanguageServersViewModel.PaneId, "Language Servers", "Manage language servers for this workspace.", "right", interaction)
+                { LanguageServers = languageServers },
             new ShellTool("output", "Output", "Workbench ready.", "bottom", interaction),
-            new ShellTool("problems", "Problems", "No diagnostics.", "bottom", interaction),
+            new ShellTool(ProblemsViewModel.PaneId, "Problems", "No diagnostics.", "bottom", interaction) { Problems = problems },
             new ShellTool("serial", "Serial Console", "No session connected.", "bottom", interaction),
             new ShellTool("breakpoints", "Breakpoints", "No breakpoints.", "bottom", interaction),
             new ShellTool("mcp-activity", "MCP Activity", "No agent activity.", "bottom", interaction),
@@ -274,9 +277,14 @@ public sealed class DockLayout : IDisposable
         if (ids.Count == paneCount)
             return layout;
 
-        // Existing layouts predate Source Control. Keep their topology and add one auto-hidden pane.
-        if (ids.Count == paneCount - 1 && !ids.Contains(SourceControlViewModel.PaneId))
-            return layout with { Main = layout.Main with { Pinned = [.. layout.Main.Pinned, new(SourceControlViewModel.PaneId, "Left", "left")] } };
+        // Insert panes introduced after older layouts without moving their existing windows or tabs.
+        var additions = new PinnedTool[]
+        {
+            new(SourceControlViewModel.PaneId, "Left", "left"),
+            new(LanguageServersViewModel.PaneId, "Right", "right"),
+        }.Where(pane => !ids.Contains(pane.Tool)).ToArray();
+        if (ids.Count + additions.Length == paneCount)
+            return layout with { Main = layout.Main with { Pinned = [.. layout.Main.Pinned, .. additions] } };
 
         return null;
 
@@ -583,7 +591,7 @@ public sealed class DockLayout : IDisposable
             new("document-tabs", "documents", 0.56, "start",
                 [new("document", "start"), new("document", "emulation"), new("document", "disassembly"), new("document", "test-results")]),
             new("splitter"),
-            new("tool-tabs", "right", 0.24, "registers", [new("tool", "registers"), new("tool", "call-stack")], "Right"),
+            new("tool-tabs", "right", 0.24, "registers", [new("tool", "registers"), new("tool", "call-stack"), new("tool", LanguageServersViewModel.PaneId)], "Right"),
         ]),
         new("splitter"),
         new("tool-tabs", "bottom", 0.27, "output",
@@ -607,6 +615,8 @@ internal sealed class ShellTool : Tool
 
     internal ExplorerViewModel? Explorer { get; init; }
     internal SourceControlViewModel? SourceControl { get; init; }
+    internal LanguageServersViewModel? LanguageServers { get; init; }
+    internal ProblemsViewModel? Problems { get; init; }
     internal WorkbenchLocalization Localization { get; set; } = WorkbenchLocalization.English;
     public string Message { get; }
     public string DefaultGroup { get; }

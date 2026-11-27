@@ -10,7 +10,7 @@ using RetroIde.Workbench;
 
 namespace RetroIde.NativeTests;
 
-internal static class RemoteControlLanguageEditorTests
+internal static partial class RemoteControlLanguageEditorTests
 {
     /// <remarks>TEST-RETRO-014#ac-test-language-features; TEST-RETRO-014#ac-test-language-documents.</remarks>
     internal static async Task RunAsync()

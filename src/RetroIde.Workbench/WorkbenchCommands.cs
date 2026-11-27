@@ -110,6 +110,16 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor LanguageOpenResult = Create("language.document.result.open", "Ctrl+Shift+Enter");
     public static readonly CommandDescriptor LanguageApply = Create("language.document.edit.apply", "Alt+Shift+Enter");
 
+    public static readonly CommandDescriptor OpenLanguageServers = Create("language.server.focus", "Ctrl+Shift+D");
+    public static readonly CommandDescriptor OpenProblems = Create("language.problems.focus", "Ctrl+Shift+J");
+    public static readonly CommandDescriptor LanguageConfigureServer = Create("language.server.configure", "Alt+Shift+K");
+    public static readonly CommandDescriptor LanguageRefreshServers = Create("language.server.list", "Alt+Shift+M");
+    public static readonly CommandDescriptor LanguageStopServer = Create("language.server.stop", "Alt+Shift+Q");
+    public static readonly CommandDescriptor LanguageRestartServer = Create("language.server.restart", "Alt+Shift+W");
+    public static readonly CommandDescriptor LanguageRemoveServer = Create("language.server.remove", "Alt+Shift+Delete");
+    public static readonly CommandDescriptor LanguageServerOutput = Create("language.server.output", "Alt+Shift+L");
+    public static readonly CommandDescriptor OpenLanguageProblem = Create("language.problem.open", "Alt+Shift+G");
+
     // A document key binding can be active inside a main or floating workbench window.
     // All commands in this catalog can share that input route, so check them together.
     private static readonly CommandDescriptor[] Commands =
@@ -128,7 +138,8 @@ internal static class WorkbenchCommands
             RenameGitRemote, RemoveGitRemote, FetchGitRemote, PushGitRemote, PullGitRemote, SetGitUpstream,
             LanguageComplete, LanguageHover, LanguageSignature, LanguageDefinition, LanguageDeclaration, LanguageType,
             LanguageImplementation, LanguageReferences, LanguageSymbols, LanguageDiagnostics, LanguageFormat, LanguageRename,
-            LanguageActions, LanguageOpenResult, LanguageApply];
+            LanguageActions, LanguageOpenResult, LanguageApply, OpenLanguageServers, OpenProblems, LanguageConfigureServer, LanguageRefreshServers,
+            LanguageStopServer, LanguageRestartServer, LanguageRemoveServer, LanguageServerOutput, OpenLanguageProblem];
 
     internal static void ValidateBundledResources()
     {

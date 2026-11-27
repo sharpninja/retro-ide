@@ -54,12 +54,25 @@ public sealed partial class LanguageServerIntegrationTests
             Assert.Equal("ok", Code(symbols));
             Assert.Contains(symbols.GetProperty("data").GetProperty("result").EnumerateArray(),
                 symbol => string.Equals(symbol.GetProperty("name").GetString(), "unsaved_symbol", StringComparison.Ordinal));
-            var hover = await http.CallAsync("language_hover", new(StringComparer.Ordinal)
+            // Syntax symbols can arrive before a real server has built the semantic model used by hover.
+            var hoverInput = new Dictionary<string, object?>(StringComparer.Ordinal)
             {
                 ["document"] = edit.GetProperty("data"),
                 ["offset"] = code.IndexOf("disk_symbol_only", StringComparison.Ordinal) + 1,
-            }, stdio).ConfigureAwait(true);
-            Assert.Equal("ok", Code(hover));
+            };
+            using var indexing = CancellationTokenSource.CreateLinkedTokenSource(token);
+            indexing.CancelAfter(TimeSpan.FromSeconds(12));
+            JsonElement hover;
+            do
+            {
+                hover = await http.CallAsync("language_hover", hoverInput, stdio).ConfigureAwait(true);
+                Assert.Equal("ok", Code(hover));
+                if (hover.GetProperty("data").GetProperty("result").ValueKind != JsonValueKind.Null)
+                    break;
+                try { await Task.Delay(100, indexing.Token).ConfigureAwait(true); }
+                catch (OperationCanceledException) when (indexing.IsCancellationRequested) { break; }
+            }
+            while (!indexing.IsCancellationRequested);
             Assert.Contains("unsaved_symbol", hover.GetProperty("data").GetProperty("result").GetRawText(), StringComparison.Ordinal);
             Assert.Equal(code, await File.ReadAllTextAsync(path, token).ConfigureAwait(true));
         }

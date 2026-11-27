@@ -65,6 +65,12 @@ internal sealed partial class LanguageServerFeatures
             ? FeatureOutcome.Success("Language server diagnostics read.", registration.LanguageServers.Diagnostics(document))
             : DocumentChanged(), typeof(LanguageDiagnosticResult));
 
+    internal Feature<GetContextInput> Problems { get; } = new("language.problems.list", "language_list_problems",
+        "List current language-server diagnostics for open workspace documents.",
+        false, static (_, view) => view is ILanguageRegistration registration
+            ? FeatureOutcome.Success("Language problems read.", registration.LanguageServers.Problems())
+            : Unavailable(), typeof(LanguageProblemSnapshot));
+
     private static Task<FeatureOutcome> ConfigureAsync(ConfigureInput input, IWorkbenchRegistration view, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();

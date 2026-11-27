@@ -56,7 +56,16 @@ public sealed partial class WorkbenchWindow : Window
         focusCommand.CanExecuteChanged += UpdateFocusEligibility;
         UpdateFocusEligibility(null, EventArgs.Empty);
         Closed += (_, _) => focusCommand.CanExecuteChanged -= UpdateFocusEligibility;
-        var viewMenu = new MenuItem { ItemsSource = new[] { FocusMenu, CreateLanguageMenu(session) } };
+        var viewMenu = new MenuItem
+        {
+            ItemsSource = new[]
+            {
+                FocusMenu,
+                CommandPresentation.CreateMenuItem(WorkbenchCommands.OpenLanguageServers, session.LanguageServersView.OpenPaneCommand, localization),
+                CommandPresentation.CreateMenuItem(WorkbenchCommands.OpenProblems, session.ProblemsView.OpenPaneCommand, localization),
+                CreateLanguageMenu(session),
+            },
+        };
         localization.Observe(viewMenu, () => viewMenu.Header = localization.Text(WorkbenchText.ViewMenu));
         var menu = new Menu
         {
@@ -101,6 +110,7 @@ public sealed partial class WorkbenchWindow : Window
         FocusShortcut = AddFocusShortcut(this);
         ExplorerPane.RegisterShortcuts(this, session.ExplorerView);
         SourceControlPane.RegisterShortcuts(this, session.SourceControl);
+        RegisterLanguagePaneShortcuts(this);
         session.ExplorerView.PickDirectoryAsync = PickWorkspaceDirectoryAsync;
         session.SourceControl.PromptSetupAsync = PromptGitSetupAsync;
         session.SourceControl.PromptCommitAsync = PromptGitCommitAsync;
@@ -116,6 +126,7 @@ public sealed partial class WorkbenchWindow : Window
             AddFocusShortcut(floating);
             ExplorerPane.RegisterShortcuts(floating, session.ExplorerView);
             SourceControlPane.RegisterShortcuts(floating, session.SourceControl);
+            RegisterLanguagePaneShortcuts(floating);
             TrackFloatingInteraction(floating);
             return floating;
         };
@@ -148,6 +159,12 @@ public sealed partial class WorkbenchWindow : Window
         PathIcon CreateIcon() => new() { Width = 16, Height = 16, Data = CommandPresentation.IconGeometry };
 
         KeyBinding AddFocusShortcut(Window surface) => RegisterShortcut(surface, focusCommand, CommandPresentation.Gesture);
+
+        void RegisterLanguagePaneShortcuts(Window surface)
+        {
+            RegisterShortcut(surface, session.LanguageServersView.OpenPaneCommand, KeyGesture.Parse(WorkbenchCommands.OpenLanguageServers.EffectiveGesture));
+            RegisterShortcut(surface, session.ProblemsView.OpenPaneCommand, KeyGesture.Parse(WorkbenchCommands.OpenProblems.EffectiveGesture));
+        }
     }
 
     private static void ApplyLanguageDirection(Window window, WorkbenchLocalization localization)

@@ -122,6 +122,7 @@ internal sealed partial class LanguageServerSession
             return;
 
         _diagnostics[uri] = new DiagnosticSet(current.Context, items.EnumerateArray().Select(item => item.Clone()).ToArray());
+        _diagnosticsChanged();
     }
 
     private (bool Handled, object? Result) OnRequest(string method, JsonElement parameters) => method switch

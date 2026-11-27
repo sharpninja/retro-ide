@@ -110,6 +110,7 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
                     !File.Exists(Path.Combine(directory, "crashed")))
                 {
                     Trace("crashed", id.GetRawText());
+                    Console.Error.WriteLine("Fixture exited during completion.");
                     return 17;
                 }
                 CompleteDocument(id, parameters);

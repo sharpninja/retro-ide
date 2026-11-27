@@ -51,12 +51,15 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
         View = new WorkbenchViewModel(workspace.WorkspaceId) { FocusTarget = "registers", Localization = Localization };
         ExplorerView = new ExplorerViewModel(View, Registry.Explorer);
         SourceControl = new SourceControlViewModel(View, Registry, Interaction);
-        Layout = new DockLayout(workspace, savedLayout, Interaction, ExplorerView, SourceControl, Localization);
+        LanguageServersView = new LanguageServersViewModel(View, Registry, Interaction);
+        ProblemsView = new ProblemsViewModel(View, Registry);
+        Layout = new DockLayout(workspace, savedLayout, Interaction, ExplorerView, SourceControl, LanguageServersView, ProblemsView, Localization);
         Controller = new WorkbenchController(Explorer, Layout, Interaction, Registry, Localization, Logs.CreateLogger<WorkbenchController>());
         Documents = new DocumentController(View, Layout, Interaction, Registry, Controller);
         Controller.Register(View);
         Controller.RegisterExplorer(ExplorerView, View, Documents);
         Controller.RegisterSourceControl(SourceControl, View);
+        Controller.RegisterLanguageViews(View, LanguageServersView, ProblemsView);
         GitRestoration = Controller.RestoreGitAsync(View);
         _ = Task.Run(Controller.LanguageServers.RestoreAsync);
     }
@@ -66,6 +69,8 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
     internal WorkbenchLocalization Localization { get; }
     internal ExplorerViewModel ExplorerView { get; }
     internal SourceControlViewModel SourceControl { get; }
+    internal LanguageServersViewModel LanguageServersView { get; }
+    internal ProblemsViewModel ProblemsView { get; }
     internal DocumentController Documents { get; }
     internal WorkspaceExplorerStore? ExplorerStore { get; }
     internal Task GitRestoration { get; }

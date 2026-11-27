@@ -214,6 +214,8 @@ public sealed class WorkbenchApp : Avalonia.Application
     {
         { Explorer: { } explorer } => ExplorerPane.Create(explorer),
         { SourceControl: { } sourceControl } => SourceControlPane.Create(sourceControl),
+        { LanguageServers: { } language } => LanguagePanes.Create(language),
+        { Problems: { } problems } => LanguagePanes.Create(problems),
         _ => PaneContent(tool.Localization, tool.Id, document: false),
     };
 

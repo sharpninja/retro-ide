@@ -46,7 +46,11 @@ internal static class NativeDockingTests
 
     private static async Task RunLanguageEditorAsync(CancellationTokenSource finished)
     {
-        try { await RemoteControlLanguageEditorTests.RunAsync().ConfigureAwait(true); }
+        try
+        {
+            await RemoteControlLanguageEditorTests.RunAsync().ConfigureAwait(true);
+            await RemoteControlLanguageEditorTests.RunPanesAsync().ConfigureAwait(true);
+        }
         finally { finished.Cancel(); }
     }
 

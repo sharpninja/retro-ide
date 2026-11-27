@@ -91,6 +91,7 @@ public sealed partial class GitSourceControlTests
         Assert.Contains(state.Main.Pinned, pin => pin is { Tool: "explorer", Alignment: "Left" });
         Assert.Contains(state.Main.Pinned, pin => pin is { Tool: "call-stack", Alignment: "Right" });
         Assert.Single(state.Main.Pinned, pin => pin is { Tool: Pane, Alignment: "Left" });
+        Assert.Single(state.Main.Pinned, pin => pin is { Tool: "language-servers", Alignment: "Right" });
         var floating = Assert.Single(state.Floating);
         Assert.Equal("previously-floating", floating.Content.Id);
         Assert.Equal("problems", floating.Content.Active);

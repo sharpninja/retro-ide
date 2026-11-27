@@ -70,7 +70,7 @@ public sealed class ViewModelContextContractTests
             "git_unlock_worktree", "git_unstage_file", "git_unstage_hunks", "git_update_submodule",
             "language_apply_edit", "language_code_actions", "language_complete", "language_configure_server", "language_declaration",
             "language_definition", "language_document_symbols", "language_format", "language_get_diagnostics", "language_get_server_output",
-            "language_hover", "language_implementation", "language_list_servers", "language_open_location",
+            "language_hover", "language_implementation", "language_list_problems", "language_list_servers", "language_open_location",
             "language_preview_code_action", "language_preview_completion", "language_references", "language_remove_server", "language_rename",
             "language_restart_server", "language_signature_help", "language_stop_server", "language_type_definition",
             "workbench_focus_tool", "workbench_get_context", "workbench_get_display_language",

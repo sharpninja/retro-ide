@@ -17,6 +17,14 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
     private readonly Slot[] _restore;
     private Task? _dispose;
 
+    internal event Action? Changed;
+
+    private void NotifyChanged()
+    {
+        if (!_shutdown.IsCancellationRequested)
+            Changed?.Invoke();
+    }
+
     internal LanguageReviewStore<LanguageEditPlan> Edits { get; } = new();
     internal LanguageReviewStore<LanguageCodeActionList> Actions { get; } = new();
     internal LanguageReviewStore<LanguageCompletionOffer> Completions { get; } = new();
@@ -79,7 +87,11 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
                     }
                 }
             }
-            finally { _configuration.Release(); }
+            finally
+            {
+                _configuration.Release();
+                NotifyChanged();
+            }
         }
         catch (OperationCanceledException) when (_shutdown.IsCancellationRequested) { }
     }
@@ -97,7 +109,11 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
                 await DetachAsync(installed, _shutdown.Token).ConfigureAwait(false);
             return await AttachAsync(profile.Bind(root), _shutdown.Token).ConfigureAwait(false);
         }
-        finally { _configuration.Release(); }
+        finally
+        {
+            _configuration.Release();
+            NotifyChanged();
+        }
     }
 
     internal async Task<LanguageServerStatus?> ChangeProfileAsync(LanguageProfileKey key, ProfileAction action, CancellationToken token)
@@ -126,7 +142,11 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
             }
             return _servers[key].Status;
         }
-        finally { _configuration.Release(); }
+        finally
+        {
+            _configuration.Release();
+            NotifyChanged();
+        }
     }
 
     internal bool TryQuery(LanguageDocument document, LanguageRequest query, CancellationToken token,
@@ -145,6 +165,11 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
     internal LanguageDiagnosticResult Diagnostics(LanguageDocument document) =>
         FindDocumentSlot(document)?.Session is { IsRunning: true } session
             ? session.Diagnostics(document) : new(document.Context, null, []);
+
+    internal LanguageProblemSnapshot Problems() => LanguageProblemSnapshot.Capture(_documents.Values
+        .OrderBy(document => document.Context.RelativePath, StringComparer.Ordinal)
+        .ThenBy(document => document.Context.RootId)
+        .SelectMany(document => LanguageProblem.Read(document, Diagnostics(document))));
 
     internal bool IsCurrent(LanguageProfileKey key, Guid? sessionId) =>
         _servers.TryGetValue(key, out var slot) && slot.Session is { IsRunning: true } session && session.Id == sessionId &&
@@ -168,7 +193,10 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
     {
         if (_shutdown.IsCancellationRequested)
             return;
+        _documents.TryGetValue(document.Context.ViewKey, out var previous);
         _documents[document.Context.ViewKey] = document;
+        if (previous is not null && previous.Context != document.Context && Diagnostics(previous).Items.Length != 0)
+            NotifyChanged();
         if (FindDocumentSlot(document) is { } slot)
             _ = Task.Run(() => SynchronizeAsync(slot, document, _shutdown.Token));
     }
@@ -176,6 +204,7 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
     internal void Closed(LanguageDocument document)
     {
         _documents.TryRemove(document.Context.ViewKey, out _);
+        NotifyChanged();
         if (FindDocumentSlot(document)?.Session is { IsRunning: true } session)
             _ = CloseDocumentAsync(session, document);
     }
@@ -255,6 +284,7 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
     private async Task ReapAsync(LanguageServerSession session)
     {
         await session.Completion.ConfigureAwait(false);
+        NotifyChanged();
         await DisposeSessionAsync(session).ConfigureAwait(false);
     }
 

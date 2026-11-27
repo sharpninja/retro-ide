@@ -40,6 +40,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
         _localization = localization;
         _logger = logger;
         LanguageServers = new LanguageServerWorkspace(explorer, logger);
+        LanguageServers.Changed += QueueLanguageStateUpdate;
         _workspaceId = explorer.WorkspaceId;
         _registry = registry;
         _layout = layout;
@@ -86,6 +87,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
         if (!_views.Remove(view.ViewKey, out var registration))
             return;
 
+        UnregisterLanguageViews(view);
         registration.Grant.Revoke();
         registration.Operations.Dispose();
         _retiredGitReads = CombineDrains(_retiredGitReads, registration.StopGitMonitor(closing: true));
@@ -245,6 +247,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
         _disposed = true;
         _shutdown.Cancel();
         _shutdown.Dispose();
+        LanguageServers.Changed -= QueueLanguageStateUpdate;
         _ = DrainLanguageServersAsync();
 
         _layout.Changed -= RefreshViews;
@@ -265,6 +268,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
         _explorerView?.ReplaceState(state);
         _explorerWatch?.UpdateRoots(state.Roots);
         LanguageServers.ReconcileRoots();
+        RefreshLanguagePanes();
         RefreshSourceControl();
     }
 
@@ -423,6 +427,11 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
                     DispatchToViewAsync(explorer, registration, _registry.Explorer.OpenEntry, source, request),
                 _ => null,
             };
+        }
+        else if (sender is LanguageToolViewModel language && request.OriginViewKey == language.ViewKey &&
+            language.ParentViewKey == registration.View.ViewKey && ReferenceEquals(GetView<IView>(language.ViewKey), language))
+        {
+            RouteLanguageTool(language, registration, request);
         }
     }
 

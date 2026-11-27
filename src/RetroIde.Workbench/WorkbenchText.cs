@@ -13,6 +13,21 @@ internal static class WorkbenchText
     internal const string LanguageNewSymbol = "document.language.new-symbol";
     internal const string LanguageTools = "document.language.tools";
     internal const string LanguageNoResults = "document.language.no-results";
+    internal const string LanguageProfiles = "language.profiles";
+    internal const string LanguageRoot = "language.root";
+    internal const string LanguageProfileId = "language.profile-id";
+    internal const string LanguageExecutable = "language.executable";
+    internal const string LanguageAssociations = "language.associations";
+    internal const string LanguageArguments = "language.arguments";
+    internal const string LanguageInitialization = "language.initialization";
+    internal const string LanguageSettings = "language.settings";
+    internal const string LanguageAdvanced = "language.advanced";
+    internal const string LanguageConfiguration = "language.configuration";
+    internal const string LanguageInvalidFields = "language.invalid-fields";
+    internal const string LanguageNoOutput = "language.no-output";
+    internal const string LanguageServerOutput = "language.server-output";
+    internal const string LanguageProblemSource = "language.problem-source";
+    internal const string LanguageProblemLimit = "language.problem-limit";
     internal const string GitMenu = "menu.git";
     internal const string GitStaged = "git.status.group.staged";
     internal const string GitWorking = "git.status.group.working";
@@ -151,8 +166,28 @@ internal static class WorkbenchText
     private const string ProjectRoot = "explorer.root.project";
     private const string UnavailableRoot = "explorer.root.unavailable";
 
+    internal static string LanguageState(string state) => state switch
+    {
+        "starting" or "running" or "stopped" or "faulted" => "language.state." + state,
+        _ => "language.state.unknown",
+    };
+
+    internal static string LanguageSeverity(int? severity) => severity switch
+    {
+        1 => "language.severity.error",
+        2 => "language.severity.warning",
+        3 => "language.severity.information",
+        4 => "language.severity.hint",
+        _ => "language.severity.diagnostic",
+    };
+
     internal static IReadOnlyList<string> Required { get; } =
-        [FileMenu, ViewMenu, LanguageMenu, LanguageNewSymbol, LanguageTools, LanguageNoResults, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
+        [FileMenu, ViewMenu, LanguageMenu,
+            LanguageProfiles, LanguageRoot, LanguageProfileId, LanguageExecutable, LanguageAssociations, LanguageArguments,
+            LanguageInitialization, LanguageSettings, LanguageAdvanced, LanguageConfiguration, LanguageInvalidFields,
+            LanguageNoOutput, LanguageServerOutput, LanguageProblemSource, LanguageProblemLimit,
+            LanguageState("starting"), LanguageState("running"), LanguageState("stopped"), LanguageState("faulted"), LanguageState(""),
+            LanguageSeverity(1), LanguageSeverity(2), LanguageSeverity(3), LanguageSeverity(4), LanguageSeverity(null), LanguageNewSymbol, LanguageTools, LanguageNoResults, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
             ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts, GitDiffStaged, GitDiffWorking, GitDiffHunks,
             GitBlameWorking, GitBlameLine, GitBlameAuthor, GitBlameCommit, GitBlameSource, GitBlameUncommitted,
             GitAbortExplanation, GitSkipExplanation, GitMergeOperation, GitRebaseOperation, GitCherryPickOperation, GitRevertOperation, GitOtherOperation,
