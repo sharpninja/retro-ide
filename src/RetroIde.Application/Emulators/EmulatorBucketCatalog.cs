@@ -83,7 +83,8 @@ internal sealed class EmulatorBucketCatalog(string root)
     private string CacheDirectory(Source source)
     {
         ValidateSource(source);
-        return Path.Combine(_root, "catalogs", source.Id, HashKey(source.Repository.AbsoluteUri));
+        // Git for Windows has length limits in its internal helpers as well as in filesystem access.
+        return Path.Combine(_root, "catalogs", ShortKey(source.Id + "\n" + source.Repository.AbsoluteUri));
     }
 
     internal static void ValidateSource(Source source)
@@ -94,13 +95,13 @@ internal sealed class EmulatorBucketCatalog(string root)
             throw new ArgumentException("A Git bucket requires a portable ID and an absolute repository URL.", nameof(source));
     }
 
-    private static async Task<string> EnsureRepositoryAsync(string cache, Source source, CancellationToken token)
+    private async Task<string> EnsureRepositoryAsync(string cache, Source source, CancellationToken token)
     {
         var repository = Path.Combine(cache, "repository");
         if (Directory.Exists(repository))
             return repository;
 
-        var staging = Path.Combine(cache, Guid.NewGuid().ToString("N"));
+        var staging = Path.Combine(_root, "git-stage", Guid.NewGuid().ToString("N"));
         try
         {
             Directory.CreateDirectory(staging);
@@ -180,7 +181,7 @@ internal sealed class EmulatorBucketCatalog(string root)
         foreach (var release in snapshot.Releases)
         {
             var pin = release.Pin;
-            var reference = "refs/retroide/releases/" + pin.Bundle + "/" + HashKey(pin.Version);
+            var reference = "refs/retroide/releases/" + pin.Bundle + "/" + ShortKey(pin.Version);
             var prior = await ReadCommitAsync(repository, reference, token).ConfigureAwait(false);
             if (prior is null)
             {
@@ -246,7 +247,7 @@ internal sealed class EmulatorBucketCatalog(string root)
         ["-c", "protocol.allow=never", "-c", "protocol.https.allow=always", "-c", "protocol.http.allow=always",
          "-c", "protocol.ssh.allow=always", "-c", "protocol.file.allow=always", "-c", "protocol.ext.allow=never", .. command];
 
-    private static string HashKey(string value) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+    private static string ShortKey(string value) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)).AsSpan(0, 16));
 
     internal sealed record Source(string Id, Uri Repository);
     internal sealed record Snapshot(string Revision, IReadOnlyList<Release> Releases);
