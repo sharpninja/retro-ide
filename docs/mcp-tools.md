@@ -115,7 +115,7 @@ Pass the exact checkout-relative `path` returned by status, including spaces, Un
 
 Hunk IDs are local to one diff preimage. When a hunk action returns `git_diff_changed`, read or reopen the diff and choose IDs from the new result before retrying.
 
-Commit and amend check the reviewed HEAD and index again before starting native Git. Restart the review when `git_commit_state_changed` is returned. The result reports whether publication of the prepared index succeeded as `indexPublished`.
+Commit and amend recheck the reviewed HEAD and index, then verify the proposed commit tree before Git publishes it. Restart the review when `git_commit_state_changed` is returned, including after a configured hook restages content. `git_commit_guard_unavailable` means Git cannot verify the reviewed tree before publication. On success, `indexPublished` indicates whether the actual index still matches the reviewed staged state.
 
 History and ref queries require the full worktree root to be open. A nonzero history offset requires an anchor. The history page limit defaults to 80 and supports 1 through 500 commits per call.
 
