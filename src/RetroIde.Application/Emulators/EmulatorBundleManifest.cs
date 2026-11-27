@@ -136,12 +136,12 @@ internal sealed partial record EmulatorBundleManifest(
         return IsIdentifier(id) ? id : throw Invalid(field, "must be a lowercase identifier.");
     }
 
-    internal static bool IsIdentifier(string value) =>
-        value.Length is > 0 and <= 96 && char.IsAsciiLetterOrDigit(value[0]) &&
+    internal static bool IsIdentifier(string? value) =>
+        value is { Length: > 0 and <= 96 } && char.IsAsciiLetterOrDigit(value[0]) &&
         value.All(static item => char.IsAsciiLetterLower(item) || char.IsAsciiDigit(item) || item is '-' or '_') &&
         BundleArchivePath.IsPortableSegment(value);
 
-    internal static bool IsReleaseVersion(string value) => value.Length <= 128 && ReleaseVersion().IsMatch(value);
+    internal static bool IsReleaseVersion(string? value) => value is { Length: <= 128 } && ReleaseVersion().IsMatch(value);
 
     private static Uri ReadUri(JsonElement value, string field, bool allowFile = false)
     {
