@@ -22,6 +22,12 @@ Compatible profiles for distinct, non-overlapping roots share a process when the
 
 Use the public context returned by `editor_get_document` with `language_complete`, `language_document_symbols`, or `language_get_diagnostics`. Completion accepts a zero-based UTF-16 offset in the editor buffer. Retro IDE translates that offset into the server's negotiated encoding and correlates the result with the captured buffer revision.
 
+`language_hover` and `language_signature_help` return the server's result for a UTF-16 editor offset. The definition, declaration, type definition, implementation, and references tools return location ranges in the negotiated server encoding. Pass a selected result and its session ID to `language_open_location` to activate the exact source location. The target must be a file under a registered workspace root. [LSP definition response](https://github.com/microsoft/language-server-protocol/blob/gh-pages/_specifications/lsp/3.17/language/definition.md)
+
+`language_format` and `language_rename` prepare previews without editing buffers. Use `language_code_actions` to get an action offer, then pass its ID and an action index to `language_preview_code_action`. Send the preview ID and the original document context to `language_apply_edit`. The controller validates every target and applies text edits in one dispatcher operation, with one undo group per affected editor. Closed source files open as dirty editor tabs. Save through the normal editor command to write the changes to disk.
+
+A preview expires after five minutes. A changed or closed buffer, changed target file, retired server, invalid range, or out-of-workspace destination invalidates the preview. Current preview support covers text edits to existing files. Resource operations and command-only code actions require separate support.
+
 ## Editor features
 
 | Area | IDE behavior |

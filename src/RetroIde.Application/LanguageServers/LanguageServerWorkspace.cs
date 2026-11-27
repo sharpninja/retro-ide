@@ -17,6 +17,9 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
     private readonly Slot[] _restore;
     private Task? _dispose;
 
+    internal LanguageReviewStore<LanguageEditPlan> Edits { get; } = new();
+    internal LanguageReviewStore<LanguageCodeActionList> Actions { get; } = new();
+
     internal LanguageServerWorkspace(WorkspaceExplorer explorer, ILogger logger)
     {
         _explorer = explorer;
@@ -125,14 +128,14 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
         finally { _configuration.Release(); }
     }
 
-    internal bool TryQuery(LanguageDocument document, string method, string provider, int? offset, CancellationToken token,
+    internal bool TryQuery(LanguageDocument document, LanguageRequest query, CancellationToken token,
         [NotNullWhen(true)] out Task<LanguageQueryResult>? pending)
     {
         pending = null;
         if (FindDocumentSlot(document) is not { Session: { IsRunning: true } session } slot ||
             slot.Configuration.GetLanguage(document.Path) is not { } language)
             return false;
-        pending = Task.Run(() => session.QueryAsync(document, slot.Configuration, language, method, provider, offset,
+        pending = Task.Run(() => session.QueryAsync(document, slot.Configuration, language, query,
             () => _documents.TryGetValue(document.Context.ViewKey, out var latest) && latest.Context == document.Context &&
                 IsCurrent(slot.Configuration.Key, session.Id), token), token);
         return true;
@@ -145,6 +148,20 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
     internal bool IsCurrent(LanguageProfileKey key, Guid? sessionId) =>
         _servers.TryGetValue(key, out var slot) && slot.Session is { IsRunning: true } session && session.Id == sessionId &&
         _explorer.Roots.Any(root => root.Id == key.RootId);
+
+    internal LanguageServerStatus? ReadSession(LanguageDocument document, Guid sessionId) =>
+        FindDocumentSlot(document) is { Session: { IsRunning: true } session } slot && session.Id == sessionId
+            ? slot.Status : null;
+
+    internal LanguageDocument? ReadObserved(WorkspaceExplorer.Address address) =>
+        _documents.Values.FirstOrDefault(document => WorkspaceExplorer.AddressEquality.Equals(
+            new(document.Context.RootId, document.Context.RelativePath), address));
+
+    internal LanguageDocument[] CaptureBuffers() => _documents.Values.ToArray();
+
+    internal int? ReadLspVersion(LanguageDocument document, Guid serverId) =>
+        FindDocumentSlot(document) is { Session: { IsRunning: true } session } && session.Id == serverId
+            ? session.ReadDocumentVersion(document) : null;
 
     internal void Observe(LanguageDocument document)
     {

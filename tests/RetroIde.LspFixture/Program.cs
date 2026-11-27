@@ -15,6 +15,8 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
     private bool _shutDown;
     private bool _deferCompletions;
     private bool _crashOnFirstCompletion;
+    private bool _navigation;
+    private string? _renameExtraUri;
     private string? _traceDirectory;
 
     /// <summary>Starts a reference server that prefers the specified position encoding.</summary>
@@ -123,6 +125,14 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
             case "fixture/releaseCompletion":
                 ReleaseCompletion(parameters);
                 break;
+            case "textDocument/hover" or "textDocument/references" or "textDocument/definition" or "textDocument/declaration"
+                or "textDocument/typeDefinition" or "textDocument/implementation" or "textDocument/signatureHelp" when request && _navigation:
+                Navigate(method, id, parameters);
+                break;
+            case "textDocument/formatting" or "textDocument/rangeFormatting" or "textDocument/rename" or "textDocument/codeAction"
+                or "codeAction/resolve" when request && _navigation:
+                Refactor(method, id, parameters);
+                break;
             case "fixture/crash":
                 return 17;
             case "shutdown" when request:
@@ -156,6 +166,11 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
             options.TryGetProperty("crashOnFirstCompletion", out var crash) && crash.ValueKind == JsonValueKind.True;
         var folderMode = options.ValueKind == JsonValueKind.Object && options.TryGetProperty("workspaceFolderMode", out var mode)
             ? mode.GetString() : null;
+        _navigation = options.ValueKind == JsonValueKind.Object && options.TryGetProperty("navigation", out var navigation)
+            && navigation.ValueKind == JsonValueKind.True;
+        if (options.ValueKind == JsonValueKind.Object && options.TryGetProperty("renameExtraUri", out var extra) &&
+            extra.ValueKind == JsonValueKind.String)
+            _renameExtraUri = extra.GetString();
         foreach (var folder in parameters.GetProperty("workspaceFolders").EnumerateArray())
             _workspaceFolders.Add(folder.GetProperty("uri").GetString()!);
         _initialized = true;
@@ -169,6 +184,17 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
                     positionEncoding = _encoding,
                     textDocumentSync = new { openClose = true, change = 2, save = true },
                     completionProvider = new { },
+                    hoverProvider = _navigation,
+                    referencesProvider = _navigation,
+                    definitionProvider = _navigation,
+                    declarationProvider = _navigation,
+                    typeDefinitionProvider = _navigation,
+                    implementationProvider = _navigation,
+                    signatureHelpProvider = _navigation ? new { triggerCharacters = new[] { "(" } } : null,
+                    documentFormattingProvider = _navigation,
+                    documentRangeFormattingProvider = _navigation,
+                    renameProvider = _navigation,
+                    codeActionProvider = _navigation ? new { resolveProvider = true } : null,
                     workspace = new { workspaceFolders = new { supported = folderMode is "initial" or "dynamic", changeNotifications = folderMode is "dynamic" } },
                 },
                 serverInfo = new { name = "Retro IDE LSP test fixture" },
@@ -182,6 +208,85 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
             _workspaceFolders.Remove(folder.GetProperty("uri").GetString()!);
         foreach (var folder in folders.GetProperty("added").EnumerateArray())
             _workspaceFolders.Add(folder.GetProperty("uri").GetString()!);
+    }
+
+    private void Navigate(string method, JsonElement id, JsonElement parameters)
+    {
+        var uri = DocumentUri(parameters);
+        var document = _documents[uri];
+        var position = parameters.GetProperty("position");
+        _ = Offset(document.Text, position);
+        var range = new { start = position, end = position };
+        object result = method switch
+        {
+            "textDocument/hover" => new { contents = new { kind = "plaintext", value = document.Text }, range },
+            "textDocument/references" when parameters.GetProperty("context").GetProperty("includeDeclaration").GetBoolean() =>
+                new[] { new { uri, range } },
+            "textDocument/references" => Array.Empty<object>(),
+            "textDocument/definition" => new[] { new { targetUri = uri, targetRange = range, targetSelectionRange = range } },
+            "textDocument/signatureHelp" => new { signatures = new[] { new { label = "fixture(arg)" } }, activeSignature = 0 },
+            "textDocument/implementation" => new[] { new { uri, range } },
+            _ => new { uri, range },
+        };
+        connection.Send(new { jsonrpc = "2.0", id, result });
+    }
+
+    private void Refactor(string method, JsonElement id, JsonElement parameters)
+    {
+        var uri = method == "codeAction/resolve"
+            ? parameters.GetProperty("data").GetProperty("uri").GetString()! : DocumentUri(parameters);
+        object result = method switch
+        {
+            "textDocument/rename" => new { documentChanges = RenameDocuments(parameters.GetProperty("newName").GetString()!) },
+            "textDocument/codeAction" => new[] { new { title = "Resolve fixture fix", kind = "quickfix", data = new { uri } } },
+            "codeAction/resolve" => new { title = "Resolve fixture fix", kind = "quickfix",
+                edit = new { changes = new Dictionary<string, object[]>(StringComparer.Ordinal) { [uri] = ReplaceValue(_documents[uri].Text, "fixed") } } },
+            _ => ReplaceValue(_documents[uri].Text, "formatted"),
+        };
+        connection.Send(new { jsonrpc = "2.0", id, result });
+    }
+
+    private object[] RenameDocuments(string name)
+    {
+        var documents = _documents.Select(item => (object)new
+        {
+            textDocument = new { uri = item.Key, version = item.Value.Version },
+            edits = ReplaceValue(item.Value.Text, name),
+        }).ToList();
+        if (_renameExtraUri is { } uri)
+        {
+            documents.Add(new
+            {
+                textDocument = new { uri, version = (int?)null },
+                edits = ReplaceValue(File.ReadAllText(new Uri(uri).LocalPath), name),
+            });
+        }
+        return documents.ToArray();
+    }
+
+    private object[] ReplaceValue(string text, string replacement)
+    {
+        const string Name = "value";
+        var index = text.IndexOf(Name, StringComparison.Ordinal);
+        if (index < 0)
+            return [];
+        var start = EncodedPosition(text, index);
+        var end = EncodedPosition(text, index + Name.Length);
+        return [new { range = new { start, end }, newText = replacement }];
+    }
+
+    private object EncodedPosition(string text, int offset)
+    {
+        var line = text[..offset].Count(c => c == '\n');
+        var lineStart = offset == 0 ? 0 : text.LastIndexOf('\n', offset - 1) + 1;
+        var prefix = text[lineStart..offset];
+        var character = _encoding switch
+        {
+            "utf-8" => Encoding.UTF8.GetByteCount(prefix),
+            "utf-32" => prefix.EnumerateRunes().Count(),
+            _ => prefix.Length,
+        };
+        return new { line, character };
     }
 
     /// <summary>Applies ordered full or ranged content changes to the current in-memory document.</summary>

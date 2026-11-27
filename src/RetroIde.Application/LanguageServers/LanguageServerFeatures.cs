@@ -3,15 +3,15 @@ using RetroIde.Application.Workspaces;
 
 namespace RetroIde.Application.LanguageServers;
 
-internal interface ILanguageRegistration
+internal interface ILanguageRegistration : IExplorerRegistration
 {
-    WorkspaceExplorer Explorer { get; }
     LanguageServerWorkspace LanguageServers { get; }
     LanguageDocument? ReadLanguageDocument(DocumentContext context);
+    FeatureOutcome ApplyLanguageEdits(LanguageBufferEdit[] documents);
     void ReportLanguageFailure(Exception error, string action);
 }
 
-internal sealed class LanguageServerFeatures
+internal sealed partial class LanguageServerFeatures
 {
     internal sealed record ConfigureInput(Guid RootId, string Executable, LanguageAssociation[] Languages,
         string[]? Arguments = null, JsonElement? InitializationOptions = null, JsonElement? Settings = null, string? ProfileId = null);
@@ -50,12 +50,12 @@ internal sealed class LanguageServerFeatures
 
     internal Feature<CompleteInput> Complete { get; } = new("language.document.complete", "language_complete",
         "Request completions at a UTF-16 editor offset in the live document revision.",
-        static (input, view, token) => QueryAsync(input.Document, input.Offset, "textDocument/completion", "completionProvider", view, token),
+        static (input, view, token) => QueryAsync(input.Document, new("textDocument/completion", "completionProvider", input.Offset), view, token),
         typeof(LanguageQueryResult));
 
     internal Feature<DocumentInput> Symbols { get; } = new("language.document.symbols", "language_document_symbols",
         "List the document symbols advertised for the live unsaved document revision.",
-        static (input, view, token) => QueryAsync(input.Document, null, "textDocument/documentSymbol", "documentSymbolProvider", view, token),
+        static (input, view, token) => QueryAsync(input.Document, new("textDocument/documentSymbol", "documentSymbolProvider"), view, token),
         typeof(LanguageQueryResult));
 
     internal Feature<DocumentInput> Diagnostics { get; } = new("language.document.diagnostics", "language_get_diagnostics",
@@ -131,21 +131,26 @@ internal sealed class LanguageServerFeatures
         }
     }
 
-    private static async Task<FeatureOutcome> QueryAsync(DocumentContext context, int? offset, string method, string provider,
-        IWorkbenchRegistration view, CancellationToken token)
+    private static async Task<FeatureOutcome> QueryAsync(DocumentContext context, LanguageRequest query,
+        IWorkbenchRegistration view, CancellationToken token,
+        Func<LanguageQueryResult, ILanguageRegistration, CancellationToken, Task<FeatureOutcome>>? project = null,
+        bool captureBuffers = false)
     {
         if (view is not ILanguageRegistration registration || registration.ReadLanguageDocument(context) is not { } document)
             return DocumentChanged();
         try
         {
-            if (!registration.LanguageServers.TryQuery(document, method, provider, offset, token, out var pending))
+            var buffers = captureBuffers ? registration.LanguageServers.CaptureBuffers() : null;
+            if (!registration.LanguageServers.TryQuery(document, query, token, out var pending))
                 return Unavailable();
-            var result = await pending.ConfigureAwait(false);
-            return new FeatureOutcome("ok", "Language server result prepared.")
+            var result = (await pending.ConfigureAwait(false)) with { CapturedBuffers = buffers };
+            var publication = project is null ? FeatureOutcome.Success("Language server result read.", result)
+                : await project(result, registration, token).ConfigureAwait(false);
+            return publication with
             {
                 Commit = current => current is ILanguageRegistration active && active.ReadLanguageDocument(context) is not null &&
                     active.LanguageServers.IsCurrent(new LanguageProfileKey(context.RootId, result.Server.ProfileId), result.Server.SessionId)
-                    ? FeatureOutcome.Success("Language server result read.", result) : DocumentChanged(),
+                    ? publication.Commit?.Invoke(current) ?? publication : DocumentChanged(),
             };
         }
         catch (LanguageDocumentChangedException) { return DocumentChanged(); }

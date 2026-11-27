@@ -10,6 +10,8 @@ public sealed partial class WorkbenchController
 
     internal Task DrainLanguageServersAsync() => LanguageServers.DisposeAsync().AsTask();
 
+    internal void ReportLanguageFailure(Exception error, string action) => RuntimeFailures.Report(_logger, error, action);
+
     private sealed partial record Registration
     {
         public LanguageServerWorkspace LanguageServers => Controller.LanguageServers;
@@ -17,7 +19,10 @@ public sealed partial class WorkbenchController
         public LanguageDocument? ReadLanguageDocument(DocumentContext context) =>
             Controller._documents?.ReadLanguageDocument(context);
 
+        public FeatureOutcome ApplyLanguageEdits(LanguageBufferEdit[] documents) =>
+            Controller._documents?.ApplyLanguageEdits(documents) ?? new("view_closed", "The source editor is unavailable.");
+
         public void ReportLanguageFailure(Exception error, string action) =>
-            RuntimeFailures.Report(Controller._logger, error, action);
+            Controller.ReportLanguageFailure(error, action);
     }
 }

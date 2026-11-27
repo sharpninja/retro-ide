@@ -22,7 +22,10 @@ internal sealed record LanguageDocument(DocumentContext Context, string Path, st
 internal sealed record LanguageServerStatus(Guid RootId, string Executable, string State, Guid? SessionId = null,
     string? PositionEncoding = null, int? ProcessId = null, string? Name = null,
     string ProfileId = LanguageProfileKey.DefaultProfile, Guid[]? WorkspaceRootIds = null);
-internal sealed record LanguageQueryResult(DocumentContext Document, LanguageServerStatus Server, JsonElement Result);
+internal sealed record LanguageQueryResult(DocumentContext Document, LanguageServerStatus Server, JsonElement Result)
+{
+    internal LanguageDocument[]? CapturedBuffers { get; init; }
+}
 internal sealed record LanguageDiagnosticResult(DocumentContext Document, Guid? SessionId, JsonElement[] Items);
 internal sealed record LanguageServerOutput(LanguageServerStatus Server, string StandardError);
 
@@ -111,10 +114,26 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
             capabilities = new
             {
                 general = new { positionEncodings = new[] { "utf-8", "utf-16", "utf-32" } },
-                workspace = new { configuration = true, workspaceFolders = true, didChangeConfiguration = new { dynamicRegistration = true } },
+                workspace = new
+                {
+                    configuration = true, workspaceFolders = true,
+                    didChangeConfiguration = new { dynamicRegistration = true },
+                    workspaceEdit = new { documentChanges = true },
+                },
                 textDocument = new
                 {
                     completion = new { },
+                    hover = new { contentFormat = new[] { "plaintext", "markdown" } },
+                    definition = new { linkSupport = true },
+                    declaration = new { linkSupport = true },
+                    typeDefinition = new { linkSupport = true },
+                    implementation = new { linkSupport = true },
+                    codeAction = new
+                    {
+                        disabledSupport = true,
+                        codeActionLiteralSupport = new { codeActionKind = new { valueSet = new[] { "", "quickfix", "refactor", "source" } } },
+                        resolveSupport = new { properties = new[] { "edit" } },
+                    },
                     publishDiagnostics = new { versionSupport = true },
                     documentSymbol = new { hierarchicalDocumentSymbolSupport = true },
                 },
@@ -155,15 +174,21 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
             throw new InvalidDataException("The language server advertised an unknown document synchronization mode.");
     }
 
-    internal bool Supports(string method, string provider) =>
-        _registrations.Values.Contains(method, StringComparer.Ordinal) ||
-        _capabilities.ValueKind == JsonValueKind.Object && _capabilities.TryGetProperty(provider, out var value) &&
-        value.ValueKind is JsonValueKind.True or JsonValueKind.Object;
-
-    internal async Task<LanguageQueryResult> QueryAsync(LanguageDocument document, LanguageServerConfiguration configuration, string language, string method,
-        string provider, int? offset, Func<bool> currentDocument, CancellationToken token)
+    internal bool Supports(string method, string provider)
     {
-        if (!Supports(method, provider))
+        if (_registrations.Values.Contains(method, StringComparer.Ordinal))
+            return true;
+        if (_capabilities.ValueKind != JsonValueKind.Object || !_capabilities.TryGetProperty(provider, out var value))
+            return false;
+        return method is "codeAction/resolve" or "completionItem/resolve"
+            ? value.ValueKind == JsonValueKind.Object && TryTrue(value, "resolveProvider")
+            : value.ValueKind is JsonValueKind.True or JsonValueKind.Object;
+    }
+
+    internal async Task<LanguageQueryResult> QueryAsync(LanguageDocument document, LanguageServerConfiguration configuration,
+        string language, LanguageRequest query, Func<bool> currentDocument, CancellationToken token)
+    {
+        if (!Supports(query.Method, query.Provider))
             throw new NotSupportedException("The language server does not advertise this feature.");
 
         var uri = FileUri(document.Path);
@@ -176,13 +201,11 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
             if (!ContainsRoot(document.Context.RootId) || !currentDocument())
                 throw new LanguageDocumentChangedException();
             var tracked = await SynchronizeCoreAsync(uri, document, language, token).ConfigureAwait(false);
-            object arguments = offset is { } at
-                ? new { textDocument = new { uri }, position = LspPosition.AtOffset(tracked.Text, at, Encoding) }
-                : new { textDocument = new { uri } };
+            var arguments = query.Build(uri, tracked.Text, Encoding);
             revisionToken = tracked.Requests.Token;
             linked = CancellationTokenSource.CreateLinkedTokenSource(token, revisionToken);
             linked.CancelAfter(TimeSpan.FromSeconds(20));
-            request = _rpc.RequestAsync(method, arguments, linked.Token);
+            request = _rpc.RequestAsync(query.Method, arguments, linked.Token);
         }
         finally { _updates.Release(); }
 
@@ -241,6 +264,9 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
         return new LanguageDiagnosticResult(document.Context, Id,
             _diagnostics.TryGetValue(uri, out var found) && found.Context == document.Context ? found.Items : []);
     }
+
+    internal int? ReadDocumentVersion(LanguageDocument document) =>
+        _documents.TryGetValue(FileUri(document.Path), out var open) && open.Context == document.Context ? open.Version : null;
 
     public ValueTask DisposeAsync()
     {

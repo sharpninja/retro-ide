@@ -54,6 +54,13 @@ public sealed partial class LanguageServerIntegrationTests
             Assert.Equal("ok", Code(symbols));
             Assert.Contains(symbols.GetProperty("data").GetProperty("result").EnumerateArray(),
                 symbol => string.Equals(symbol.GetProperty("name").GetString(), "unsaved_symbol", StringComparison.Ordinal));
+            var hover = await http.CallAsync("language_hover", new(StringComparer.Ordinal)
+            {
+                ["document"] = edit.GetProperty("data"),
+                ["offset"] = code.IndexOf("disk_symbol_only", StringComparison.Ordinal) + 1,
+            }, stdio).ConfigureAwait(true);
+            Assert.Equal("ok", Code(hover));
+            Assert.Contains("unsaved_symbol", hover.GetProperty("data").GetProperty("result").GetRawText(), StringComparison.Ordinal);
             Assert.Equal(code, await File.ReadAllTextAsync(path, token).ConfigureAwait(true));
         }
         finally { fixture.Delete(recursive: true); }

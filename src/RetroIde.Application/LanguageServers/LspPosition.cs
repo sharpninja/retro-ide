@@ -47,6 +47,47 @@ internal readonly record struct LspPosition(int Line, int Character)
         };
     }
 
+    internal int ToOffset(string text, string encoding, bool clampColumn = false)
+    {
+        if (Line < 0 || Character < 0)
+            throw new ArgumentOutOfRangeException(nameof(text), "The language server position is negative.");
+
+        var start = 0;
+        for (var line = 0; line < Line; line++)
+        {
+            var newline = text.AsSpan(start).IndexOfAny(Newlines);
+            if (newline < 0)
+                throw new ArgumentOutOfRangeException(nameof(text), "The language server line is outside the source.");
+            start += newline + 1;
+            if (text[start - 1] == '\r' && start < text.Length && text[start] == '\n')
+                start++;
+        }
+
+        var body = text.AsSpan(start);
+        var end = body.IndexOfAny(Newlines);
+        if (end >= 0)
+            body = body[..end];
+        var column = 0;
+        var index = 0;
+        foreach (var rune in body.EnumerateRunes())
+        {
+            if (column == Character)
+                return start + index;
+            column += encoding switch
+            {
+                "utf-8" => rune.Utf8SequenceLength,
+                "utf-32" => 1,
+                _ => rune.Utf16SequenceLength,
+            };
+            if (column > Character)
+                throw new ArgumentOutOfRangeException(nameof(text), "The language server column divides a source character.");
+            index += rune.Utf16SequenceLength;
+        }
+        if (column == Character || clampColumn)
+            return start + index;
+        throw new ArgumentOutOfRangeException(nameof(text), "The language server column is outside the line.");
+    }
+
     private static int CommonPrefix(string left, string right)
     {
         var limit = Math.Min(left.Length, right.Length);
