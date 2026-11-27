@@ -7,7 +7,7 @@ using Xunit;
 namespace RetroIde.IntegrationTests;
 
 /// <summary>Exercises emulator bundle metadata and archive verification.</summary>
-public sealed class EmulatorBundleIntegrationTests
+public sealed partial class EmulatorBundleIntegrationTests
 {
     private const string WindowsHash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     private const string LinuxHash = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
@@ -85,7 +85,7 @@ public sealed class EmulatorBundleIntegrationTests
         Assert.Contains(field, Assert.Throws<InvalidDataException>(() => Parse(invalid)).Message, StringComparison.Ordinal);
     }
 
-    /// <remarks>TR-RETRO-BUNDLE-009#ac-bundle-integrity; TEST-RETRO-009#ac-test-bundle-integrity.</remarks>
+    /// <remarks>TR-RETRO-BUNDLE-009#ac-bundle-transaction; TEST-RETRO-009#ac-test-bundle-integrity.</remarks>
     [Fact]
     public async Task Matching_archives_stage_regular_assets_and_preserve_executable_permission()
     {
@@ -113,7 +113,7 @@ public sealed class EmulatorBundleIntegrationTests
         }
     }
 
-    /// <remarks>TR-RETRO-BUNDLE-009#ac-bundle-integrity; TEST-RETRO-009#ac-test-bundle-integrity.</remarks>
+    /// <remarks>TR-RETRO-BUNDLE-009#ac-bundle-transaction; TEST-RETRO-009#ac-test-bundle-integrity.</remarks>
     [Theory]
     [InlineData("sha256", "bin/uae", 0)]
     [InlineData("entry point", "bin/other", 0)]
@@ -147,7 +147,7 @@ public sealed class EmulatorBundleIntegrationTests
         }
     }
 
-    /// <remarks>TR-RETRO-BUNDLE-009#ac-bundle-integrity; TEST-RETRO-009#ac-test-bundle-integrity.</remarks>
+    /// <remarks>TR-RETRO-BUNDLE-009#ac-bundle-transaction; TEST-RETRO-009#ac-test-bundle-integrity.</remarks>
     [Fact]
     public async Task Incomplete_archives_leave_no_staged_installation()
     {

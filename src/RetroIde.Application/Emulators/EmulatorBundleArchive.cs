@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 namespace RetroIde.Application.Emulators;
 
 /// <summary>Verifies and extracts a bundle into an unpublished installation directory.</summary>
-/// <remarks>TR-RETRO-BUNDLE-009#ac-bundle-integrity.</remarks>
+/// <remarks>TR-RETRO-BUNDLE-009#ac-bundle-transaction.</remarks>
 internal static class EmulatorBundleArchive
 {
     private const long MaximumArchiveBytes = 2L * 1024 * 1024 * 1024;

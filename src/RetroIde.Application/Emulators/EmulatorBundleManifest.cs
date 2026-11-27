@@ -11,8 +11,13 @@ internal sealed partial record EmulatorBundleManifest(
     IReadOnlyList<Version> AdapterApi, IReadOnlyDictionary<string, EmulatorBundleArtifact> Targets,
     IReadOnlyDictionary<string, EmulatorDebuggerProfileAsset> DebuggerProfiles)
 {
+    internal const int MaximumBytes = 1024 * 1024;
+
     internal static EmulatorBundleManifest Parse(ReadOnlyMemory<byte> utf8)
     {
+        if (utf8.Length > MaximumBytes)
+            throw new InvalidDataException("The bundle manifest exceeds its permitted size.");
+
         try
         {
             using var document = JsonDocument.Parse(utf8);
@@ -39,7 +44,7 @@ internal sealed partial record EmulatorBundleManifest(
         if (ReadPositiveInt(manifest, "schemaVersion") != 1)
             throw Invalid("schemaVersion", "must be 1.");
         var version = ReadText(manifest, "version");
-        if (version.Length > 128 || !ReleaseVersion().IsMatch(version))
+        if (!IsReleaseVersion(version))
             throw Invalid("version", "must be a SemVer release version.");
         var targets = ReadMap(Required(manifest, "targets"), "targets", ReadTarget);
         if (targets.Count == 0)
@@ -131,10 +136,12 @@ internal sealed partial record EmulatorBundleManifest(
         return IsIdentifier(id) ? id : throw Invalid(field, "must be a lowercase identifier.");
     }
 
-    private static bool IsIdentifier(string value) =>
+    internal static bool IsIdentifier(string value) =>
         value.Length is > 0 and <= 96 && char.IsAsciiLetterOrDigit(value[0]) &&
         value.All(static item => char.IsAsciiLetterLower(item) || char.IsAsciiDigit(item) || item is '-' or '_') &&
         BundleArchivePath.IsPortableSegment(value);
+
+    internal static bool IsReleaseVersion(string value) => value.Length <= 128 && ReleaseVersion().IsMatch(value);
 
     private static Uri ReadUri(JsonElement value, string field, bool allowFile = false)
     {
