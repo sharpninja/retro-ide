@@ -13,13 +13,30 @@ public sealed partial class Phase03GitCommitContractTests
     /// <summary>Applies the reference index and hook assertions through the live MCP workbench.</summary>
     /// <remarks>2026-11-26. TEST-RETRO-013#ac-test-git-stage-and-push. Observes native HEAD, index, and working bytes after the reviewed CQRS operation.</remarks>
     [AvaloniaFact]
-    public async Task Live_workbench_publishes_only_the_reviewed_index()
+    public Task Live_workbench_publishes_only_the_reviewed_index() => WithLiveCommitPortAsync(VerifyReviewedCommitAsync);
+
+    /// <summary>Requires a fresh review when a configured pre-commit hook restages working changes.</summary>
+    /// <remarks>TEST-RETRO-013#ac-test-git-stage-and-push; TR-RETRO-GIT-013#ac-git-state-consistency.</remarks>
+    [AvaloniaFact]
+    public Task Live_workbench_rejects_changes_restaged_by_a_native_hook() => WithLiveCommitPortAsync(
+        async (port, token) =>
+        {
+            var before = await port.ReadStateAsync(token).ConfigureAwait(false);
+            var reviewed = await port.ReviewAsync(token).ConfigureAwait(false);
+            await port.ConfigureRestagingHookAsync(token).ConfigureAwait(false);
+
+            var result = await port.CommitAsync(reviewed, token).ConfigureAwait(false);
+            Assert.Equal(before, await port.ReadStateAsync(token).ConfigureAwait(false));
+            Assert.Equal("git_commit_state_changed", result);
+        });
+
+    private static async Task WithLiveCommitPortAsync(Func<LiveCommitPort, CancellationToken, Task> exercise)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
         var folder = Directory.CreateTempSubdirectory("retro-commit-contract-");
         try
         {
-            await VerifyWorkbenchAsync(folder, timeout.Token).ConfigureAwait(true);
+            await VerifyWorkbenchAsync(folder, exercise, timeout.Token).ConfigureAwait(true);
         }
         finally
         {
@@ -30,7 +47,8 @@ public sealed partial class Phase03GitCommitContractTests
         }
     }
 
-    private static async Task VerifyWorkbenchAsync(DirectoryInfo folder, CancellationToken token)
+    private static async Task VerifyWorkbenchAsync(DirectoryInfo folder, Func<LiveCommitPort, CancellationToken, Task> exercise,
+        CancellationToken token)
     {
         var session = new WorkbenchSession(Guid.NewGuid());
         try
@@ -49,7 +67,7 @@ public sealed partial class Phase03GitCommitContractTests
             var hooks = folder.CreateSubdirectory("hooks").FullName;
             var port = new LiveCommitPort(bridge, checkout, hooks);
             await port.ConfigureFixtureAsync(token).ConfigureAwait(true);
-            await VerifyReviewedCommitAsync(port, token).ConfigureAwait(true);
+            await exercise(port, token).ConfigureAwait(true);
         }
         finally { await GitFixture.DisposeWorkbenchAsync(session).ConfigureAwait(true); }
     }
@@ -110,10 +128,15 @@ public sealed partial class Phase03GitCommitContractTests
             finally { await File.WriteAllTextAsync(WorkingFile, working, CancellationToken.None).ConfigureAwait(false); }
         }
 
-        public async Task ConfigureHookAsync(bool allow, CancellationToken token)
+        public Task ConfigureHookAsync(bool allow, CancellationToken token) => WritePreCommitHookAsync(
+            allow ? "#!/bin/sh\nexit 0\n" : "#!/bin/sh\nprintf 'fixture rejects commit\\n' >&2\nexit 1\n", token);
+
+        internal Task ConfigureRestagingHookAsync(CancellationToken token) =>
+            WritePreCommitHookAsync("#!/bin/sh\ngit add -- " + Source + "\n", token);
+
+        private async Task WritePreCommitHookAsync(string script, CancellationToken token)
         {
             var path = Path.Combine(hooks, "pre-commit");
-            var script = allow ? "#!/bin/sh\nexit 0\n" : "#!/bin/sh\nprintf 'fixture rejects commit\\n' >&2\nexit 1\n";
             await File.WriteAllTextAsync(path, script, token).ConfigureAwait(false);
             if (!OperatingSystem.IsWindows())
                 File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
