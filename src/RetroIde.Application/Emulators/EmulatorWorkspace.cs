@@ -104,6 +104,25 @@ internal sealed class EmulatorWorkspace
 
     internal SelectionState ReadSelection(Project project) => new(project.Id, Selection(project).Read());
 
+    internal async Task<AdapterResult<PinnedEmulatorSession>> OpenSelectedAsync(Project project, EmulatorSessionPlan plan,
+        Func<string, IEmulatorAdapterFactory> activateBinding, CancellationToken token)
+    {
+        Pin? pin;
+        try { pin = ReadSelection(project).Selection?.Active; }
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
+        {
+            ReportFailure(error);
+            return AdapterResult<PinnedEmulatorSession>.Failure(new(AdapterErrorCodes.Failed,
+                "The project's emulator selection could not be read. Check the application log for details."));
+        }
+
+        if (pin is null)
+            return AdapterResult<PinnedEmulatorSession>.Failure(new(AdapterErrorCodes.Unavailable, "Select an emulator bundle for this project."));
+
+        var coordinator = new EmulatorSessionCoordinator(_store, RuntimeInformation.RuntimeIdentifier, activateBinding, _logger);
+        return await coordinator.OpenAsync(pin, plan, token).ConfigureAwait(false);
+    }
+
     internal async Task<SelectionState> SelectAsync(Project project, Pin pin, bool rollback, CancellationToken token)
     {
         pin = Normalize(pin);

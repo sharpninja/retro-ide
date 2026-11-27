@@ -45,7 +45,7 @@ public interface IEmulatorPort
 - `SessionIdentity` identifies the adapter, bundle version, and unique session instance. Any backend instance ID is mapped to that identity. `SessionState` contains the lifecycle and execution status, current state revision, machine and device descriptors, capability snapshot, and an event cursor for that state.
 - `SessionCloseRequest` releases the IDE's connection and subscriptions. A launched session follows its declared cleanup policy. An attached host continues independently when the IDE detaches. Guest reset and power operations use the execution port and applicable host authorization.
 
-The factory returns a usable session only after startup or attach and capability negotiation. Failed opens release partial resources. Session disposal releases streams and the bundle lease. Reconnection confirms backend instance identity and refreshes state and capabilities. A restarted or replaced backend instance gets a new session identity so a request from the previous instance cannot target it.
+The factory returns a usable session only after startup or attach and capability negotiation. The coordinator resolves the project pin, holds its installed version, and checks the initial identity, state, cursor, and close policy before returning the connection. Failed opens release the connection and lease. Session disposal releases streams and the bundle lease. Reconnection confirms backend instance identity and refreshes state and capabilities. A restarted or replaced backend instance gets a new session identity so a request from the previous instance cannot target it.
 
 ## Capability ports
 
