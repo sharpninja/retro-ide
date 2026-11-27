@@ -76,7 +76,10 @@ public sealed partial class EmulatorBundleIntegrationTests
     private static WorkbenchSession OpenEmulatorWorkbench(BundleStoreFixture root) =>
         new(new WorkspaceExplorerStore(Path.Combine(root.Directory, "workspace.json")), savedLayout: null,
             localization: null, logs: null,
-            emulatorDataFolder: Path.Combine(root.Directory, "workspace application data with a deliberately long path"));
+            emulatorDataFolder: EmulatorData(root));
+
+    private static string EmulatorData(BundleStoreFixture root) =>
+        Path.Combine(root.Directory, "workspace application data with a deliberately long path");
 
     private static Dictionary<string, object?> BucketArguments(string? repository = null)
     {

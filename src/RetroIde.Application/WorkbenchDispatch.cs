@@ -300,7 +300,9 @@ public sealed class FeatureRegistry
             Git.Operation, Git.ContinueOperation, Git.AbortOperation, Git.SkipOperation, Git.StartOperation,
             Git.ReviewReset, Git.Reset, Git.ListStashes, Git.InspectStash, Git.CreateStash, Git.ApplyStash, Git.PopStash, Git.DropStash,
             Git.ExportPatch, Git.ReviewPatch, Git.ApplyPatch,
-            Emulators.List, Emulators.Configure, Emulators.Refresh, Emulators.Remove);
+            Emulators.List, Emulators.Configure, Emulators.Refresh, Emulators.Remove,
+            Emulators.Inventory, Emulators.Install, Emulators.Update, Emulators.RemoveBundle,
+            Emulators.Selection, Emulators.Select, Emulators.Rollback);
     }
 
     internal ExplorerFeatures Explorer { get; }

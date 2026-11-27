@@ -102,14 +102,13 @@ internal sealed partial class EmulatorBundleStore(string root)
         return installed;
     }
 
-    private static InstalledBundle ReadInstalled(string directory, Pin pin, string runtimeIdentifier, Version adapterApi)
+    private static InstalledBundle ReadInstalled(string directory, Pin pin, string runtimeIdentifier, Version? adapterApi, Receipt? receipt = null)
     {
         try
         {
             RequirePathType(directory, directoryExpected: true);
-            var receiptBytes = ReadDocument(directory, ReceiptFile, MaximumReceiptBytes);
-            var receipt = JsonSerializer.Deserialize(receiptBytes, StoreJson.Default.Receipt);
-            if (receipt is null || receipt.SchemaVersion != SchemaVersion || receipt.Pin != pin ||
+            receipt ??= ReadReceipt(directory);
+            if (receipt.Pin != pin ||
                 !string.Equals(receipt.RuntimeIdentifier, runtimeIdentifier, StringComparison.Ordinal))
                 throw new InvalidDataException("The installed bundle receipt does not match the requested pin and host.");
 
@@ -117,7 +116,10 @@ internal sealed partial class EmulatorBundleStore(string root)
             if (!string.Equals(receipt.ManifestSha256, Digest(bytes), StringComparison.Ordinal))
                 throw new InvalidDataException("The installed bundle manifest differs from its receipt.");
             var manifest = ReadManifest(pin, bytes);
-            var artifact = manifest.TargetFor(runtimeIdentifier, adapterApi);
+            if (adapterApi is not null)
+                _ = manifest.TargetFor(runtimeIdentifier, adapterApi);
+            if (!manifest.Targets.TryGetValue(runtimeIdentifier, out var artifact))
+                throw new InvalidDataException("The installed bundle no longer declares its host target.");
             if (!string.Equals(receipt.ArchiveSha256, artifact.Sha256, StringComparison.Ordinal))
                 throw new InvalidDataException("The installed bundle archive digest differs from its manifest.");
 
@@ -133,6 +135,14 @@ internal sealed partial class EmulatorBundleStore(string root)
         {
             throw new InvalidDataException("The installed bundle receipt or payload is missing or invalid.", error);
         }
+    }
+
+    private static Receipt ReadReceipt(string directory)
+    {
+        var bytes = ReadDocument(directory, ReceiptFile, MaximumReceiptBytes);
+        return JsonSerializer.Deserialize(bytes, StoreJson.Default.Receipt) is { SchemaVersion: SchemaVersion, Pin: not null } receipt
+            ? receipt
+            : throw new InvalidDataException("The installed bundle receipt is invalid.");
     }
 
     private static void RequirePayloadFile(string root, string path)

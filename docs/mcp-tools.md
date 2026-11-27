@@ -48,6 +48,17 @@ The shared command registry exposes these bucket operations through Streamable H
 | `emulator_refresh_bucket` | `bucketId`, workbench `context`, optional `background` | The verified catalog and its exact Git commit, or an operation handle when requested. A failed refresh preserves the last valid catalog. |
 | `emulator_remove_bucket` | `bucketId`, workbench `context` | The removed configuration ID. Installed bundles and project pins remain available. |
 
+A bundle pin has `bucket`, `bundle`, `version`, and `manifestRevision` fields. Package mutation tools use the same write-enabled attachment and workbench context as bucket mutations. Project tools accept an open project root ID from `workspace_list_roots`.
+
+| Tool | Arguments | Result |
+| --- | --- | --- |
+| `emulator_list_installed` | None | Verified host installations with exact pins and adapter compatibility. |
+| `emulator_install_bundle` | `pin`, workbench `context`, optional `background` | The verified host installation or an operation handle. |
+| `emulator_update_bundle` | Installed `current` pin, reviewed catalog `target` pin, workbench `context`, optional `background` | Installs the current catalog release alongside the original. Returns the installation or an operation handle. |
+| `emulator_remove_bundle` | `pin`, workbench `context` | Removes the exact installation. A live session lease protects its release. |
+| `emulator_get_project_bundle` | `rootId` | The active emulator pin and selection history for that project. |
+| `emulator_select_bundle`, `emulator_rollback_bundle` | `rootId`, `pin`, workbench `context` | Persists the reviewed installed release as the project selection. Rollback chooses a compatible installed pin from that project's history. |
+
 ## Phase 03 Git tools
 
 Phase 03 exposes native Git actions and the repository terminal through the same attached workbench over stdio and Streamable HTTP. Discovery takes a literal path within an open Project Explorer root. Use an empty `relativePath` to inspect the root itself. Use forward slashes in path arguments on both hosts, including Windows paths such as `C:/src/example`. [Phase 03 acceptance](receipts/phase-03-git-terminal-language-servers.md)

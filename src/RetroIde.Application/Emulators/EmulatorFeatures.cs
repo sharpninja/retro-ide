@@ -1,8 +1,9 @@
 using System.ComponentModel;
+using Project = RetroIde.Application.Workspaces.WorkspaceExplorer.Root;
 
 namespace RetroIde.Application.Emulators;
 
-internal sealed class EmulatorFeatures
+internal sealed partial class EmulatorFeatures
 {
     internal sealed record ConfigureInput(string BucketId, string Repository);
     internal sealed record BucketInput(string BucketId);
@@ -29,38 +30,48 @@ internal sealed class EmulatorFeatures
             "Emulator bucket removed."), typeof(EmulatorWorkspace.BucketChange), mutation: true);
 
     private static Task<FeatureOutcome> Prepare<T>(IWorkbenchRegistration view,
-        Func<EmulatorWorkspace, CancellationToken, Task<T>> execute, string success)
+        Func<EmulatorWorkspace, CancellationToken, Task<T>> execute, string success, string area = "bucket", Project? project = null)
     {
         if (view is not IEmulatorRegistration { Emulators: { } workspace })
             return Task.FromResult(Unavailable());
-        return Task.FromResult(new FeatureOutcome("ok", "Emulator bucket operation prepared.")
+        return Task.FromResult(new FeatureOutcome("ok", "Emulator operation prepared.")
         {
-            Commit = current => current is IEmulatorRegistration active && ReferenceEquals(active.Emulators, workspace)
-                ? new FeatureOutcome("ok", "Emulator bucket operation authorized.")
+            Commit = current =>
+            {
+                if (current is not IEmulatorRegistration active || !ReferenceEquals(active.Emulators, workspace))
+                    return Unavailable();
+                if (project is not null && ResolveProject(current, project.Id) != project)
+                    return MissingProject();
+                return new FeatureOutcome("ok", "Emulator operation authorized.")
                 {
-                    ExecuteAuthorizedAsync = token => RunAsync(workspace, execute, success, token),
-                }
-                : Unavailable(),
+                    ExecuteAuthorizedAsync = token => RunAsync(workspace, execute, success, token, area),
+                };
+            },
         });
     }
 
     private static async Task<FeatureOutcome> RunAsync<T>(EmulatorWorkspace workspace,
-        Func<EmulatorWorkspace, CancellationToken, Task<T>> execute, string success, CancellationToken token)
+        Func<EmulatorWorkspace, CancellationToken, Task<T>> execute, string success, CancellationToken token, string area = "bucket")
     {
         try
         {
             var result = await execute(workspace, token).ConfigureAwait(false);
             return FeatureOutcome.Success(success, result);
         }
+        catch (EmulatorWorkspace.Rejected error)
+        {
+            return new(error.Code, error.Message);
+        }
         catch (Exception error) when (error is InvalidDataException or ArgumentException or IOException or UnauthorizedAccessException
-            or KeyNotFoundException or Win32Exception)
+            or KeyNotFoundException or Win32Exception or HttpRequestException or InvalidOperationException)
         {
             workspace.ReportFailure(error);
             return error switch
             {
                 KeyNotFoundException => new("emulator_bucket_missing", "The emulator bucket is not configured."),
-                InvalidDataException or ArgumentException => new("emulator_bucket_invalid", "The emulator bucket settings or manifest are invalid."),
-                _ => new("emulator_bucket_io", "The emulator bucket could not be read or updated."),
+                InvalidDataException or ArgumentException => new($"emulator_{area}_invalid", $"The emulator {area} input or stored data is invalid."),
+                InvalidOperationException => new($"emulator_{area}_unavailable", error.Message),
+                _ => new($"emulator_{area}_io", $"The emulator {area} could not be read or updated."),
             };
         }
     }

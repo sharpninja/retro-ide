@@ -55,7 +55,9 @@ public sealed class ViewModelContextContractTests
         [
             "editor_close_document", "editor_edit_text", "editor_find_text", "editor_get_document",
             "editor_redo", "editor_replace_text", "editor_save_document", "editor_undo",
-            "emulator_configure_bucket", "emulator_list_buckets", "emulator_refresh_bucket", "emulator_remove_bucket",
+            "emulator_configure_bucket", "emulator_get_project_bundle", "emulator_install_bundle",
+            "emulator_list_buckets", "emulator_list_installed", "emulator_refresh_bucket", "emulator_remove_bucket",
+            "emulator_remove_bundle", "emulator_rollback_bundle", "emulator_select_bundle", "emulator_update_bundle",
             "git_abort_operation", "git_add_remote", "git_add_worktree", "git_amend", "git_apply_patch", "git_apply_stash", "git_clone_repository", "git_close_blame", "git_close_diff", "git_close_history", "git_commit",
             "git_continue_operation",
             "git_create_branch", "git_create_stash", "git_create_tag", "git_delete_branch", "git_delete_tag", "git_discover_repository", "git_drop_stash", "git_export_patch", "git_fetch",
