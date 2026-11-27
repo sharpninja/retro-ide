@@ -16,6 +16,8 @@ internal sealed partial class Program(LspConnection connection, string preferred
     private bool _deferCompletions;
     private bool _crashOnFirstCompletion;
     private bool _navigation;
+    private bool _pauseLargeFrame;
+    private bool _pausedLargeFrame;
     private int? _verifiedSyncMode;
     private string? _renameExtraUri;
     private string? _traceDirectory;
@@ -47,7 +49,7 @@ internal sealed partial class Program(LspConnection connection, string preferred
     /// <returns>The selected fixture exit code.</returns>
     private int Run()
     {
-        while (connection.Read() is { } message)
+        while (connection.Read(PauseLargeFrame) is { } message)
         {
             using (message)
             {
@@ -94,6 +96,7 @@ internal sealed partial class Program(LspConnection connection, string preferred
             case "textDocument/didSave":
                 if (_verifiedSyncMode is not null)
                     Trace("did-save", parameters.GetRawText());
+                TraceDocument("save", DocumentUri(parameters));
                 break;
             case "workspace/didChangeWorkspaceFolders":
                 ChangeFolders(parameters.GetProperty("event"));
@@ -103,6 +106,7 @@ internal sealed partial class Program(LspConnection connection, string preferred
                 var uri = opened.GetProperty("uri").GetString()!;
                 var document = new OpenDocument(opened.GetProperty("version").GetInt32(), opened.GetProperty("text").GetString()!);
                 _documents.Add(uri, document);
+                TraceDocument("open", uri);
                 PublishDiagnostics(uri, document.Version, document.Text);
                 break;
             case "textDocument/didChange":
@@ -111,6 +115,9 @@ internal sealed partial class Program(LspConnection connection, string preferred
             case "textDocument/didClose":
                 var closed = DocumentUri(parameters);
                 _documents.Remove(closed);
+                TraceDocument("close", closed);
+                if (_pauseLargeFrame)
+                    Trace("did-close", closed);
                 PublishDiagnostics(closed, null, string.Empty);
                 break;
             case "textDocument/completion" when request:
@@ -173,6 +180,8 @@ internal sealed partial class Program(LspConnection connection, string preferred
         if (options.ValueKind == JsonValueKind.Object && options.TryGetProperty("traceDirectory", out var trace) &&
             trace.ValueKind == JsonValueKind.String)
             _traceDirectory = trace.GetString();
+        _pauseLargeFrame = options.ValueKind == JsonValueKind.Object && options.TryGetProperty("pauseLargeFrame", out var pause) &&
+            pause.ValueKind == JsonValueKind.True;
         _crashOnFirstCompletion = options.ValueKind == JsonValueKind.Object &&
             options.TryGetProperty("crashOnFirstCompletion", out var crash) && crash.ValueKind == JsonValueKind.True;
         ReadWorkspaceEditFixture(options, parameters);
@@ -365,6 +374,23 @@ internal sealed partial class Program(LspConnection connection, string preferred
         {
             SendCompletion(completion);
         }
+    }
+
+    private void PauseLargeFrame(int size)
+    {
+        if (!_pauseLargeFrame || _pausedLargeFrame || size < 2 * 1024 * 1024 || _traceDirectory is not { } directory)
+            return;
+        _pausedLargeFrame = true;
+        var release = Path.Combine(directory, "release-large-frame");
+        Trace("large-frame-held", "");
+        if (!SpinWait.SpinUntil(() => File.Exists(release), TimeSpan.FromSeconds(25)))
+            throw new InvalidDataException("The test did not release the large LSP input frame.");
+    }
+
+    private void TraceDocument(string kind, string uri)
+    {
+        if (_pauseLargeFrame && _traceDirectory is { } directory)
+            File.AppendAllText(Path.Combine(directory, "document-timeline"), $"{kind} {uri}\n");
     }
 
     private void Trace(string name, string value)

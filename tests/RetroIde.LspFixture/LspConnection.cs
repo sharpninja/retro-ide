@@ -18,10 +18,11 @@ internal sealed class LspConnection(Stream input, Stream output)
     };
 
     /// <summary>Reads a complete framed JSON document, or returns null when the client closes between frames.</summary>
+    /// <param name="beforeBody">Optional fixture callback after reading the frame header.</param>
     /// <returns>The parsed request or notification, owned by the caller.</returns>
     /// <exception cref="InvalidDataException">The frame headers or byte length are invalid.</exception>
     /// <exception cref="EndOfStreamException">The client closes during a frame.</exception>
-    public JsonDocument? Read()
+    public JsonDocument? Read(Action<int>? beforeBody = null)
     {
         var header = new StringBuilder();
         while (header.Length < MaxHeaderBytes)
@@ -45,6 +46,7 @@ internal sealed class LspConnection(Stream input, Stream output)
                 CultureInfo.InvariantCulture, out var size) || size is <= 0 or > MaxContentBytes)
                 throw new InvalidDataException("The LSP frame requires one bounded Content-Length.");
 
+            beforeBody?.Invoke(size);
             var body = new byte[size];
             input.ReadExactly(body);
             return JsonDocument.Parse(body);
