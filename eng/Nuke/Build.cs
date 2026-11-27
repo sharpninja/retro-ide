@@ -4,7 +4,7 @@ using Nuke.Common.IO;
 using Nuke.Common.Tools.DotNet;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
-internal sealed class Build : NukeBuild
+internal sealed partial class Build : NukeBuild
 {
     private static readonly int[] IconSizes = [16, 24, 32, 48, 64, 128, 256, 512];
     private readonly string _releaseId = $"{DateTime.UtcNow:yyyyMMddTHHmmssZ}-{Guid.NewGuid():N}";

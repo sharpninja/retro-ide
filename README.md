@@ -27,9 +27,15 @@ dotnet run --project src/RetroIde.Workbench -c Release --no-build
 
 Start the desktop with `-- --mcp` to issue an observer attachment or `-- --mcp-mutate` to allow scoped writes. The workbench shows the path to its private attachment file. A stdio client can launch `dotnet` with the built `RetroIde.Mcp.Stdio.dll` and that file path as arguments. A Streamable HTTP client uses the loopback endpoint and bearer token from the same file. Call `workbench_get_context` to capture the public ViewModel context, then supply that context with a tool ID such as `registers` to `workbench_focus_tool`. [Explorer, editor and language tools](docs/mcp-tools.md)
 
-Run `dotnet test RetroIde.sln -c Release --no-build` for the managed tests. The UI suite drives the workbench through SharpNinja.Avalonia.RemoteControl on Avalonia Headless and needs no physical keyboard or mouse. The test projects load RemoteControl. Run `pwsh -File eng/Verify-Phase01Trace.ps1 -ThroughPhase 02` with `-QBrainExport` and the effective requirements export to check the compiled criterion IDs against QBrain.
+Run the Nuke managed gate or select specific test classes from the repository root. Give each run a unique ID. The gates write a TRX for each selected project under `TestResults/<run-id>/`.
 
-For the native-window UI suite on Windows and Linux, run `dotnet run --project tests/RetroIde.NativeTests -c Release --no-build -- --remote-control`. With SharpNinja.Avalonia.RemoteControl, the suite exercises the scoped Wait cursor, native floating and redocking, mixed-root Explorer, source editing and save, and live localization and persistence. It uses application-scoped input and fixture paths for file selection.
+```powershell
+dotnet run --project eng/Nuke/RetroIde.Build.csproj -c Release -- Test --test-run-id managed-01
+dotnet run --project eng/Nuke/RetroIde.Build.csproj -c Release -- TestGroups --test-groups 'RetroIde.IntegrationTests:GitDiffIndexTests' --test-run-id git-01
+dotnet run --project eng/Nuke/RetroIde.Build.csproj -c Release -- ValidateTraceability --through-phase 03 --qbrain-export /path/to/effective-requirements.yaml
+```
+
+Run `TestNative` with the same Nuke project for the native-window suite. SharpNinja.Avalonia.RemoteControl drives the workbench without physical keyboard or mouse input. The suite checks the scoped Wait cursor, floating and redocking, mixed-root Explorer, editor workflows, localization, and Git tooling. On Linux, run it on an explicitly selected unused test display.
 
 The Linux platform smoke also checks effective X11 cursor rendering and interactive tear-away and redock gestures. For Linux, choose an explicit unused display number and verify that its socket and lock are absent before launching the test. The example uses display `:177`.
 
