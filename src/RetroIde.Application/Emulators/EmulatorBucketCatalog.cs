@@ -103,8 +103,11 @@ internal sealed class EmulatorBucketCatalog(string root)
         var staging = Path.Combine(cache, Guid.NewGuid().ToString("N"));
         try
         {
-            var result = await NativeGit.RunAsync(cache, TransportArguments(
-                ["clone", "--bare", "--no-local", "--no-tags", "--template=", "--", source.Repository.AbsoluteUri, GitPath(staging)]), token)
+            Directory.CreateDirectory(staging);
+            // Keep the Git directory relative so Git for Windows can pass it to index-pack.
+            string[] arguments = ["-c", "core.longpaths=true", .. TransportArguments(
+                ["clone", "--bare", "--no-local", "--no-tags", "--template=", "--", source.Repository.AbsoluteUri, "."])];
+            var result = await NativeGit.RunAsync(staging, arguments, token)
                 .ConfigureAwait(false);
             if (result is null)
                 throw new IOException("The configured Git bucket could not be cloned.");
@@ -221,7 +224,7 @@ internal sealed class EmulatorBucketCatalog(string root)
     }
 
     private static async Task<byte[]> ReadBlobAsync(string repository, string objectId, CancellationToken token) =>
-        await NativeGit.ReadBytesAsync(repository, RepositoryArguments(repository, ["cat-file", "blob", objectId]), token).ConfigureAwait(false)
+        await NativeGit.ReadBytesAsync(repository, RepositoryArguments(["cat-file", "blob", objectId]), token).ConfigureAwait(false)
             ?? throw new InvalidDataException("The Git bucket manifest blob is missing.");
 
     private static async Task SetRefAsync(string repository, string reference, string revision, CancellationToken token)
@@ -234,17 +237,14 @@ internal sealed class EmulatorBucketCatalog(string root)
         GitAsync(repository, ["update-ref", "--no-deref", "-d", PendingRef], CancellationToken.None);
 
     private static Task<string?> GitAsync(string repository, IReadOnlyList<string> command, CancellationToken token) =>
-        NativeGit.RunAsync(repository, RepositoryArguments(repository, command), token);
+        NativeGit.RunAsync(repository, RepositoryArguments(command), token);
 
-    private static List<string> RepositoryArguments(string repository, IReadOnlyList<string> command) =>
-        ["--no-replace-objects", "--git-dir", GitPath(repository), "-c", "core.longpaths=true",
-         "-c", "core.hooksPath=" + GitPath(Path.Combine(repository, "disabled-hooks")), .. command];
+    private static List<string> RepositoryArguments(IReadOnlyList<string> command) =>
+        ["--no-replace-objects", "--git-dir", ".", "-c", "core.longpaths=true", "-c", "core.hooksPath=disabled-hooks", .. command];
 
     private static List<string> TransportArguments(IReadOnlyList<string> command) =>
-        ["-c", "core.longpaths=true", "-c", "protocol.allow=never", "-c", "protocol.https.allow=always", "-c", "protocol.http.allow=always",
+        ["-c", "protocol.allow=never", "-c", "protocol.https.allow=always", "-c", "protocol.http.allow=always",
          "-c", "protocol.ssh.allow=always", "-c", "protocol.file.allow=always", "-c", "protocol.ext.allow=never", .. command];
-
-    private static string GitPath(string path) => OperatingSystem.IsWindows() ? path.Replace('\\', '/') : path;
 
     private static string HashKey(string value) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
