@@ -49,14 +49,16 @@ public sealed partial class Phase03OperationContractTests
                 "The live workbench does not expose workbench_operation_status.");
             await VerifyLiveOperationsAsync(folder, host, direct, grant, token).ConfigureAwait(true);
         }
-        finally
-        {
-            // Phase 02 has a synchronous lifetime. The later workbench drains its native watchers asynchronously.
-            if ((IDisposable)session is IAsyncDisposable asyncSession)
-                await asyncSession.DisposeAsync().ConfigureAwait(true);
-            else
-                session.Dispose();
-        }
+        finally { await DisposeWorkbenchAsync(session).ConfigureAwait(true); }
+    }
+
+    internal static async ValueTask DisposeWorkbenchAsync(IDisposable session)
+    {
+        // The Phase 02 baseline has a synchronous lifetime. Later workbenches drain native watchers asynchronously.
+        if (session is IAsyncDisposable asyncSession)
+            await asyncSession.DisposeAsync().ConfigureAwait(true);
+        else
+            session.Dispose();
     }
 
     private static async Task VerifyLiveOperationsAsync(DirectoryInfo folder, LoopbackMcpHost host,
@@ -104,14 +106,14 @@ public sealed partial class Phase03OperationContractTests
             await GitAsync(checkout, token, "rev-parse", TrackingRef).ConfigureAwait(false));
     }
 
-    private static Task<McpClient> ConnectAsync(AttachmentDescriptor descriptor, HttpClient client, CancellationToken token) =>
+    internal static Task<McpClient> ConnectAsync(AttachmentDescriptor descriptor, HttpClient client, CancellationToken token) =>
         McpClient.CreateAsync(new HttpClientTransport(new()
         {
             Endpoint = descriptor.Endpoint,
             TransportMode = HttpTransportMode.StreamableHttp,
         }, client), cancellationToken: token);
 
-    private static Task<McpClient> ConnectStdioAsync(DirectoryInfo folder, AttachmentDescriptor descriptor, CancellationToken token)
+    internal static Task<McpClient> ConnectStdioAsync(DirectoryInfo folder, AttachmentDescriptor descriptor, CancellationToken token)
     {
         var path = Path.Combine(folder.FullName, "attachment.json");
         descriptor.Write(path);
@@ -122,7 +124,7 @@ public sealed partial class Phase03OperationContractTests
         }), cancellationToken: token);
     }
 
-    private static async Task<string> GitAsync(string directory, CancellationToken token, params string[] arguments)
+    internal static async Task<string> GitAsync(string directory, CancellationToken token, params string[] arguments)
     {
         var start = new ProcessStartInfo("git")
         {
