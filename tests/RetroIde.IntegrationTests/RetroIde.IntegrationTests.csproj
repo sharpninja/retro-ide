@@ -15,6 +15,7 @@
     <PackageReference Include="ModelContextProtocol" />
     <ProjectReference Include="../../src/RetroIde.Workbench/RetroIde.Workbench.csproj" />
     <ProjectReference Include="../RetroIde.AdapterFixture/RetroIde.AdapterFixture.csproj" />
+    <ProjectReference Include="../RetroIde.LspFixture/RetroIde.LspFixture.csproj" />
     <ProjectReference Include="../../src/RetroIde.Mcp.Stdio/RetroIde.Mcp.Stdio.csproj" />
   </ItemGroup>
 </Project>

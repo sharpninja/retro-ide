@@ -13,6 +13,8 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
     private bool _initialized;
     private bool _shutDown;
     private bool _deferCompletions;
+    private bool _crashOnFirstCompletion;
+    private string? _traceDirectory;
 
     /// <summary>Starts a reference server that prefers the specified position encoding.</summary>
     /// <param name="args">An optional preferred encoding of utf-8, utf-16, or utf-32.</param>
@@ -98,12 +100,21 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
                 PublishDiagnostics(closed, null, string.Empty);
                 break;
             case "textDocument/completion" when request:
+                if (_crashOnFirstCompletion && _traceDirectory is { } directory &&
+                    !File.Exists(Path.Combine(directory, "crashed")))
+                {
+                    Trace("crashed", id.GetRawText());
+                    return 17;
+                }
                 CompleteDocument(id, parameters);
                 break;
             case "$/cancelRequest":
                 var key = parameters.GetProperty("id").GetRawText();
                 if (_pending.TryGetValue(key, out var pending))
+                {
                     _pending[key] = pending with { Cancelled = true };
+                    Trace("cancel-received", key);
+                }
                 break;
             case "fixture/releaseCompletion":
                 ReleaseCompletion(parameters);
@@ -134,6 +145,11 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
 
         _deferCompletions = parameters.TryGetProperty("initializationOptions", out var options) &&
             options.ValueKind == JsonValueKind.Object && options.TryGetProperty("deferCompletions", out var defer) && defer.ValueKind == JsonValueKind.True;
+        if (options.ValueKind == JsonValueKind.Object && options.TryGetProperty("traceDirectory", out var trace) &&
+            trace.ValueKind == JsonValueKind.String)
+            _traceDirectory = trace.GetString();
+        _crashOnFirstCompletion = options.ValueKind == JsonValueKind.Object &&
+            options.TryGetProperty("crashOnFirstCompletion", out var crash) && crash.ValueKind == JsonValueKind.True;
         _initialized = true;
         connection.Send(new
         {
@@ -192,12 +208,19 @@ internal sealed class Program(LspConnection connection, string preferredEncoding
         if (_deferCompletions)
         {
             _pending.Add(id.GetRawText(), completion);
+            Trace("completion-held", id.GetRawText());
             connection.Send(new { jsonrpc = "2.0", method = "fixture/completionHeld", @params = new { id, uri, version = snapshot.Version } });
         }
         else
         {
             SendCompletion(completion);
         }
+    }
+
+    private void Trace(string name, string value)
+    {
+        if (_traceDirectory is { } directory)
+            File.WriteAllText(Path.Combine(directory, name), value);
     }
 
     /// <summary>Releases a held completion with its original contents, or returns the native cancellation error.</summary>

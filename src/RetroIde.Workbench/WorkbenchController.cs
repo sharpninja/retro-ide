@@ -7,6 +7,7 @@ using RetroIde.Application.Git;
 using RetroIde.Application.Terminals;
 using RetroIde.Application.Workspaces;
 using RetroIde.Application.Localization;
+using RetroIde.Application.LanguageServers;
 
 namespace RetroIde.Workbench;
 
@@ -38,6 +39,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
         _workspaceExplorer = explorer;
         _localization = localization;
         _logger = logger;
+        LanguageServers = new LanguageServerWorkspace(logger);
         _workspaceId = explorer.WorkspaceId;
         _registry = registry;
         _layout = layout;
@@ -243,6 +245,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
         _disposed = true;
         _shutdown.Cancel();
         _shutdown.Dispose();
+        _ = DrainLanguageServersAsync();
 
         _layout.Changed -= RefreshViews;
         _interaction.Changed -= RefreshViews;
@@ -465,7 +468,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
     /// <summary>Represents the live workbench registration and its own native Git selection.</summary>
     /// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-multiple-repos; TEST-RETRO-015#ac-test-mcp-same-instance. Publish selection revisions through the existing workbench layout.</remarks>
     private sealed partial record Registration(WorkbenchViewModel View, ActorGrant Grant, WorkbenchController Controller) : IWorkbenchRegistration,
-        IExplorerRegistration, ILocalizationRegistration, IGitRegistration, ITerminalRegistration, IWorkbenchOperationRegistration
+        IExplorerRegistration, ILocalizationRegistration, IGitRegistration, ITerminalRegistration, IWorkbenchOperationRegistration, ILanguageRegistration
     {
         private GitStatusMonitor? _gitMonitor;
         private Task _drainingMonitors = Task.CompletedTask;

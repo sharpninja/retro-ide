@@ -5,6 +5,7 @@ using System.Text.Json.Schema;
 using RetroIde.Application.Git;
 using RetroIde.Application.Workspaces;
 using RetroIde.Application.Localization;
+using RetroIde.Application.LanguageServers;
 
 namespace RetroIde.Application;
 
@@ -271,12 +272,15 @@ public sealed class FeatureRegistry
         Localization = new LocalizationFeatures();
         Git = new GitFeatures();
         Terminals = new Terminals.TerminalFeatures();
+        Language = new LanguageServerFeatures();
         var operations = new WorkbenchOperationFeatures();
         Features = ImmutableArray.Create<FeatureRegistration>(GetContext, FocusTool, operations.Status, operations.Result, operations.Cancel,
             Explorer.OpenRoot, Explorer.ReadRoots,
             Explorer.ReadChildren, Explorer.SetExpansion, Explorer.SelectEntry, Explorer.OpenEntry, Explorer.RevealEntry,
             Explorer.SaveDocument, Documents.GetContext, Documents.Find, Documents.Replace, Documents.Close,
             Documents.Edit, Documents.Undo, Documents.Redo, Localization.GetLanguage, Localization.SetLanguage,
+            Language.Configure, Language.List, Language.Restart, Language.Stop, Language.Output,
+            Language.Complete, Language.Symbols, Language.Diagnostics,
             Git.Discover, Git.Select, Git.Status, Git.Initialize, Git.Clone, Git.Diff, Git.OpenDiff, Git.CloseDiff,
             Git.Blame, Git.OpenBlame, Git.CloseBlame,
             Git.InspectTag, Git.CreateTag, Git.DeleteTag,
@@ -298,6 +302,7 @@ public sealed class FeatureRegistry
     /// <summary>Gets the Git operations used by the shared controller and MCP registry.</summary>
     internal GitFeatures Git { get; }
     internal Terminals.TerminalFeatures Terminals { get; }
+    internal LanguageServerFeatures Language { get; }
     internal ViewContextContract? DocumentContextContract { get; }
 
     /// <summary>Gets the public workbench context contract shared by its tools.</summary>

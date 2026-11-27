@@ -10,6 +10,14 @@ Start the selected process asynchronously in its workspace context. The initial 
 
 The first conformance targets are standalone clangd for C and C++ and rust-analyzer for Rust. Registrations can support additional languages and assembly dialects. A file without a configured server opens with the editor's local syntax highlighting or plain text. [clangd client setup](https://clangd.llvm.org/installation) · [rust-analyzer manual](https://rust-analyzer.github.io/book/other_editors.html)
 
+### Running a server from MCP
+
+Use `language_configure_server` with a live workspace `rootId`, an installed executable's absolute path, an argument array, and one or more language associations. Each association provides `languageId` and an array of file extensions including the leading dot. The call accepts optional JSON initialization options and settings. For example, configure clangd for `c` with extension `.c`.
+
+`language_list_servers` returns the active workbench's root configurations, process states, and negotiated position encodings. `language_restart_server` reopens the current buffers in a new session. `language_stop_server` stops the process and keeps its configuration available for restart in the current workbench. `language_get_server_output` returns the retained standard error for the root.
+
+Use the public context returned by `editor_get_document` with `language_complete`, `language_document_symbols`, or `language_get_diagnostics`. Completion accepts a zero-based UTF-16 offset in the editor buffer. Retro IDE translates that offset into the server's negotiated encoding and correlates the result with the captured buffer revision.
+
 ## Editor features
 
 | Area | IDE behavior |

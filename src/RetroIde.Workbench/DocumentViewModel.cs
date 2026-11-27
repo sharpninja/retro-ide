@@ -4,6 +4,7 @@ using AvaloniaEdit.Document;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RetroIde.Application;
+using RetroIde.Application.LanguageServers;
 using RetroIde.Application.Workspaces;
 
 namespace RetroIde.Workbench;
@@ -32,6 +33,7 @@ internal sealed partial class DocumentViewModel : ObservableObject, IView
         {
             Revision++;
             IsDirty = !string.Equals(Buffer.Text, _savedText, StringComparison.Ordinal);
+            LanguageContentChanged?.Invoke(this, EventArgs.Empty);
         };
     }
 
@@ -56,6 +58,7 @@ internal sealed partial class DocumentViewModel : ObservableObject, IView
     internal string Scope => $"source-{DocumentId:N}";
 
     public event EventHandler<ViewCommandRequested>? CommandRequested;
+    internal event EventHandler? LanguageContentChanged;
     internal event EventHandler? PositionRequested;
     internal event EventHandler? SearchRequested;
 
@@ -94,11 +97,14 @@ internal sealed partial class DocumentViewModel : ObservableObject, IView
 
     internal DocumentSaveSnapshot CaptureSave(DocumentContext context) => new(context, _source.Address, Buffer.Text, _source.Encoding);
 
+    internal LanguageDocument CaptureLanguageDocument() => new(Capture(), FullPath, Buffer.Text, SavedRevision, _savedText);
+
     internal void MarkSaved(DocumentSaveSnapshot snapshot)
     {
         SavedRevision = snapshot.Context.Revision;
         _savedText = snapshot.Text;
         IsDirty = !string.Equals(Buffer.Text, _savedText, StringComparison.Ordinal);
+        LanguageContentChanged?.Invoke(this, EventArgs.Empty);
     }
 
     internal void ReloadSource(WorkspaceExplorer.SourceFile source)
@@ -110,6 +116,7 @@ internal sealed partial class DocumentViewModel : ObservableObject, IView
         Buffer.UndoStack.ClearAll();
         SavedRevision = Revision;
         IsDirty = false;
+        LanguageContentChanged?.Invoke(this, EventArgs.Empty);
     }
 
     partial void OnIsDirtyChanged(bool value)

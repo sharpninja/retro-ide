@@ -5,6 +5,7 @@ using Dock.Model.Core.Events;
 using GPS.SimpleMVC.Controllers;
 using RetroIde.Application;
 using RetroIde.Application.Git;
+using RetroIde.Application.LanguageServers;
 using RetroIde.Application.Workspaces;
 
 namespace RetroIde.Workbench;
@@ -63,6 +64,8 @@ internal sealed partial class DocumentController : SimpleControllerBase
             _open.Add(address, document);
             view.CommandRequested += OnCommandRequested;
             view.PropertyChanged += OnDocumentStateChanged;
+            view.LanguageContentChanged += OnLanguageContentChanged;
+            _dispatch.LanguageServers.Observe(view.CaptureLanguageDocument());
             _layout.AddTransientDocument(document);
         }
 
@@ -76,6 +79,15 @@ internal sealed partial class DocumentController : SimpleControllerBase
     }
 
     internal DocumentContext? ReadContext(Guid key) => GetView<IView>(key) is DocumentViewModel view ? view.Capture() : null;
+
+    internal LanguageDocument? ReadLanguageDocument(DocumentContext context) =>
+        TryResolve(context, out var view) ? view.CaptureLanguageDocument() : null;
+
+    private void OnLanguageContentChanged(object? sender, EventArgs args)
+    {
+        if (sender is DocumentViewModel view)
+            _dispatch.LanguageServers.Observe(view.CaptureLanguageDocument());
+    }
 
     internal GitFileOperations.DiffTab? ShowDiff(GitFileOperations.DiffResult diff)
     {
@@ -329,6 +341,8 @@ internal sealed partial class DocumentController : SimpleControllerBase
             return;
         view.CommandRequested -= OnCommandRequested;
         view.PropertyChanged -= OnDocumentStateChanged;
+        view.LanguageContentChanged -= OnLanguageContentChanged;
+        _dispatch.LanguageServers.Closed(view.CaptureLanguageDocument());
         RemoveView(view);
         _layout.ForgetTransientDocument(document);
     }
