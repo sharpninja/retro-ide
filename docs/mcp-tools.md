@@ -168,4 +168,16 @@ Backend capabilities, workbench state, and client grants govern actual tool avai
 - **Long-running work.** Report progress for clients that request it. A build, launch, Git operation, or bundle install can return an operation ID with status, result, and cancel tools. Clients that negotiate MCP Tasks can use the SDK extension for task status and result retrieval.
 - **Large results.** Read logs, disassembly, or supported media streams through bounded tools with cursor or stream handles. Image captures can return MCP image content. Resources can provide alternate access to the same data.
 
+### Background operation handles
+
+Git clone, fetch, pull, push, LFS fetch, and LFS fetch-and-checkout accept an optional `background: true` argument. The start response uses the accepted operation ID in both the envelope and `data.operationId`. The data also identifies the tool, current state, and available timestamps. Calls with the default `background: false` wait for their typed result.
+
+| Tool | Input | Result |
+| --- | --- | --- |
+| `workbench_operation_status` | `operationId` | Returns the current state, cancellation availability, and timestamps. States are `queued`, `running`, `cancelling`, `succeeded`, `failed`, and `cancelled`. |
+| `workbench_operation_result` | `operationId` | Returns the original operation envelope in `data` after completion. A pending operation returns `operation_pending`. |
+| `workbench_operation_cancel` | `operationId` and current workbench `context` | Requests cancellation and returns the resulting status. An operation that already finished keeps its original result. |
+
+Use the same attachment credential to follow a handle over HTTP or stdio. The workbench scopes handles to that attachment, cancels its running work when the grant is revoked, and releases retained handles when the view closes. Each workbench admits up to eight pending operations and keeps up to 64 handles. Finished results are eligible for eviction after 15 minutes or when capacity is needed.
+
 Verify tool discovery and invocation through both transports. Compare UI and MCP outcomes for the same typed operation. Verify ViewModel context schema parity, live context resolution, scoped authorization, ambiguous or stale targets, capability changes, progress and cancellation, and every registered feature area. Track this feature under `FR-RETRO-015`, `TR-RETRO-MCP-015`, and `TEST-RETRO-015`.

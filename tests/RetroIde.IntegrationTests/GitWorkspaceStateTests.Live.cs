@@ -177,7 +177,8 @@ public sealed partial class GitWorkspaceStateTests
     private static Dictionary<string, object?> Address(Guid root, string path) =>
         new(StringComparer.Ordinal) { ["rootId"] = root, ["relativePath"] = path };
 
-    internal sealed class WorkspaceConnection(LoopbackMcpHost host, McpClient client, HttpClient http, CancellationToken token) : IAsyncDisposable
+    internal sealed class WorkspaceConnection(LoopbackMcpHost host, AttachmentDescriptor attachment, McpClient client,
+        HttpClient http, CancellationToken token) : IAsyncDisposable
     {
         internal static async Task<WorkspaceConnection> ConnectAsync(WorkbenchSession session, CancellationToken token, bool canMutate = true)
         {
@@ -191,7 +192,7 @@ public sealed partial class GitWorkspaceStateTests
                     Endpoint = attachment.Endpoint,
                     TransportMode = HttpTransportMode.StreamableHttp,
                 }, http), cancellationToken: token).ConfigureAwait(false);
-                return new(host, client, http, token);
+                return new(host, attachment, client, http, token);
             }
             catch
             {
@@ -214,15 +215,18 @@ public sealed partial class GitWorkspaceStateTests
             return ChangeAsync("workspace_set_expanded", args);
         }
 
-        internal async Task<McpClient> ConnectStdioAsync(string file)
+        internal async Task<McpClient> ConnectStdioAsync(string file, bool shareGrant = false)
         {
-            host.CreateAttachment("workspace-git-stdio", canMutate: true).Write(file);
+            var descriptor = shareGrant ? attachment : host.CreateAttachment("workspace-git-stdio", canMutate: true);
+            descriptor.Write(file);
             return await McpClient.CreateAsync(new StdioClientTransport(new()
             {
                 Command = "dotnet",
                 Arguments = [typeof(RetroIde.Mcp.Stdio.BridgeEntryPoint).Assembly.Location, file],
             }), cancellationToken: token).ConfigureAwait(false);
         }
+
+        internal void Revoke() => host.Revoke(attachment);
 
         internal async Task<JsonElement> ChangeAsync(string name, Dictionary<string, object?> args, McpClient? transport = null)
         {

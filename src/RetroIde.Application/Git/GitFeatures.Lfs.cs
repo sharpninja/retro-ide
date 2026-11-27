@@ -9,7 +9,7 @@ internal sealed partial class GitFeatures
     public Feature<GitLfsOperations.ActionInput> FetchLfs { get; } = new("git.lfs.fetch", "git_lfs_fetch",
         "Fetch Git LFS objects for the reviewed commit from a configured remote, leaving working files untouched.",
         static (input, view, token) => GitLfsOperations.RunAsync(input, GitLfsOperations.Operation.Fetch, view, token),
-        typeof(GitLfsState.Status), mutation: true);
+        typeof(GitLfsState.Status), mutation: true, background: true);
 
     public Feature<GitLfsOperations.ActionInput> CheckoutLfs { get; } = new("git.lfs.checkout", "git_lfs_checkout",
         "Check out cached Git LFS objects in the reviewed worktree while protecting open editor buffers.",
@@ -19,5 +19,5 @@ internal sealed partial class GitFeatures
     public Feature<GitLfsOperations.ActionInput> PullLfs { get; } = new("git.lfs.pull", "git_lfs_pull",
         "Fetch Git LFS objects for the reviewed commit from a configured remote, then check out the available files.",
         static (input, view, token) => GitLfsOperations.RunAsync(input, GitLfsOperations.Operation.Pull, view, token),
-        typeof(GitLfsState.Status), mutation: true);
+        typeof(GitLfsState.Status), mutation: true, background: true);
 }

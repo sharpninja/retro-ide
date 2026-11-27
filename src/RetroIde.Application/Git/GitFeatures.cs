@@ -140,7 +140,7 @@ internal sealed partial class GitFeatures
         static (input, view, token) => string.IsNullOrWhiteSpace(input.Source)
             ? Task.FromResult(new FeatureOutcome("git_invalid_source", "Choose a Git remote URL or an existing repository path."))
             : ProvisionAsync(input.Destination, input.Source, view, token),
-        typeof(GitProvisionedWorkspace), mutation: true);
+        typeof(GitProvisionedWorkspace), mutation: true, background: true);
 
     private static async Task<FeatureOutcome> ProvisionAsync(string destination, string? source, IWorkbenchRegistration view, CancellationToken token)
     {

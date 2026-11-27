@@ -12,7 +12,7 @@ namespace RetroIde.Workbench;
 
 /// <summary>Owns workbench view registrations and the shared typed dispatch entry point.</summary>
 /// <remarks>TEST-RETRO-007#ac-test-simplemvc-views; TEST-RETRO-007#ac-test-view-result-routing</remarks>
-public sealed partial class WorkbenchController : SimpleControllerBase, IWorkbenchDispatcher
+public sealed partial class WorkbenchController : SimpleControllerBase, IWorkbenchDispatcher, ITrackedWorkbenchDispatcher
 {
     private readonly Guid _workspaceId;
     private readonly DockLayout _layout;
@@ -85,6 +85,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
             return;
 
         registration.Grant.Revoke();
+        registration.Operations.Dispose();
         _retiredGitReads = CombineDrains(_retiredGitReads, registration.StopGitMonitor(closing: true));
         if (_explorerView is { } explorer && explorer.ParentViewKey == view.ViewKey)
         {
@@ -191,14 +192,22 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
         ActorGrant actor, Guid operationId, CancellationToken cancellationToken) where TInput : class =>
         DispatchAsync(feature, input, context, actor, operationId, cancellationToken, refreshOrigin: null);
 
+    Task<OperationResult> ITrackedWorkbenchDispatcher.StartBackgroundAsync<TInput>(Feature<TInput> feature, TInput input,
+        WorkbenchAddress? context, ActorGrant actor, Guid operationId, CancellationToken cancellationToken) =>
+        DispatchAsync(feature, input, context, actor, operationId, cancellationToken, refreshOrigin: null, background: true);
+
     private async Task<OperationResult> DispatchAsync<TInput>(Feature<TInput> feature, TInput input, WorkbenchAddress? context,
-        ActorGrant actor, Guid operationId, CancellationToken cancellationToken, Registration? refreshOrigin) where TInput : class
+        ActorGrant actor, Guid operationId, CancellationToken cancellationToken, Registration? refreshOrigin, bool background = false)
+        where TInput : class
     {
         try
         {
             var dispatch = Dispatcher.UIThread.InvokeAsync<Task<OperationResult>>(() =>
             {
                 DispatchCount++;
+                if (background)
+                    return Task.FromResult(_unitOfWork.StartBackground(feature, context, actor, operationId, cancellationToken,
+                        jobToken => DispatchAsync(feature, input, context, actor, operationId, jobToken)));
                 return _unitOfWork.ExecuteAsync(feature, input, refreshOrigin?.Address ?? context, actor, operationId, cancellationToken);
             }, DispatcherPriority.Background, _shutdown.Token);
             return await dispatch.GetTask().Unwrap().ConfigureAwait(false);
@@ -456,7 +465,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
     /// <summary>Represents the live workbench registration and its own native Git selection.</summary>
     /// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-multiple-repos; TEST-RETRO-015#ac-test-mcp-same-instance. Publish selection revisions through the existing workbench layout.</remarks>
     private sealed partial record Registration(WorkbenchViewModel View, ActorGrant Grant, WorkbenchController Controller) : IWorkbenchRegistration,
-        IExplorerRegistration, ILocalizationRegistration, IGitRegistration, ITerminalRegistration
+        IExplorerRegistration, ILocalizationRegistration, IGitRegistration, ITerminalRegistration, IWorkbenchOperationRegistration
     {
         private GitStatusMonitor? _gitMonitor;
         private Task _drainingMonitors = Task.CompletedTask;
@@ -465,6 +474,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
         private long _displayedRead;
 
         public WorkbenchAddress Address => View.Address;
+        public WorkbenchOperations Operations { get; } = new(Controller._logger);
         public object ContextSource => View;
         public bool TryFocus(string toolId) => Controller.CanFocus(toolId) && Controller._layout.Focus(toolId);
         public WorkspaceExplorer Explorer => Controller._workspaceExplorer;

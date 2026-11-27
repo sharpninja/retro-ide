@@ -14,6 +14,7 @@ public sealed class ActorGrant(string actor, Guid workspaceId, Guid viewKey, boo
 {
     private readonly Lock _gate = new();
     private bool _revoked;
+    private CancellationTokenSource? _revocation;
 
     /// <summary>Identifies the actor without exposing credentials.</summary>
     public string Actor { get; } = actor;
@@ -33,8 +34,25 @@ public sealed class ActorGrant(string actor, Guid workspaceId, Guid viewKey, boo
     /// <summary>Invalidates the grant, including requests already waiting for the UI dispatcher.</summary>
     public void Revoke()
     {
+        CancellationTokenSource? revocation;
         lock (_gate)
+        {
+            if (_revoked)
+                return;
             _revoked = true;
+            revocation = _revocation;
+            _revocation = null;
+        }
+        revocation?.Cancel();
+    }
+
+    internal CancellationToken RevocationToken
+    {
+        get
+        {
+            lock (_gate)
+                return _revoked ? new CancellationToken(canceled: true) : (_revocation ??= new()).Token;
+        }
     }
 
     internal OperationResult Authorize(Guid operationId, bool mutation, Func<OperationResult> execute)
@@ -122,6 +140,7 @@ public abstract class FeatureRegistration
 
     internal abstract JsonObject InputSchema { get; }
     internal abstract Type? DataType { get; }
+    internal virtual bool SupportsBackground => false;
 
     /// <summary>Adapts wire arguments to the registered typed operation.</summary>
     public abstract Task<OperationResult> InvokeAsync(IWorkbenchDispatcher dispatcher, ViewContextContract contract,
@@ -132,11 +151,17 @@ public abstract class FeatureRegistration
 /// <remarks>TEST-RETRO-015#ac-test-mcp-inventory</remarks>
 public sealed class Feature<TInput> : FeatureRegistration where TInput : class
 {
-    private readonly Func<TInput, IWorkbenchRegistration, FeatureOutcome>? _handler;
+    private readonly Func<TInput, IWorkbenchRegistration, ActorGrant, FeatureOutcome>? _handler;
     internal Func<TInput, IWorkbenchRegistration, CancellationToken, Task<FeatureOutcome>>? PrepareAsync { get; }
 
     internal Feature(string id, string toolName, string description, bool mutation,
         Func<TInput, IWorkbenchRegistration, FeatureOutcome> handler, Type? dataType = null)
+        : this(id, toolName, description, mutation, (input, view, _) => handler(input, view), dataType)
+    {
+    }
+
+    internal Feature(string id, string toolName, string description, bool mutation,
+        Func<TInput, IWorkbenchRegistration, ActorGrant, FeatureOutcome> handler, Type? dataType = null)
         : base(id, toolName, description, mutation)
     {
         _handler = handler;
@@ -145,23 +170,32 @@ public sealed class Feature<TInput> : FeatureRegistration where TInput : class
 
     internal Feature(string id, string toolName, string description,
         Func<TInput, IWorkbenchRegistration, CancellationToken, Task<FeatureOutcome>> prepareAsync, Type dataType, bool mutation = false)
+        : this(id, toolName, description, prepareAsync, dataType, mutation, background: false)
+    {
+    }
+
+    internal Feature(string id, string toolName, string description,
+        Func<TInput, IWorkbenchRegistration, CancellationToken, Task<FeatureOutcome>> prepareAsync, Type dataType, bool mutation, bool background)
         : base(id, toolName, description, mutation)
     {
         PrepareAsync = prepareAsync;
         DataType = dataType;
+        SupportsBackground = background;
     }
 
     internal override JsonObject InputSchema => WireJson.Options.GetJsonSchemaAsNode(typeof(TInput), FeatureRegistry.RequiredRoot).AsObject();
     internal override Type? DataType { get; }
+    internal override bool SupportsBackground { get; }
 
-    internal FeatureOutcome Execute(TInput input, IWorkbenchRegistration view) =>
-        (_handler ?? throw new InvalidOperationException("Use async dispatch for this feature."))(input, view);
+    internal FeatureOutcome Execute(TInput input, IWorkbenchRegistration view, ActorGrant actor) =>
+        (_handler ?? throw new InvalidOperationException("Use async dispatch for this feature."))(input, view, actor);
 
     /// <inheritdoc />
     public override Task<OperationResult> InvokeAsync(IWorkbenchDispatcher dispatcher, ViewContextContract contract,
         IDictionary<string, JsonElement>? arguments, ActorGrant actor, Guid operationId, CancellationToken cancellationToken)
     {
         WorkbenchAddress? address = null;
+        var background = false;
         var inputJson = new JsonObject();
         if (arguments is not null)
         {
@@ -171,6 +205,12 @@ public sealed class Feature<TInput> : FeatureRegistration where TInput : class
                 {
                     if (!contract.TryRead(value, out address))
                         return Invalid();
+                }
+                else if (SupportsBackground && string.Equals(name, "background", StringComparison.Ordinal))
+                {
+                    if (value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                        return Invalid();
+                    background = value.GetBoolean();
                 }
                 else
                 {
@@ -186,7 +226,13 @@ public sealed class Feature<TInput> : FeatureRegistration where TInput : class
         try { input = inputJson.Deserialize<TInput>(WireJson.Options); }
         catch (JsonException) { return Invalid(); }
 
-        return input is null ? Invalid() : dispatcher.DispatchAsync(this, input, address, actor, operationId, cancellationToken);
+        if (input is null)
+            return Invalid();
+        if (!background)
+            return dispatcher.DispatchAsync(this, input, address, actor, operationId, cancellationToken);
+        return dispatcher is ITrackedWorkbenchDispatcher tracked
+            ? tracked.StartBackgroundAsync(this, input, address, actor, operationId, cancellationToken)
+            : Task.FromResult(OperationResult.Failure(operationId, "background_unavailable", "This workbench cannot start background operations."));
 
         Task<OperationResult> Invalid() =>
             Task.FromResult(OperationResult.Failure(operationId, "invalid_arguments", "The arguments do not match the tool schema."));
@@ -225,7 +271,9 @@ public sealed class FeatureRegistry
         Localization = new LocalizationFeatures();
         Git = new GitFeatures();
         Terminals = new Terminals.TerminalFeatures();
-        Features = ImmutableArray.Create<FeatureRegistration>(GetContext, FocusTool, Explorer.OpenRoot, Explorer.ReadRoots,
+        var operations = new WorkbenchOperationFeatures();
+        Features = ImmutableArray.Create<FeatureRegistration>(GetContext, FocusTool, operations.Status, operations.Result, operations.Cancel,
+            Explorer.OpenRoot, Explorer.ReadRoots,
             Explorer.ReadChildren, Explorer.SetExpansion, Explorer.SelectEntry, Explorer.OpenEntry, Explorer.RevealEntry,
             Explorer.SaveDocument, Documents.GetContext, Documents.Find, Documents.Replace, Documents.Close,
             Documents.Edit, Documents.Undo, Documents.Redo, Localization.GetLanguage, Localization.SetLanguage,
@@ -269,6 +317,13 @@ public sealed class FeatureRegistry
     {
         var input = feature.InputSchema;
         ProjectDocumentMember(input);
+        if (feature.SupportsBackground)
+            input["properties"]!.AsObject().Add("background", new JsonObject
+            {
+                ["type"] = "boolean",
+                ["default"] = false,
+                ["description"] = "Return an operation handle immediately after admission.",
+            });
         if (feature.IsMutation)
         {
             input["properties"]!.AsObject().Add("context", JsonNode.Parse(Context.Schema.GetRawText()));
@@ -279,7 +334,9 @@ public sealed class FeatureRegistry
         var properties = output["properties"]!.AsObject();
         properties["context"] = JsonNode.Parse(Context.Schema.GetRawText());
         if (feature.DataType is { } type)
-            properties["data"] = DescribeData(type);
+            properties["data"] = feature.SupportsBackground
+                ? new JsonObject { ["anyOf"] = new JsonArray(DescribeData(type), DescribeData(typeof(WorkbenchOperationStatus))) }
+                : DescribeData(type);
         else
             properties.Remove("data");
         return new FeatureDescription(JsonSerializer.SerializeToElement(input), JsonSerializer.SerializeToElement(output));
@@ -314,7 +371,21 @@ public sealed class WorkbenchUnitOfWork(ViewContextContract contract, Func<Guid,
         return actor.Authorize(operationId, feature.IsMutation, () =>
         {
             var failure = Validate(captured, actor, feature.IsMutation, operationId, cancellationToken, out var view);
-            return failure ?? Complete(operationId, view!, feature.Execute(input, view!));
+            return failure ?? Complete(operationId, view!, feature.Execute(input, view!, actor));
+        });
+    }
+
+    internal OperationResult StartBackground(FeatureRegistration feature, WorkbenchAddress? captured, ActorGrant actor,
+        Guid operationId, CancellationToken requestToken, Func<CancellationToken, Task<OperationResult>> execute)
+    {
+        return actor.Authorize(operationId, feature.IsMutation, () =>
+        {
+            var failure = Validate(captured, actor, feature.IsMutation, operationId, requestToken, out var view);
+            if (failure is not null)
+                return failure;
+            if (!feature.SupportsBackground || view is not IWorkbenchOperationRegistration registration)
+                return OperationResult.Failure(operationId, "background_unavailable", "This operation cannot run in the background.");
+            return Complete(operationId, view, registration.Operations.Start(operationId, feature.ToolName, actor, execute));
         });
     }
 

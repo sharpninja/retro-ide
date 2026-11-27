@@ -20,7 +20,7 @@ internal sealed partial class GitFeatures
 
     public Feature<GitRemoteOperations.FetchInput> Fetch { get; } = new("git.remote.fetch", "git_fetch",
         "Fetch the reviewed remote tracking refs without integrating changes into the selected branch.",
-        GitRemoteOperations.FetchAsync, typeof(GitRemoteOperations.FetchResult), mutation: true);
+        GitRemoteOperations.FetchAsync, typeof(GitRemoteOperations.FetchResult), mutation: true, background: true);
 
     public Feature<GitRemoteOperations.UpstreamInput> SetUpstream { get; } = new("git.branch.upstream", "git_set_upstream",
         "Set or clear a reviewed local branch's upstream. Use the full ref name.",
@@ -28,11 +28,11 @@ internal sealed partial class GitFeatures
 
     public Feature<GitRemoteOperations.PushInput> Push { get; } = new("git.remote.push", "git_push",
         "Push a reviewed local commit to the named remote branch with an optional explicit lease.",
-        GitRemoteOperations.PushAsync, typeof(GitRemoteOperations.SyncResult), mutation: true);
+        GitRemoteOperations.PushAsync, typeof(GitRemoteOperations.SyncResult), mutation: true, background: true);
 
     public Feature<GitRemoteOperations.PullInput> Pull { get; } = new("git.remote.pull", "git_pull",
         "Fetch and integrate a reviewed remote branch using the selected strategy.",
-        GitRemoteOperations.PullAsync, typeof(GitRemoteOperations.SyncResult), mutation: true);
+        GitRemoteOperations.PullAsync, typeof(GitRemoteOperations.SyncResult), mutation: true, background: true);
 
     private static Feature<GitRemoteOperations.ConfigureInput> Configure(string id, string tool, string summary, GitRemoteOperations.Change change) =>
         new(id, tool, summary, (input, view, token) => GitRemoteOperations.ConfigureAsync(input, view, change, token),

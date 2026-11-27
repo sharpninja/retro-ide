@@ -68,7 +68,9 @@ public sealed class ViewModelContextContractTests
             "git_start_operation", "git_switch_branch", "git_sync_submodule",
             "git_terminal_close", "git_terminal_list", "git_terminal_open", "git_terminal_read", "git_terminal_resize", "git_terminal_write",
             "git_unlock_worktree", "git_unstage_file", "git_unstage_hunks", "git_update_submodule",
-            "workbench_focus_tool", "workbench_get_context", "workbench_get_display_language", "workbench_set_display_language",
+            "workbench_focus_tool", "workbench_get_context", "workbench_get_display_language",
+            "workbench_operation_cancel", "workbench_operation_result", "workbench_operation_status",
+            "workbench_set_display_language",
             "workspace_list_children", "workspace_list_roots", "workspace_open_file", "workspace_open_root",
             "workspace_reveal_entry", "workspace_select_entry", "workspace_set_expanded",
         ];
