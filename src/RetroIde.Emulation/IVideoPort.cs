@@ -4,7 +4,7 @@ namespace RetroIde.Emulation;
 public interface IVideoPort : IEmulatorPort
 {
     /// <summary>Gets the versioned video capability ID.</summary>
-    public static CapabilityId Capability { get; } = new("retroide.video", AdapterContract.CurrentVersion);
+    public static CapabilityId Capability { get; } = new("retroide.video", new Version(1, 0));
 
     /// <summary>Identifies the operation for requesting a single frame.</summary>
     public const string Capture = "capture";

@@ -72,39 +72,9 @@ internal sealed partial class EmulatorSessionControl
         string operation, Func<TPort, CapabilityDescriptor, ValueTask<AdapterResult<T>>> invoke, CancellationToken token)
         where TPort : class, IEmulatorPort where T : class
     {
-        var scope = request.Scope;
-        if (ValidateScope(scope) is { } invalid)
-            return AdapterResult<T>.Failure(invalid);
         if (string.IsNullOrWhiteSpace(request.OutputId))
-            return Fail<T>(AdapterErrorCodes.InvalidArgument, "Select a media output.", scope.OperationId);
-
-        try
-        {
-            var snapshot = await ReadAsync(token).ConfigureAwait(false);
-            if (!snapshot.Succeeded)
-                return AdapterResult<T>.Failure(snapshot.Error with { OperationId = scope.OperationId });
-            var state = snapshot.Value;
-            if (state.Lifecycle != SessionLifecycle.Connected)
-                return Fail<T>(AdapterErrorCodes.Disconnected, "The emulator session is disconnected.", scope.OperationId);
-            if (scope.ExpectedRevision is { } expected && expected != state.StateRevision)
-                return Fail<T>(AdapterErrorCodes.RevisionConflict, "The media selection used an old revision.", scope.OperationId, state.StateRevision);
-
-            var descriptor = Advertised(state, capability, request.OutputId, operation);
-            if (descriptor is null || !_connection.TryGetPort<TPort>(capability, out var port))
-                return Fail<T>(AdapterErrorCodes.Unsupported, "This media operation is not advertised for the selected output.", scope.OperationId);
-
-            var result = await invoke(port, descriptor).ConfigureAwait(false);
-            return result.Succeeded ? result : AdapterResult<T>.Failure(result.Error with { OperationId = scope.OperationId });
-        }
-        catch (OperationCanceledException) when (token.IsCancellationRequested)
-        {
-            return Fail<T>(AdapterErrorCodes.Cancelled, "Opening emulator media was cancelled.", scope.OperationId);
-        }
-        catch (Exception error) when (RuntimeFailures.CanRecover(error))
-        {
-            RuntimeFailures.Report(_logger, error, "open emulator media");
-            return Fail<T>(AdapterErrorCodes.Disconnected, "The emulator media operation failed.", scope.OperationId);
-        }
+            return Fail<T>(AdapterErrorCodes.InvalidArgument, "Select a media output.", request.Scope.OperationId);
+        return await InvokePortAsync(request.Scope, capability, request.OutputId, operation, invoke, token).ConfigureAwait(false);
     }
 
     private async ValueTask ReleaseMediaAsync<T>(IEmulatorMediaStream<T> source) where T : class

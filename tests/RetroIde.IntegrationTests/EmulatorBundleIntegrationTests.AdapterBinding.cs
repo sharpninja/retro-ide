@@ -12,7 +12,7 @@ namespace RetroIde.IntegrationTests;
 public sealed partial class EmulatorBundleIntegrationTests
 {
     /// <summary>Verifies that an opened session holds the exact package selected by its project.</summary>
-    /// <remarks>TEST-RETRO-010#ac-test-session-contract.</remarks>
+    /// <remarks>TEST-RETRO-010#ac-test-session-contract; TEST-RETRO-017#ac-test-machine-descriptor-contract.</remarks>
     [Theory]
     [InlineData(SessionMode.Launch, SessionClosePolicy.StopOwnedHost)]
     [InlineData(SessionMode.Attach, SessionClosePolicy.Detach)]
@@ -37,7 +37,19 @@ public sealed partial class EmulatorBundleIntegrationTests
         {
             Assert.Equal(policy, running.InitialState.ClosePolicy);
             Assert.Equal(FirstPin.Version, running.Connection.Identity.BundleVersion, StringComparer.Ordinal);
-            Assert.Equal(running.InitialState, (await running.Control.ReadAsync(token)).Value);
+            var snapshot = (await running.Control.ReadAsync(token).ConfigureAwait(true)).Value;
+            Assert.NotNull(snapshot);
+            Assert.Equal(running.InitialState.Cursor, snapshot.Cursor);
+            Assert.Equal(MachineDebugAdapterFixture.DescriptorCapability, Assert.Single(snapshot.Capabilities.Items));
+            var machine = await running.Control.DescribeMachineAsync(new(running.InitialState.Identity, Guid.NewGuid(), "desktop", null), token)
+                .ConfigureAwait(true);
+            Assert.True(machine.Succeeded, machine.Error?.Message);
+            Assert.Equal(mode == SessionMode.Launch ? "mc68040" : "mc68030", machine.Value!.Cpus[0].Variant, StringComparer.Ordinal);
+            var verifiedProfile = running.ReadDebuggerProfile(machine.Value);
+            Assert.Equal("$", verifiedProfile.Value?.Disassembly.Prefix, StringComparer.Ordinal);
+            Assert.Equal(16, verifiedProfile.Value?.BytesPerRow);
+            var foreign = machine.Value with { Session = machine.Value.Session with { InstanceId = Guid.NewGuid() } };
+            Assert.Equal(AdapterErrorCodes.Incompatible, running.ReadDebuggerProfile(foreign).Error?.Code, StringComparer.Ordinal);
             Assert.Equal(AdapterApi, factory.Request?.ContractVersion);
             if (mode == SessionMode.Launch)
             {
@@ -139,22 +151,30 @@ public sealed partial class EmulatorBundleIntegrationTests
         }
     }
 
-    private sealed class ConnectionFixture(SessionIdentity identity, SessionClosePolicy policy) : IEmulatorSession
+    private sealed class ConnectionFixture(SessionIdentity identity, SessionClosePolicy policy) : IEmulatorSession, IMachineDescriptorPort
     {
         public SessionIdentity Identity { get; } = identity;
         internal bool Disposed { get; private set; }
 
         public ValueTask<AdapterResult<SessionState>> GetStateAsync(CancellationToken cancellationToken) =>
             ValueTask.FromResult(AdapterResult<SessionState>.Success(new(Identity, SessionLifecycle.Connected, ExecutionStatus.Paused,
-                1, policy, new CapabilitySnapshot(1, []), new EventCursor(Identity, 1))));
+                1, policy, new CapabilitySnapshot(1, [MachineDebugAdapterFixture.DescriptorCapability]), new EventCursor(Identity, 1))));
+
+        public ValueTask<AdapterResult<MachineDescriptor>> DescribeAsync(SessionOperation scope, CancellationToken cancellationToken)
+        {
+            var machine = MachineDebugAdapterFixture.DescribeTarget(Identity);
+            if (policy == SessionClosePolicy.Detach)
+                machine = machine with { Cpus = machine.Cpus.SetItem(0, machine.Cpus[0] with { Model = "68030", Variant = "mc68030" }) };
+            return ValueTask.FromResult(AdapterResult<MachineDescriptor>.Success(machine));
+        }
 
         public IAsyncEnumerable<SessionEvent> ReadEventsAsync(EventCursor? after, CancellationToken cancellationToken) =>
             AsyncEnumerable.Empty<SessionEvent>();
 
         public bool TryGetPort<TPort>(CapabilityId capability, [NotNullWhen(true)] out TPort? port) where TPort : class, IEmulatorPort
         {
-            port = null;
-            return false;
+            port = capability == IMachineDescriptorPort.Capability ? this as TPort : null;
+            return port is not null;
         }
 
         public ValueTask<AdapterResult<SessionCloseResult>> CloseAsync(SessionCloseRequest request, CancellationToken cancellationToken) =>

@@ -12,6 +12,24 @@ internal sealed class PinnedEmulatorSession(IEmulatorSession session, SessionSta
     internal SessionState InitialState { get; } = initialState;
     internal EmulatorSessionControl Control { get; } = new(session, initialState, logger);
 
+    internal AdapterResult<DebuggerPresentationProfile> ReadDebuggerProfile(MachineDescriptor machine)
+    {
+        if (machine.Session != InitialState.Identity || machine.Version != IMachineDescriptorPort.Capability.Version ||
+            !Control.IsCurrentMap(machine.MapRevision))
+            return AdapterResult<DebuggerPresentationProfile>.Failure(new(AdapterErrorCodes.Incompatible,
+                "The debugger profile request is for a different or older emulator target."));
+        if (_bundle is not { } owned || machine.Profile is not { } profile)
+            return AdapterResult<DebuggerPresentationProfile>.Failure(new(AdapterErrorCodes.Unavailable,
+                "This emulator target has no active debugger profile."));
+        try { return owned.Installation.ReadDebuggerProfile(profile); }
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
+        {
+            RuntimeFailures.Report(logger, error, "read pinned debugger profile");
+            return AdapterResult<DebuggerPresentationProfile>.Failure(new(AdapterErrorCodes.Incompatible,
+                "The pinned bundle's debugger profile could not be verified."));
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _bundle, null) is not { } owned)

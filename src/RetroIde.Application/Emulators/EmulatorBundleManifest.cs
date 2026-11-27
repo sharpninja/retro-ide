@@ -52,6 +52,8 @@ internal sealed partial record EmulatorBundleManifest(
         var profiles = manifest.TryGetProperty("debuggerProfiles", out var profileData)
             ? ReadMap(profileData, "debuggerProfiles", ReadProfile)
             : ReadOnlyDictionary<string, EmulatorDebuggerProfileAsset>.Empty;
+        if (profiles.Count > 128)
+            throw Invalid("debuggerProfiles", "must contain no more than 128 assets.");
         return new EmulatorBundleManifest(ReadId(manifest, "id"), version, ReadText(manifest, "name"), ReadText(manifest, "description"),
             ReadUri(manifest, "homepage"), ReadText(manifest, "license"), ReadId(manifest, "adapterId"),
             ReadAdapterVersions(manifest), targets, profiles);

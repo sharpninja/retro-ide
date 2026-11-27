@@ -204,7 +204,23 @@ public sealed partial class EmulatorBundleIntegrationTests
         }
     }
 
-    private static MemoryStream Archive(params (string Path, int Mode)[] entries)
+    private const string DebuggerFixturePath = "profiles/amiga-aga.json";
+    private const string DebuggerFixture = """
+        {
+          "schemaVersion": 1,
+          "id": "amiga-aga",
+          "disassembly": {"radix":16,"prefix":"$","minimumDigits":8,"upperCase":true,"notation":"flat"},
+          "memory": {
+            "address":{"radix":16,"prefix":"$","minimumDigits":8,"upperCase":true,"notation":"flat"},
+            "bytesPerRow": 16,
+            "bytesPerGroup": 2
+          }
+        }
+        """;
+
+    private static MemoryStream Archive(params (string Path, int Mode)[] entries) => ArchiveWithDebuggerProfile(DebuggerFixture, entries);
+
+    private static MemoryStream ArchiveWithDebuggerProfile(string profile, params (string Path, int Mode)[] entries)
     {
         var stream = new MemoryStream();
         using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
@@ -216,7 +232,7 @@ public sealed partial class EmulatorBundleIntegrationTests
                 if (!path.EndsWith('/'))
                 {
                     using var file = entry.Open();
-                    file.Write(Encoding.UTF8.GetBytes(path));
+                    file.Write(Encoding.UTF8.GetBytes(string.Equals(path, DebuggerFixturePath, StringComparison.Ordinal) ? profile : path));
                 }
             }
         }

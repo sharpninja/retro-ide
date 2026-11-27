@@ -40,6 +40,7 @@ internal sealed partial class EmulatorBundleStore(string root)
         var published = false;
         try
         {
+            receipt = receipt with { DebuggerProfilesSha256 = StageProfileReceipt(staging, manifest, cancellationToken) };
             WriteDocument(staging, ManifestFile, bytes);
             WriteDocument(staging, ReceiptFile, JsonSerializer.SerializeToUtf8Bytes(receipt, StoreJson.Default.Receipt));
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
@@ -97,7 +98,9 @@ internal sealed partial class EmulatorBundleStore(string root)
 
     private static InstalledBundle Reuse(InstalledBundle installed, Receipt expected)
     {
-        if (installed.Receipt != expected)
+        if (installed.Receipt with { DebuggerProfilesSha256 = null } != expected with { DebuggerProfilesSha256 = null } ||
+            (installed.Receipt.DebuggerProfilesSha256 is { } actual && expected.DebuggerProfilesSha256 is { } staged &&
+                !string.Equals(actual, staged, StringComparison.Ordinal)))
             throw new InvalidDataException("The installed bundle revision does not match the requested manifest and archive.");
         return installed;
     }
@@ -127,8 +130,6 @@ internal sealed partial class EmulatorBundleStore(string root)
             RequirePathType(files, directoryExpected: true);
             foreach (var path in artifact.EntryPoints.Values)
                 RequirePayloadFile(files, path);
-            foreach (var profile in manifest.DebuggerProfiles.Values)
-                RequirePayloadFile(files, profile.Path);
             return new InstalledBundle(receipt, manifest, ForwardSlashes(directory));
         }
         catch (Exception error) when (error is JsonException or FileNotFoundException or DirectoryNotFoundException)
@@ -194,14 +195,16 @@ internal sealed partial class EmulatorBundleStore(string root)
         }
     }
 
-    internal sealed record Receipt(int SchemaVersion, Pin Pin, string RuntimeIdentifier, string ArchiveSha256, string ManifestSha256);
+    internal sealed record Receipt(int SchemaVersion, Pin Pin, string RuntimeIdentifier, string ArchiveSha256, string ManifestSha256,
+        string? DebuggerProfilesSha256 = null);
 
-    internal sealed record InstalledBundle(Receipt Receipt, EmulatorBundleManifest Manifest, string Directory)
+    internal sealed partial record InstalledBundle(Receipt Receipt, EmulatorBundleManifest Manifest, string Directory)
     {
         internal string EntryPoint(string role) => Directory + "/files/" + Manifest.Targets[Receipt.RuntimeIdentifier].EntryPoints[role];
     }
 
     [JsonSerializable(typeof(Receipt))]
+    [JsonSerializable(typeof(SortedDictionary<string, string>))]
     [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
     private sealed partial class StoreJson : JsonSerializerContext;
 }

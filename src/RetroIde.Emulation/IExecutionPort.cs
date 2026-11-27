@@ -4,7 +4,7 @@ namespace RetroIde.Emulation;
 public interface IExecutionPort : IEmulatorPort
 {
     /// <summary>Gets the capability ID for version 1.0 of the execution port.</summary>
-    public static CapabilityId Capability { get; } = new("retroide.execution", AdapterContract.CurrentVersion);
+    public static CapabilityId Capability { get; } = new("retroide.execution", new Version(1, 0));
 
     /// <summary>Requests an execution change. The backend checks actor, revision and operation identity.</summary>
     /// <remarks>The backend must deduplicate previously applied operation IDs within the same session, including after reconnect.</remarks>

@@ -89,6 +89,8 @@ internal sealed partial class EmulatorSessionControl
                 revision = observed.StateRevision;
                 if (observed is SessionStateChanged changed)
                     Publish(changed.State);
+                if (observed is MachineMapChanged map)
+                    ObserveMapRevision(map.MapRevision);
                 yield return item;
             }
         }

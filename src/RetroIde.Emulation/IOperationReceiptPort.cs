@@ -4,7 +4,7 @@ namespace RetroIde.Emulation;
 public interface IOperationReceiptPort : IEmulatorPort
 {
     /// <summary>Gets the capability ID for version 1.0 of the reconciliation port.</summary>
-    public static CapabilityId Capability { get; } = new("retroide.operation-receipts", AdapterContract.CurrentVersion);
+    public static CapabilityId Capability { get; } = new("retroide.operation-receipts", new Version(1, 0));
 
     /// <summary>Identifies the reconciliation operation in the advertised capability.</summary>
     public const string Reconcile = "reconcile";

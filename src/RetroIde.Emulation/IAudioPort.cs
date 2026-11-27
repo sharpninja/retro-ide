@@ -4,7 +4,7 @@ namespace RetroIde.Emulation;
 public interface IAudioPort : IEmulatorPort
 {
     /// <summary>Gets the versioned audio capability ID.</summary>
-    public static CapabilityId Capability { get; } = new("retroide.audio", AdapterContract.CurrentVersion);
+    public static CapabilityId Capability { get; } = new("retroide.audio", new Version(1, 0));
 
     /// <summary>Identifies the operation for opening an audio stream.</summary>
     public const string Subscribe = "subscribe";
