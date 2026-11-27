@@ -82,12 +82,16 @@ internal sealed class EmulatorBucketCatalog(string root)
 
     private string CacheDirectory(Source source)
     {
-        var repository = source.Repository;
-        if (!EmulatorBundleManifest.IsIdentifier(source.Id) || !repository.IsAbsoluteUri ||
+        ValidateSource(source);
+        return Path.Combine(_root, "catalogs", source.Id, HashKey(source.Repository.AbsoluteUri));
+    }
+
+    internal static void ValidateSource(Source source)
+    {
+        if (!EmulatorBundleManifest.IsIdentifier(source.Id) || source.Repository is not { IsAbsoluteUri: true } repository ||
             repository.Scheme is not ("https" or "http" or "ssh" or "file") || repository.Fragment.Length != 0 ||
             (repository.UserInfo.Length != 0 && (repository.Scheme is not "ssh" || repository.UserInfo.Contains(':'))))
             throw new ArgumentException("A Git bucket requires a portable ID and an absolute repository URL.", nameof(source));
-        return Path.Combine(_root, "catalogs", source.Id, HashKey(repository.AbsoluteUri));
     }
 
     private static async Task<string> EnsureRepositoryAsync(string cache, Source source, CancellationToken token)

@@ -94,7 +94,7 @@ public sealed class WorkbenchApp : Avalonia.Application
                 throw new InvalidOperationException("The Retro IDE application data directory must be an absolute path.");
             var layouts = new LayoutStore(Path.Combine(folder, "layout.json"), _logs.CreateLogger<LayoutStore>());
             var explorerStore = new WorkspaceExplorerStore(Path.Combine(folder, "workspace.json"), _logs.CreateLogger<WorkspaceExplorerStore>());
-            var session = new WorkbenchSession(explorerStore, layouts.Load(), new WorkbenchLocalization(folder), _logs);
+            var session = new WorkbenchSession(explorerStore, layouts.Load(), new WorkbenchLocalization(folder), _logs, folder);
             var lifetimeCancellation = new CancellationTokenSource();
             _stopDesktop = () =>
             {

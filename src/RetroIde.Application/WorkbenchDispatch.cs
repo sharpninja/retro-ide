@@ -6,6 +6,7 @@ using RetroIde.Application.Git;
 using RetroIde.Application.Workspaces;
 using RetroIde.Application.Localization;
 using RetroIde.Application.LanguageServers;
+using RetroIde.Application.Emulators;
 
 namespace RetroIde.Application;
 
@@ -273,6 +274,7 @@ public sealed class FeatureRegistry
         Git = new GitFeatures();
         Terminals = new Terminals.TerminalFeatures();
         Language = new LanguageServerFeatures();
+        Emulators = new EmulatorFeatures();
         var operations = new WorkbenchOperationFeatures();
         Features = ImmutableArray.Create<FeatureRegistration>(GetContext, FocusTool, operations.Status, operations.Result, operations.Cancel,
             Explorer.OpenRoot, Explorer.ReadRoots,
@@ -297,7 +299,8 @@ public sealed class FeatureRegistry
             Git.Remotes, Git.AddRemote, Git.SetRemoteUrl, Git.RenameRemote, Git.RemoveRemote, Git.Fetch, Git.SetUpstream, Git.Push, Git.Pull,
             Git.Operation, Git.ContinueOperation, Git.AbortOperation, Git.SkipOperation, Git.StartOperation,
             Git.ReviewReset, Git.Reset, Git.ListStashes, Git.InspectStash, Git.CreateStash, Git.ApplyStash, Git.PopStash, Git.DropStash,
-            Git.ExportPatch, Git.ReviewPatch, Git.ApplyPatch);
+            Git.ExportPatch, Git.ReviewPatch, Git.ApplyPatch,
+            Emulators.List, Emulators.Configure, Emulators.Refresh, Emulators.Remove);
     }
 
     internal ExplorerFeatures Explorer { get; }
@@ -307,6 +310,7 @@ public sealed class FeatureRegistry
     internal GitFeatures Git { get; }
     internal Terminals.TerminalFeatures Terminals { get; }
     internal LanguageServerFeatures Language { get; }
+    internal EmulatorFeatures Emulators { get; }
     internal ViewContextContract? DocumentContextContract { get; }
 
     /// <summary>Gets the public workbench context contract shared by its tools.</summary>

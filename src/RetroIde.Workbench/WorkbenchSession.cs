@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RetroIde.Application;
+using RetroIde.Application.Emulators;
 using RetroIde.Application.Workspaces;
 
 namespace RetroIde.Workbench;
@@ -27,20 +28,22 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
     }
 
     internal WorkbenchSession(WorkspaceExplorerStore explorerStore, WorkbenchLayoutState? savedLayout,
-        WorkbenchLocalization? localization, ILoggerFactory? logs)
-        : this(explorerStore.Load() ?? new WorkspaceExplorer(Guid.NewGuid()), explorerStore, savedLayout, localization, logs)
+        WorkbenchLocalization? localization, ILoggerFactory? logs, string? emulatorDataFolder = null)
+        : this(explorerStore.Load() ?? new WorkspaceExplorer(Guid.NewGuid()), explorerStore, savedLayout, localization, logs, emulatorDataFolder)
     {
     }
 
     private WorkbenchSession(WorkspaceExplorer explorer, WorkspaceExplorerStore store, WorkbenchLayoutState? savedLayout,
-        WorkbenchLocalization? localization, ILoggerFactory? logs)
-        : this(new StandaloneWorkspace(explorer.WorkspaceId), savedLayout, explorer, store, localization, logs: logs)
+        WorkbenchLocalization? localization, ILoggerFactory? logs, string? emulatorDataFolder)
+        : this(new StandaloneWorkspace(explorer.WorkspaceId), savedLayout, explorer, store, localization, logs: logs,
+            emulatorDataFolder: emulatorDataFolder)
     {
     }
 
     internal WorkbenchSession(IWorkbenchWorkspaceContext workspace, WorkbenchLayoutState? savedLayout,
         WorkspaceExplorer? explorer = null, WorkspaceExplorerStore? store = null, WorkbenchLocalization? localization = null,
-        Func<DocumentSaveSnapshot, CancellationToken, Task<PreparedDocumentSave>>? stageSave = null, ILoggerFactory? logs = null)
+        Func<DocumentSaveSnapshot, CancellationToken, Task<PreparedDocumentSave>>? stageSave = null, ILoggerFactory? logs = null,
+        string? emulatorDataFolder = null)
     {
         Logs = logs ?? NullLoggerFactory.Instance;
         Explorer = explorer ?? new WorkspaceExplorer(workspace.WorkspaceId);
@@ -54,7 +57,10 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
         LanguageServersView = new LanguageServersViewModel(View, Registry, Interaction);
         ProblemsView = new ProblemsViewModel(View, Registry);
         Layout = new DockLayout(workspace, savedLayout, Interaction, ExplorerView, SourceControl, LanguageServersView, ProblemsView, Localization);
-        Controller = new WorkbenchController(Explorer, Layout, Interaction, Registry, Localization, Logs.CreateLogger<WorkbenchController>());
+        var emulators = emulatorDataFolder is null ? null : new EmulatorWorkspace(Path.Combine(emulatorDataFolder, "emulators"),
+            Logs.CreateLogger<EmulatorWorkspace>());
+        Controller = new WorkbenchController(Explorer, Layout, Interaction, Registry, Localization, Logs.CreateLogger<WorkbenchController>(),
+            emulators);
         Documents = new DocumentController(View, Layout, Interaction, Registry, Controller);
         Controller.Register(View);
         Controller.RegisterExplorer(ExplorerView, View, Documents);

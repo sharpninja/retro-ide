@@ -8,6 +8,7 @@ using RetroIde.Application.Terminals;
 using RetroIde.Application.Workspaces;
 using RetroIde.Application.Localization;
 using RetroIde.Application.LanguageServers;
+using RetroIde.Application.Emulators;
 
 namespace RetroIde.Workbench;
 
@@ -34,11 +35,12 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
     private bool _disposed;
 
     internal WorkbenchController(WorkspaceExplorer explorer, DockLayout layout, InteractionBlocks interaction, FeatureRegistry registry,
-        WorkbenchLocalization localization, ILogger logger)
+        WorkbenchLocalization localization, ILogger logger, EmulatorWorkspace? emulators = null)
     {
         _workspaceExplorer = explorer;
         _localization = localization;
         _logger = logger;
+        Emulators = emulators;
         LanguageServers = new LanguageServerWorkspace(explorer, logger);
         LanguageServers.Changed += QueueLanguageStateUpdate;
         _workspaceId = explorer.WorkspaceId;
@@ -55,6 +57,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
     public override bool Initialize() => true;
 
     internal int DispatchCount { get; private set; }
+    internal EmulatorWorkspace? Emulators { get; }
 
     /// <summary>Registers the ViewModel directly with SimpleMVC and subscribes once.</summary>
     public void Register(WorkbenchViewModel view)
@@ -478,7 +481,8 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
     /// <summary>Represents the live workbench registration and its own native Git selection.</summary>
     /// <remarks>2026-11-26 · TEST-RETRO-013#ac-test-git-multiple-repos; TEST-RETRO-015#ac-test-mcp-same-instance. Publish selection revisions through the existing workbench layout.</remarks>
     private sealed partial record Registration(WorkbenchViewModel View, ActorGrant Grant, WorkbenchController Controller) : IWorkbenchRegistration,
-        IExplorerRegistration, ILocalizationRegistration, IGitRegistration, ITerminalRegistration, IWorkbenchOperationRegistration, ILanguageRegistration
+        IExplorerRegistration, ILocalizationRegistration, IGitRegistration, ITerminalRegistration, IWorkbenchOperationRegistration,
+        ILanguageRegistration, IEmulatorRegistration
     {
         private GitStatusMonitor? _gitMonitor;
         private Task _drainingMonitors = Task.CompletedTask;
@@ -491,6 +495,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
         public object ContextSource => View;
         public bool TryFocus(string toolId) => Controller.CanFocus(toolId) && Controller._layout.Focus(toolId);
         public WorkspaceExplorer Explorer => Controller._workspaceExplorer;
+        public EmulatorWorkspace? Emulators => Controller.Emulators;
 
         /// <inheritdoc />
         public GitSelection? SelectedGit { get; private set; }

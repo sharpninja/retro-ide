@@ -37,6 +37,17 @@ The Phase 02 implementation currently exposes these Project Explorer operations 
 
 Read-only attachments can list workspace roots and children and read a live document context. Root, expansion, selection, and editor mutations require a write-enabled attachment and the current public workbench context. Each branch read is scoped to an open root. Refresh the context after a successful mutation before sending the next write.
 
+## Emulator bucket tools
+
+The shared command registry exposes these bucket operations through Streamable HTTP and stdio. Bucket configuration is shared by workbenches using the same application data directory. Mutations require a write-enabled attachment and the current public workbench context.
+
+| Tool | Arguments | Result |
+| --- | --- | --- |
+| `emulator_list_buckets` | None | Configured buckets, last verified commit and releases for each bucket, and compatibility with the current host and adapter contract. Uses the local cache. |
+| `emulator_configure_bucket` | `bucketId`, absolute Git `repository` URL, workbench `context` | The saved bucket source. |
+| `emulator_refresh_bucket` | `bucketId`, workbench `context`, optional `background` | The verified catalog and its exact Git commit, or an operation handle when requested. A failed refresh preserves the last valid catalog. |
+| `emulator_remove_bucket` | `bucketId`, workbench `context` | The removed configuration ID. Installed bundles and project pins remain available. |
+
 ## Phase 03 Git tools
 
 Phase 03 exposes native Git actions and the repository terminal through the same attached workbench over stdio and Streamable HTTP. Discovery takes a literal path within an open Project Explorer root. Use an empty `relativePath` to inspect the root itself. Use forward slashes in path arguments on both hosts, including Windows paths such as `C:/src/example`. [Phase 03 acceptance](receipts/phase-03-git-terminal-language-servers.md)
