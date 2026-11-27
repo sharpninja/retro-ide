@@ -118,6 +118,7 @@ internal sealed class GitWorktreeFixture : IDisposable
         {
             WorkingDirectory = repository,
             UseShellExecute = false,
+            RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             StandardOutputEncoding = Encoding.UTF8,
@@ -140,6 +141,7 @@ internal sealed class GitWorktreeFixture : IDisposable
             start.ArgumentList.Add(argument);
 
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Git did not start.");
+        process.StandardInput.Close();
         var stdout = process.StandardOutput.ReadToEndAsync(token);
         var stderr = process.StandardError.ReadToEndAsync(token);
         try

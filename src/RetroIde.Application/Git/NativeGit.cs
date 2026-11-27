@@ -149,7 +149,7 @@ internal static class NativeGit
         var start = new ProcessStartInfo("git")
         {
             WorkingDirectory = directory, UseShellExecute = false, CreateNoWindow = true,
-            RedirectStandardOutput = true, RedirectStandardError = true,
+            RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
         };
         foreach (var name in WorkspaceOverrides)
             start.Environment.Remove(name);
@@ -162,6 +162,8 @@ internal static class NativeGit
 
         token.ThrowIfCancellationRequested();
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Git did not start.");
+        // Captured commands have no input protocol. Git LFS can wait on inherited stdin.
+        process.StandardInput.Close();
         using var buffer = new MemoryStream();
         using var errorBuffer = captureError ? new MemoryStream() : null;
         var output = process.StandardOutput.BaseStream.CopyToAsync(buffer, token);
