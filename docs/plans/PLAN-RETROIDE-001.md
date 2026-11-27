@@ -1,6 +1,6 @@
 # PLAN-RETROIDE-001 — Retro IDE BDPv4 implementation plan
 
-**Status.** Phases 01 and 02 were accepted on 2026-11-26. Phase 03 is next. [Phase 01 verification](../receipts/phase-01-workbench-mcp.md) · [Phase 02 verification](../receipts/phase-02-workbench-explorer-editor.md)
+**Status.** Phases 01 and 02 were accepted on 2026-11-26. Phase 03 remains open. Its operation-handle task was accepted on 2026-11-27. [Phase 01 verification](../receipts/phase-01-workbench-mcp.md) · [Phase 02 verification](../receipts/phase-02-workbench-explorer-editor.md) · [Phase 03 verdict](../receipts/hv/20261127T083643-phase-03-renewed.verdict.md)
 
 **Baseline.** The original Retro IDE QBrain baseline has 15 functional, 15 technical, and 15 testing records across 15 mappings and 176 acceptance criteria. The current requirements also include the debugger CPU and emulator machine description groups in the traceability table below. Published source `e066c7325f3ad3c9a14c1310fbeba0c8b531edda` and wiki `13fc5aa1f0729e0879e9e515824ce2d9d56d4cb7` document local validation. [Published architecture](https://github.com/sharpninja/retro-ide/wiki/Architecture) · [MCP Tools](https://github.com/sharpninja/retro-ide/wiki/MCP-Tools) · [Accepted Phase 01 C4 model](../architecture/structurizr/versions/implementation-01-workbench-mcp/manifest.json)
 
@@ -105,6 +105,18 @@ All seven incomplete test-first entries from `60457dc` now have criterion-specif
 
 - Use native Git for discovery, clone/init, repository and worktree selection, diffs and hunks, stage and unstage, commit and amend, history and blame, branches/tags/upstreams, fetch/pull/push, stash and patches, merge/rebase/cherry-pick/revert/reset, worktrees, submodules, installed LFS, and a repository-scoped terminal. Preserve native credentials, SSH, prompts, signing, and hooks. Parse machine-readable state with literal paths, revalidate hunks, serialize overlapping writes, and keep unsaved buffers separate. Run `GitWorktreeIntegrationTests` with local bare remotes, unusual paths, divergence, stale hunks, external changes, conflict recovery, and cancellation. [Git integration](../git-integration.md)
 - Configure LSP servers by root and language with framed JSON-RPC, negotiated 3.18/3.17 capabilities and encoding, versioned unsaved buffers, and cancellation/restart. Implement advertised completion, hover, symbols, references, definition navigation, diagnostics, formatting, rename, and code actions. Validate workspace edits and route them through the owning controller and CQRS. Run `LanguageServerIntegrationTests` with a deterministic fixture, clangd and rust-analyzer, Unicode, capability changes, stale replies, and recovery while editing remains available. Use RemoteControl for Source Control, terminal and editor surfaces. Exercise scoped MCP parity for Git, terminal and LSP. Introduce the common operation handle for long calls in this slice, with status, result, and cancellation reused by later phases. [Language server contract](../language-servers.md)
+
+#### Phase 03 independent review
+
+The 2026-11-27 review of `212cac6` returned DISAGREE at 96 accuracy and 95 completeness overall. No accepted Phase 01 or 02 task regressed. [Full verdict](../receipts/hv/20261127T083643-phase-03-renewed.verdict.md)
+
+| Task | Verdict | Accuracy | Completeness | Status |
+| --- | --- | --- | --- | --- |
+| 03A · `EXEC-TODO-008` | DISAGREE | 96 | 95 | Open. Protect Git transfers from overlapping remote changes. Retain live evidence for the overlap and for reviewed commits on initial or detached HEAD. |
+| 03B · `EXEC-TODO-009` | DISAGREE | 96 | 96 | Open. Preserve successful save notifications through close and first synchronization. Verify both at the workbench-to-server boundary. |
+| 03C · `EXEC-TODO-010` | AGREE | 99 | 99 | Complete. Scoped native success, cancellation, failure and foreign-result denial passed across HTTP and stdio. |
+
+Negotiated MCP Tasks and bounded diagnostic or image results remain in Phase 07. The complete MCP inventory and scope audit remain in Phase 08.
 
 ### 04 — Emulator manager and adapter conformance
 
