@@ -15,6 +15,7 @@ internal static partial class GitRemoteOperations
 
             return Authorize(selection, async cancellation =>
             {
+                using var held = await GitConfigurationGate.EnterAsync(repo, cancellation).ConfigureAwait(false);
                 var current = await ValidateUpstreamAsync(repo, input, cancellation).ConfigureAwait(false);
                 if (current is not null)
                     return current;

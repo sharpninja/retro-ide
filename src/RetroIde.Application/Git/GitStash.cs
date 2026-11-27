@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -9,8 +8,6 @@ namespace RetroIde.Application.Git;
 internal static class GitStash
 {
     private static readonly byte[] RevisionKey = RandomNumberGenerator.GetBytes(32);
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new(
-        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
     internal enum Action { Apply, Pop, Drop }
     internal sealed record ListInput(string WorktreePath);
     internal sealed record CreateInput(string WorktreePath, string Message, bool IncludeUntracked = false);
@@ -57,19 +54,10 @@ internal static class GitStash
                 ? new FeatureOutcome("ok", "Git stash operation authorized.")
                 {
                     ExecuteAuthorizedAsync = cancellation => GitOperationRecovery.TryAsync(
-                        () => InStackGateAsync(selection, () => execute(git, selection, cancellation), cancellation)),
+                        () => GitConfigurationGate.RunAsync(selection.Repository, cancellation, () => execute(git, selection, cancellation))),
                 }
                 : GitOperationRecovery.ChangedSelection(),
         }), token);
-
-    private static async Task<FeatureOutcome> InStackGateAsync(GitSelection selection, Func<Task<FeatureOutcome>> action, CancellationToken token)
-    {
-        // Linked worktrees share refs/stash even though they have different indexes.
-        var gate = Gates.GetOrAdd(selection.Repository.CommonDirectory, static _ => new SemaphoreSlim(1));
-        await gate.WaitAsync(token).ConfigureAwait(false);
-        try { return await action().ConfigureAwait(false); }
-        finally { gate.Release(); }
-    }
 
     private static async Task<FeatureOutcome> CreateCoreAsync(IGitRegistration git, GitSelection selection, CreateInput input, CancellationToken token)
     {

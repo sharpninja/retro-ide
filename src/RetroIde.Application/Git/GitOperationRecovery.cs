@@ -89,6 +89,7 @@ internal static class GitOperationRecovery
 
     private static async Task<FeatureOutcome> ApplyAsync(IGitRegistration git, GitSelection selection, string revision, Action action, CancellationToken token)
     {
+        using var held = await GitConfigurationGate.EnterAsync(selection.Repository, token).ConfigureAwait(false);
         // Resuming a sequencer may also apply later commits. Hold all open buffers in this worktree until Git returns.
         var lease = await git.BeginIntegrationAsync(selection, paths: null, token).ConfigureAwait(false);
         if (lease.Guard is not { } guard)

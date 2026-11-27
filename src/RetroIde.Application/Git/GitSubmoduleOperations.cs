@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace RetroIde.Application.Git;
 
 internal static class GitSubmoduleOperations
@@ -7,9 +5,6 @@ internal static class GitSubmoduleOperations
     internal sealed record ListInput(string WorktreePath);
     internal sealed record TargetInput(string WorktreePath, string Path, string ExpectedRevision);
     internal enum Operation { Init, Update, Sync }
-
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new(
-        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
 
     internal static Task<FeatureOutcome> ListAsync(ListInput input, IWorkbenchRegistration view, CancellationToken token) =>
         WithSourceAsync(input.WorktreePath, view, async (_, selection) =>
@@ -29,23 +24,30 @@ internal static class GitSubmoduleOperations
         Operation operation, CancellationToken token)
     {
         var repo = selection.Repository;
-        var gate = Gates.GetOrAdd(repo.CommonDirectory, static _ => new SemaphoreSlim(1));
-        await gate.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            if (!await SourceAvailableAsync(repo, token).ConfigureAwait(false))
-                return SourceUnavailable();
-            var (target, failure) = await ReviewAsync(repo, input, token).ConfigureAwait(false);
-            if (failure is not null)
-                return failure;
-            if (operation == Operation.Update)
-                return await UpdateAsync(git, selection, input, target!, token).ConfigureAwait(false);
-            if (operation == Operation.Sync && !target!.Module.IsConfigured)
-                return new("git_submodule_not_configured", "Initialize the selected submodule before syncing its URL.");
-            return await InvokeAsync(repo, target!, operation, token).ConfigureAwait(false);
-        }
-        finally { gate.Release(); }
+        if (!await SourceAvailableAsync(repo, token).ConfigureAwait(false))
+            return SourceUnavailable();
+        var (reviewed, initialFailure) = await ReviewAsync(repo, input, token).ConfigureAwait(false);
+        if (initialFailure is not null)
+            return initialFailure;
+
+        using var held = await GitConfigurationGate.EnterAsync(repo, token, reviewed!.Checkout).ConfigureAwait(false);
+        if (!await SourceAvailableAsync(repo, token).ConfigureAwait(false))
+            return SourceUnavailable();
+        var (target, failure) = await ReviewAsync(repo, input, token).ConfigureAwait(false);
+        if (failure is not null)
+            return failure;
+        if (!SameCheckout(reviewed.Checkout, target!.Checkout))
+            return Changed();
+        if (operation == Operation.Update)
+            return await UpdateAsync(git, selection, input, target, token).ConfigureAwait(false);
+        if (operation == Operation.Sync && !target.Module.IsConfigured)
+            return new("git_submodule_not_configured", "Initialize the selected submodule before syncing its URL.");
+        return await InvokeAsync(repo, target, operation, token).ConfigureAwait(false);
     }
+
+    private static bool SameCheckout(GitWorktree? expected, GitWorktree? current) => expected is null
+        ? current is null
+        : current is not null && NativeGit.IsSameWorktree(expected, current);
 
     private static async Task<FeatureOutcome> UpdateAsync(IGitRegistration git, GitSelection selection, TargetInput input,
         GitSubmoduleState.Entry reviewed, CancellationToken token)
@@ -66,11 +68,13 @@ internal static class GitSubmoduleOperations
             var (target, failure) = await ReviewAsync(selection.Repository, input, token).ConfigureAwait(false);
             if (failure is not null)
                 return failure;
-            if (await HasLocalChangesAsync(target!, token).ConfigureAwait(false))
+            if (!SameCheckout(reviewed.Checkout, target!.Checkout))
+                return Changed();
+            if (await HasLocalChangesAsync(target, token).ConfigureAwait(false))
                 return new("git_submodule_dirty", "Save or move local submodule files and finish any Git operation before updating.");
             token.ThrowIfCancellationRequested();
             attempted = true;
-            return await InvokeAsync(selection.Repository, target!, Operation.Update, token).ConfigureAwait(false);
+            return await InvokeAsync(selection.Repository, target, Operation.Update, token).ConfigureAwait(false);
         }
         finally
         {

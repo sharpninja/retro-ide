@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Security.Cryptography;
 using System.Text;
@@ -9,8 +8,6 @@ namespace RetroIde.Application.Git;
 internal static partial class GitRemoteOperations
 {
     private static readonly byte[] RevisionKey = RandomNumberGenerator.GetBytes(32);
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> ConfigurationGates = new(
-        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
     internal sealed record ListInput(string WorktreePath);
     internal sealed record ConfigureInput(string WorktreePath, string Name, string Revision, string? Value = null, bool Push = false);
     internal sealed record FetchInput(string WorktreePath, string Name, string Revision, bool Prune = false);
@@ -38,7 +35,7 @@ internal static partial class GitRemoteOperations
             var problem = await ValidateChangeAsync(repo, snapshot, input, change, token).ConfigureAwait(false);
             if (problem is not null)
                 return problem;
-            return Authorize(selection, cancellation => WithConfigurationGateAsync(repo, cancellation,
+            return Authorize(selection, cancellation => GitConfigurationGate.RunAsync(repo, cancellation,
                 () => ConfigureReviewedAsync(repo, input, change, cancellation)));
         }, token);
 
@@ -65,17 +62,6 @@ internal static partial class GitRemoteOperations
             (await ReadConfigAsync(repo, CancellationToken.None).ConfigureAwait(false)).Display);
     }
 
-    internal static async Task<FeatureOutcome> WithConfigurationGateAsync(GitWorktree repository, CancellationToken token,
-        Func<Task<FeatureOutcome>> operation)
-    {
-        // Native transfers resolve their remote name while Git runs. Use the same gate
-        // for configuration edits and transfers across all worktrees sharing that config.
-        var gate = ConfigurationGates.GetOrAdd(repository.CommonDirectory, static _ => new SemaphoreSlim(1));
-        await gate.WaitAsync(token).ConfigureAwait(false);
-        try { return await operation().ConfigureAwait(false); }
-        finally { gate.Release(); }
-    }
-
     internal static Task<FeatureOutcome> FetchAsync(FetchInput input, IWorkbenchRegistration view, CancellationToken token) =>
         InScopeAsync(input.WorktreePath, view, async selection =>
         {
@@ -88,7 +74,7 @@ internal static partial class GitRemoteOperations
             if (!remote.FetchMappings.All(IsTrackingRefspec))
                 return new("git_fetch_refspec_unsupported", "Fetch must target remote tracking refs or tags.");
 
-            return Authorize(selection, cancellation => WithConfigurationGateAsync(repo, cancellation, async () =>
+            return Authorize(selection, cancellation => GitConfigurationGate.RunAsync(repo, cancellation, async () =>
             {
                 if (!Matches(await ReadConfigAsync(repo, cancellation).ConfigureAwait(false), input.Revision))
                     return Changed();

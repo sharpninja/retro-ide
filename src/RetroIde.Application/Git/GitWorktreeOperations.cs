@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using RetroIde.Application.Workspaces;
 
 namespace RetroIde.Application.Git;
@@ -14,7 +13,6 @@ internal static class GitWorktreeOperations
     internal enum Maintenance { Lock, Unlock, Remove }
     private sealed record Target(GitHistoryOperations.Worktree Row, GitWorktree Repository);
     private static readonly StringComparer Paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new(Paths);
     private const string HeadPrefix = "refs/heads/";
 
     internal static Task<FeatureOutcome> ListAsync(ListInput input, IWorkbenchRegistration view, CancellationToken token) =>
@@ -194,14 +192,9 @@ internal static class GitWorktreeOperations
             ExecuteAuthorizedAsync = token => GitOperationRecovery.TryAsync(async () =>
             {
                 var repo = selection.Repository;
-                var gate = Gates.GetOrAdd(repo.CommonDirectory, static _ => new SemaphoreSlim(1));
-                await gate.WaitAsync(token).ConfigureAwait(false);
-                try
-                {
-                    return await SourceAvailableAsync(repo, token).ConfigureAwait(false)
-                        ? await run(token).ConfigureAwait(false) : SourceUnavailable();
-                }
-                finally { gate.Release(); }
+                using var held = await GitConfigurationGate.EnterAsync(repo, token).ConfigureAwait(false);
+                return await SourceAvailableAsync(repo, token).ConfigureAwait(false)
+                    ? await run(token).ConfigureAwait(false) : SourceUnavailable();
             }),
         });
 

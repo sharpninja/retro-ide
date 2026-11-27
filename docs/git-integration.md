@@ -46,6 +46,8 @@ Open **Remotes** from Git History to add, rename, remove, or edit a remote. The 
 
 In **Remotes**, pick the remote and enter the destination branch. **Push** sends the displayed local branch tip. To replace divergent history, select **Force push with lease** and enter the full remote commit ID you reviewed. Git rejects the update if that remote branch moved. **Pull** integrates the selected remote branch into the displayed checked-out branch. It defaults to **Fast-forward only** and also supports **Merge** and **Rebase**. Save or discard affected unsaved editor changes before pulling. A successful pull refreshes affected clean editor buffers. Git reports integration conflicts in the current worktree. [Git push](https://git-scm.com/docs/git-push) · [Git pull](https://git-scm.com/docs/git-pull)
 
+Retro IDE uses the same repository lock for the final remote revision check, the native transfer, and built-in operations that can change the effective configuration. This includes branch changes that activate conditional Git settings. A submodule sync also takes the populated submodule's repository lock. Linked worktrees share the lock within the IDE process. Commands run manually in the terminal use Git's native locking.
+
 ## Start or recover an operation
 
 Select a commit in **Git History** and choose **Apply Commit**. Review the checkout, its current HEAD, and the full ID of the selected commit. Choose **Merge**, **Rebase onto commit**, **Cherry-pick**, or **Revert**. When cherry-picking or reverting a merge commit, choose which parent Git should treat as the mainline. Retro IDE checks the reviewed HEAD and branch before starting. If Git pauses, open **Source Control** to resolve or abort the operation.

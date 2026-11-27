@@ -18,7 +18,7 @@ internal static class GitLfsOperations
             new FeatureOutcome("ok", "Git LFS operation authorized.")
             {
                 ExecuteAuthorizedAsync = cancellation => GitOperationRecovery.TryAsync(
-                    () => GitRemoteOperations.WithConfigurationGateAsync(selection.Repository, cancellation,
+                    () => GitConfigurationGate.RunAsync(selection.Repository, cancellation,
                         () => ExecuteAsync(git, selection, input, operation, cancellation))),
             })), token);
 
