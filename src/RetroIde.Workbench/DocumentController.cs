@@ -249,6 +249,7 @@ internal sealed partial class DocumentController : SimpleControllerBase
 
         staged.Commit();
         view.MarkSaved(snapshot);
+        _dispatch.LanguageServers.Saved(view.CaptureLanguageDocument(), snapshot.Text);
         return view.Capture();
     }
 

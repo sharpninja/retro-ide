@@ -18,7 +18,7 @@ internal sealed partial record LanguageServerConfiguration(Guid RootId, string D
         Languages.FirstOrDefault(item => item.Extensions.Contains(extension, StringComparer.OrdinalIgnoreCase))?.LanguageId;
 }
 
-internal sealed record LanguageDocument(DocumentContext Context, string Path, string Text, long SavedRevision, string SavedText);
+internal sealed record LanguageDocument(DocumentContext Context, string Path, string Text, long SavedRevision);
 internal sealed record LanguageServerStatus(Guid RootId, string Executable, string State, Guid? SessionId = null,
     string? PositionEncoding = null, int? ProcessId = null, string? Name = null,
     string ProfileId = LanguageProfileKey.DefaultProfile, Guid[]? WorkspaceRootIds = null);
@@ -260,6 +260,30 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
         finally { _updates.Release(); }
     }
 
+    internal async Task SaveDocumentAsync(LanguageDocument document, string language, string savedText, CancellationToken token)
+    {
+        if (!_save)
+            return;
+        // Queue this disk commit before a subsequent close can wait on _updates.
+        // Continue off the dispatcher even when the lock was immediately available.
+        await _updates.WaitAsync(token).ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+        try
+        {
+            if (!IsRunning || !ContainsRoot(document.Context.RootId))
+                return;
+
+            var uri = FileUri(document.Path);
+            if ((_openClose || _change != 0) &&
+                (!_documents.TryGetValue(uri, out var tracked) || tracked.Context.DocumentId != document.Context.DocumentId ||
+                    tracked.Context.Revision < document.Context.Revision))
+                await SynchronizeCoreAsync(uri, document, language, token).ConfigureAwait(false);
+
+            object parameters = _includeSaveText ? new { textDocument = new { uri }, text = savedText } : new { textDocument = new { uri } };
+            await _rpc.NotifyAsync("textDocument/didSave", parameters, token).ConfigureAwait(false);
+        }
+        finally { _updates.Release(); }
+    }
+
     internal LanguageDiagnosticResult Diagnostics(LanguageDocument document)
     {
         var uri = FileUri(document.Path);
@@ -307,7 +331,7 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
 
     internal static string FileUri(string path) => new Uri(Path.GetFullPath(path)).AbsoluteUri;
 
-    private sealed record OpenDocument(DocumentContext Context, int Version, string Text, long SavedRevision)
+    private sealed record OpenDocument(DocumentContext Context, int Version, string Text)
     {
         internal CancellationTokenSource Requests { get; } = new();
 

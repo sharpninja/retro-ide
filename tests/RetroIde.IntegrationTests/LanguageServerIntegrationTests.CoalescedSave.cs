@@ -29,7 +29,7 @@ public sealed partial class LanguageServerIntegrationTests
                 static (_, _, _) => Task.FromResult(new LanguageServerEditReply(false)), token).ConfigureAwait(true);
             await using var session = started.ConfigureAwait(true);
             var context = new DocumentContext(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), root, "fixture.c", 1);
-            var initial = new LanguageDocument(context, Path.Combine(fixture.FullName, context.RelativePath), "int first;", 1, "int first;");
+            var initial = new LanguageDocument(context, Path.Combine(fixture.FullName, context.RelativePath), "int first;", 1);
             await started.SynchronizeAsync(initial, "c", static () => true, token).ConfigureAwait(true);
 
             const string Saved = "int saved;";
@@ -38,8 +38,8 @@ public sealed partial class LanguageServerIntegrationTests
                 Context = context with { Revision = dirtyAfterSave ? 3 : 2 },
                 Text = dirtyAfterSave ? "int dirty;" : Saved,
                 SavedRevision = 2,
-                SavedText = Saved,
             };
+            await started.SaveDocumentAsync(latest, "c", Saved, token).ConfigureAwait(true);
             var completion = new LanguageRequest("textDocument/completion", Offset: 0);
             var result = await started.QueryAsync(latest, configuration, "c", completion, static () => true, token).ConfigureAwait(true);
             Assert.Equal(latest.Text, result.Result[0].GetProperty("detail").GetString(), StringComparer.Ordinal);

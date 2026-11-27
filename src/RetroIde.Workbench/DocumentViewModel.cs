@@ -110,7 +110,7 @@ internal sealed partial class DocumentViewModel : ObservableObject, IView
 
     internal DocumentSaveSnapshot CaptureSave(DocumentContext context) => new(context, _source.Address, Buffer.Text, _source.Encoding);
 
-    internal LanguageDocument CaptureLanguageDocument() => new(Capture(), FullPath, Buffer.Text, SavedRevision, _savedText);
+    internal LanguageDocument CaptureLanguageDocument() => new(Capture(), FullPath, Buffer.Text, SavedRevision);
 
     internal void MarkSaved(DocumentSaveSnapshot snapshot)
     {

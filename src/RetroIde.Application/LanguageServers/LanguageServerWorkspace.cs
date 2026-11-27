@@ -214,6 +214,13 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
             _ = CloseDocumentAsync(session, document);
     }
 
+    internal void Saved(LanguageDocument document, string savedText)
+    {
+        if (FindDocumentSlot(document) is { Session: { IsRunning: true } session } slot &&
+            slot.Configuration.GetLanguage(document.Path) is { } language)
+            _ = SendSaveAsync(session, document, language, savedText);
+    }
+
     internal void ReconcileRoots()
     {
         var roots = _explorer.Roots.Select(root => root.Id).ToHashSet();
@@ -284,6 +291,16 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
         {
             if (session.IsRunning && !_shutdown.IsCancellationRequested)
                 RuntimeFailures.Report(_logger, error, "Close language server document");
+        }
+    }
+
+    private async Task SendSaveAsync(LanguageServerSession session, LanguageDocument document, string language, string savedText)
+    {
+        try { await session.SaveDocumentAsync(document, language, savedText, _shutdown.Token).ConfigureAwait(false); }
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
+        {
+            if (session.IsRunning && !_shutdown.IsCancellationRequested)
+                RuntimeFailures.Report(_logger, error, "Send saved document to language server");
         }
     }
 

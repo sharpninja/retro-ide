@@ -27,7 +27,7 @@ internal sealed partial class LanguageServerSession
             previous = null;
         }
         if (previous is null)
-            return await OpenCoreAsync(uri, source, language, source.SavedRevision, token).ConfigureAwait(false);
+            return await OpenCoreAsync(uri, source, language, token).ConfigureAwait(false);
         if (previous.Context.Revision > source.Context.Revision)
             throw new LanguageDocumentChangedException();
 
@@ -36,15 +36,14 @@ internal sealed partial class LanguageServerSession
         if (revisionChanged && _change == 0 && _openClose)
         {
             await CloseCoreAsync(uri, token).ConfigureAwait(false);
-            // Reopening sends the current text. A newer save still needs its own notification.
-            updated = await OpenCoreAsync(uri, source, language, previous.SavedRevision, token).ConfigureAwait(false);
+            updated = await OpenCoreAsync(uri, source, language, token).ConfigureAwait(false);
         }
         else if (revisionChanged)
         {
             if (_change == 0 && source.Context.Revision != source.SavedRevision)
                 throw new NotSupportedException("The language server cannot synchronize this unsaved document.");
 
-            updated = new OpenDocument(source.Context, NextDocumentVersion(uri), source.Text, previous.SavedRevision);
+            updated = new OpenDocument(source.Context, NextDocumentVersion(uri), source.Text);
             _diagnostics.TryRemove(uri, out _);
             _documents[uri] = updated;
             if (_change != 0)
@@ -70,27 +69,15 @@ internal sealed partial class LanguageServerSession
             previous.CancelRequests();
         }
 
-        if (updated.SavedRevision < source.SavedRevision)
-        {
-            if (_save)
-            {
-                object parameters = _includeSaveText
-                    ? new { textDocument = new { uri }, text = source.SavedText }
-                    : new { textDocument = new { uri } };
-                await _rpc.NotifyAsync("textDocument/didSave", parameters, token).ConfigureAwait(false);
-            }
-            updated = updated with { SavedRevision = source.SavedRevision };
-            _documents[uri] = updated;
-        }
         return updated;
     }
 
     private async Task<OpenDocument> OpenCoreAsync(string uri, LanguageDocument source, string language,
-        long savedRevision, CancellationToken token)
+        CancellationToken token)
     {
         if (!_openClose && _change == 0 && source.Context.Revision != source.SavedRevision)
             throw new NotSupportedException("The language server cannot synchronize this unsaved document.");
-        var tracked = new OpenDocument(source.Context, NextDocumentVersion(uri), source.Text, savedRevision);
+        var tracked = new OpenDocument(source.Context, NextDocumentVersion(uri), source.Text);
         _documents[uri] = tracked;
         if (_openClose)
         {
