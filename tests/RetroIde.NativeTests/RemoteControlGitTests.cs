@@ -18,7 +18,7 @@ internal static partial class RemoteControlGitTests
     /// <remarks>TEST-RETRO-013#ac-test-git-stage-and-push, ac-test-git-extensions; TEST-RETRO-015#ac-test-mcp-same-instance.</remarks>
     internal static async Task RunAsync()
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(65));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(45));
         var token = timeout.Token;
         using var sample = await GitWorktreeFixture.CreateAsync("git", token).ConfigureAwait(true);
         const string Change = "native Source Control change";
@@ -78,12 +78,16 @@ internal static partial class RemoteControlGitTests
             await VerifyCommitAsync(window, session, sample, token).ConfigureAwait(true);
             await VerifyHistoryAsync(window, session, token).ConfigureAwait(true);
             await VerifyTagsAsync(window, sample, token).ConfigureAwait(true);
+            // Bound each group independently so earlier fixture work cannot consume its deadline.
+            timeout.CancelAfter(TimeSpan.FromSeconds(50));
             await VerifyWorktreesAsync(window, session, sample, token).ConfigureAwait(true);
             await VerifyBranchAsync(window, sample, token).ConfigureAwait(true);
             await VerifyBranchMaintenanceAsync(window, sample, token).ConfigureAwait(true);
+            timeout.CancelAfter(TimeSpan.FromSeconds(45));
             await VerifyRemoteSyncAsync(window, sample, token).ConfigureAwait(true);
             _ = await MutateAsync("workbench_focus_tool", new(StringComparer.Ordinal) { ["toolId"] = "source-control" }).ConfigureAwait(true);
             await VerifyRecoveryAsync(window, session, sample, token).ConfigureAwait(true);
+            timeout.CancelAfter(TimeSpan.FromSeconds(40));
             await VerifyStashAsync(window, sample, token).ConfigureAwait(true);
             await VerifyPatchAsync(window, session.SourceControl, sample, token).ConfigureAwait(true);
             using var submoduleDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(45));
