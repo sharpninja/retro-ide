@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -15,7 +16,7 @@ namespace RetroIde.NativeTests;
 internal static partial class RemoteControlGitTests
 {
     /// <summary>Exercises the Source Control commands and staged diff in a native desktop without physical input.</summary>
-    /// <remarks>TEST-RETRO-013#ac-test-git-stage-and-push, ac-test-git-extensions; TEST-RETRO-015#ac-test-mcp-same-instance.</remarks>
+    /// <remarks>2026-11-26. TEST-RETRO-013#ac-test-git-stage-and-push, ac-test-git-recovery, ac-test-git-extensions; TEST-RETRO-015#ac-test-mcp-same-instance. Measure each native Git workflow against an independent deadline so slower subprocesses cannot consume the next workflow's allowance.</remarks>
     internal static async Task RunAsync()
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(45));
@@ -78,34 +79,40 @@ internal static partial class RemoteControlGitTests
             await VerifyCommitAsync(window, session, sample, token).ConfigureAwait(true);
             await VerifyHistoryAsync(window, session, token).ConfigureAwait(true);
             await VerifyTagsAsync(window, sample, token).ConfigureAwait(true);
-            // Bound each group independently so earlier fixture work cannot consume its deadline.
-            timeout.CancelAfter(TimeSpan.FromSeconds(50));
-            await VerifyWorktreesAsync(window, session, sample, token).ConfigureAwait(true);
-            await VerifyBranchAsync(window, sample, token).ConfigureAwait(true);
-            await VerifyBranchMaintenanceAsync(window, sample, token).ConfigureAwait(true);
-            timeout.CancelAfter(TimeSpan.FromSeconds(45));
-            await VerifyRemoteSyncAsync(window, sample, token).ConfigureAwait(true);
-            _ = await MutateAsync("workbench_focus_tool", new(StringComparer.Ordinal) { ["toolId"] = "source-control" }).ConfigureAwait(true);
-            await VerifyRecoveryAsync(window, session, sample, token).ConfigureAwait(true);
-            timeout.CancelAfter(TimeSpan.FromSeconds(40));
-            await VerifyStashAsync(window, sample, token).ConfigureAwait(true);
-            await VerifyPatchAsync(window, session.SourceControl, sample, token).ConfigureAwait(true);
-            using var submoduleDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(45));
-            await VerifySubmodulesAsync(window, session.SourceControl, sample, submoduleDeadline.Token).ConfigureAwait(true);
-            using var lfsDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(40));
-            await VerifyLfsAsync(window, session.SourceControl, sample, lfsDeadline.Token).ConfigureAwait(true);
+            await VerifyScenarioAsync("worktrees and branches", 50, async deadline =>
+            {
+                await VerifyWorktreesAsync(window, session, sample, deadline).ConfigureAwait(true);
+                await VerifyBranchAsync(window, sample, deadline).ConfigureAwait(true);
+                await VerifyBranchMaintenanceAsync(window, sample, deadline).ConfigureAwait(true);
+            }).ConfigureAwait(true);
+            await VerifyScenarioAsync("remote sync", 45, deadline => VerifyRemoteSyncAsync(window, sample, deadline)).ConfigureAwait(true);
+            await VerifyScenarioAsync("operation recovery", 90, async deadline =>
+            {
+                _ = await MutateAsync("workbench_focus_tool", new(StringComparer.Ordinal) { ["toolId"] = "source-control" }, deadline)
+                    .ConfigureAwait(true);
+                await VerifyRecoveryAsync(window, session, sample, deadline).ConfigureAwait(true);
+            }).ConfigureAwait(true);
+            await VerifyScenarioAsync("stash and patch", 40, async deadline =>
+            {
+                await VerifyStashAsync(window, sample, deadline).ConfigureAwait(true);
+                await VerifyPatchAsync(window, session.SourceControl, sample, deadline).ConfigureAwait(true);
+            }).ConfigureAwait(true);
+            await VerifyScenarioAsync("submodules", 45,
+                deadline => VerifySubmodulesAsync(window, session.SourceControl, sample, deadline)).ConfigureAwait(true);
+            await VerifyScenarioAsync("Git LFS", 90,
+                deadline => VerifyLfsAsync(window, session.SourceControl, sample, deadline)).ConfigureAwait(true);
             await VerifyTerminalAsync(window, session, sample).ConfigureAwait(true);
 
-            async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments)
+            async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments, CancellationToken? deadline = null)
             {
-                var current = await InvokeAsync("workbench_get_context").ConfigureAwait(true);
+                var current = await InvokeAsync("workbench_get_context", deadline: deadline).ConfigureAwait(true);
                 arguments["context"] = current.GetProperty("context");
-                return await InvokeAsync(tool, arguments).ConfigureAwait(true);
+                return await InvokeAsync(tool, arguments, deadline).ConfigureAwait(true);
             }
 
-            async Task<JsonElement> InvokeAsync(string tool, Dictionary<string, object?>? arguments = null)
+            async Task<JsonElement> InvokeAsync(string tool, Dictionary<string, object?>? arguments = null, CancellationToken? deadline = null)
             {
-                var response = await client.CallToolAsync(tool, arguments, cancellationToken: token).ConfigureAwait(true);
+                var response = await client.CallToolAsync(tool, arguments, cancellationToken: deadline ?? token).ConfigureAwait(true);
                 if (response.StructuredContent is not { } result ||
                     !string.Equals(result.GetProperty("code").GetString(), "ok", StringComparison.Ordinal))
                     throw new InvalidOperationException($"Native Git tool {tool} failed.");
@@ -118,6 +125,21 @@ internal static partial class RemoteControlGitTests
             throw;
         }
         finally { window.Close(); }
+    }
+
+    private static async Task VerifyScenarioAsync(string name, int seconds, Func<CancellationToken, Task> verify)
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(seconds));
+        var elapsed = Stopwatch.StartNew();
+        try
+        {
+            await verify(deadline.Token).ConfigureAwait(true);
+            Console.WriteLine($"Native Git {name} completed in {elapsed.Elapsed}.");
+        }
+        catch (OperationCanceledException error) when (deadline.IsCancellationRequested)
+        {
+            throw new TimeoutException($"Native Git {name} exceeded its own {seconds}-second deadline.", error);
+        }
     }
 
     private static async Task VerifyTagsAsync(Window window, GitWorktreeFixture sample, CancellationToken token)
