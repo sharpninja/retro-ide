@@ -19,6 +19,9 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
     private readonly FeatureRegistry _registry;
     private readonly InteractionBlocks _interaction;
     private readonly ILogger _logger;
+    private CancellationTokenSource? _activeCommand;
+    private Task _pendingWork = Task.CompletedTask;
+    private bool _closing;
 
     internal EmulatorsViewModel(WorkbenchViewModel workbench, FeatureRegistry registry, InteractionBlocks interaction, ILogger logger) : base(workbench)
     {
@@ -60,7 +63,7 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
     }
 
     [RelayCommand(CanExecute = nameof(IsAvailable))]
-    private Task ReloadAsync(CancellationToken token) => BlockAsync(() => ReloadCoreAsync(token));
+    private Task ReloadAsync(CancellationToken token) => BlockAsync(ReloadCoreAsync, token);
 
     [RelayCommand(CanExecute = nameof(CanConfigure))]
     private Task ConfigureAsync(CancellationToken token) => ChangeAsync(_registry.Emulators.Configure, new(BucketId!, Repository!), token);
@@ -90,9 +93,9 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
         ChangeAsync(_registry.Emulators.Rollback, new(SelectedProject!.Id, SelectedPrevious!), token);
 
     [RelayCommand]
-    private Task ReadProjectAsync(CancellationToken token) => BlockAsync(() => LoadProjectAsync(token));
+    private Task ReadProjectAsync(CancellationToken token) => BlockAsync(LoadProjectAsync, token);
 
-    private bool IsAvailable() => !IsBusy && ParentViewKey is not null;
+    private bool IsAvailable() => !_closing && !IsBusy && ParentViewKey is not null;
     private bool CanConfigure() => IsAvailable() && !string.IsNullOrWhiteSpace(BucketId) && !string.IsNullOrWhiteSpace(Repository);
     private bool HasBucket() => IsAvailable() && SelectedBucket is not null;
     private bool HasInstallation() => IsAvailable() && SelectedInstallation is not null;
@@ -118,15 +121,15 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
         RollbackCommand.NotifyCanExecuteChanged();
     }
 
-    private Task ChangeAsync<T>(Feature<T> feature, T input, CancellationToken token) where T : class => BlockAsync(async () =>
+    private Task ChangeAsync<T>(Feature<T> feature, T input, CancellationToken token) where T : class => BlockAsync(async commandToken =>
     {
-        var result = await SendAsync(feature, input, token).ConfigureAwait(true);
+        var result = await SendAsync(feature, input, commandToken).ConfigureAwait(true);
         if (result is { Code: "ok" })
         {
-            await ReloadCoreAsync(token).ConfigureAwait(true);
+            await ReloadCoreAsync(commandToken).ConfigureAwait(true);
             Receive(result);
         }
-    });
+    }, token);
 
     private async Task ReloadCoreAsync(CancellationToken token)
     {
@@ -164,15 +167,38 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
         SelectedPrevious = PreviousPins.FirstOrDefault(pin => pin == previous) ?? PreviousPins.FirstOrDefault();
     }
 
-    private async Task BlockAsync(Func<Task> operation)
+    internal void CancelPending()
+    {
+        _closing = true;
+        _activeCommand?.Cancel();
+    }
+
+    internal Task DrainAsync()
+    {
+        CancelPending();
+        return _pendingWork;
+    }
+
+    private Task BlockAsync(Func<CancellationToken, Task> operation, CancellationToken token)
     {
         if (!IsAvailable())
-            return;
+            return Task.CompletedTask;
+        var command = CancellationTokenSource.CreateLinkedTokenSource(token);
+        _activeCommand = command;
         IsBusy = true;
         _interaction.Begin(PaneId);
-        try { await operation().ConfigureAwait(true); }
+        _pendingWork = RunBlockedAsync(operation, command);
+        return _pendingWork;
+    }
+
+    private async Task RunBlockedAsync(Func<CancellationToken, Task> operation, CancellationTokenSource command)
+    {
+        try { await operation(command.Token).ConfigureAwait(true); }
+        catch (OperationCanceledException) when (command.IsCancellationRequested) { }
         finally
         {
+            _activeCommand = null;
+            command.Dispose();
             _interaction.End(PaneId);
             IsBusy = false;
         }

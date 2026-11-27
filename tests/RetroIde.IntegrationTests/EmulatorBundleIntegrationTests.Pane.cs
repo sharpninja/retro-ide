@@ -48,6 +48,10 @@ public sealed partial class EmulatorBundleIntegrationTests
             await ClickEmulatorButtonAsync(window, "emulator.project.select.toolbar", deadline.Token);
             while (await SelectedPinAsync(http, rootId) != pin)
                 await Task.Delay(25, deadline.Token);
+            var picker = Assert.Single(window.GetVisualDescendants().OfType<ComboBox>(), control =>
+                string.Equals(AutomationProperties.GetAutomationId(control), "emulator.projects.items", StringComparison.Ordinal));
+            Assert.Contains(picker.GetVisualDescendants().OfType<TextBlock>(), text =>
+                string.Equals(text.Text, project.FullName.Replace('\\', '/'), StringComparison.Ordinal));
         }
         finally { window.Close(); }
     }

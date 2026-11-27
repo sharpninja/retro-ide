@@ -103,6 +103,7 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
     /// <inheritdoc />
     public void Dispose()
     {
+        EmulatorsView.CancelPending();
         Controller.Dispose();
         Documents.Dispose();
         Layout.Dispose();
@@ -116,7 +117,7 @@ public sealed class WorkbenchSession : IDisposable, IAsyncDisposable
         try
         {
             await Task.WhenAll(Controller.DrainGitRefreshAsync(View), Documents.DrainTerminalsAsync(),
-                Controller.DrainLanguageServersAsync()).ConfigureAwait(true);
+                Controller.DrainLanguageServersAsync(), EmulatorsView.DrainAsync()).ConfigureAwait(true);
         }
         finally { Dispose(); }
     }

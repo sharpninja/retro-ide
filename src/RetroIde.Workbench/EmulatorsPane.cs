@@ -87,7 +87,7 @@ internal static class EmulatorsPane
         var locale = view.Localization;
         pane.Children.Add(Picker(pane, view, Project, "emulator.projects.items",
             () => view.Projects, () => view.SelectedProject, value => view.SelectedProject = value,
-            value => (Path.GetFileName(value.Path), value.Path)));
+            value => ProjectLabel(value.Path)));
         var active = new TextBlock { TextWrapping = TextWrapping.Wrap };
         Watch(pane, view, () =>
         {
@@ -120,6 +120,13 @@ internal static class EmulatorsPane
     }
 
     private static string DisplayPin(Pin pin) => $"{pin.Bucket}/{pin.Bundle} {pin.Version}";
+
+    private static (string Title, string Detail) ProjectLabel(string path)
+    {
+        var title = Path.GetFileName(path);
+        var displayPath = OperatingSystem.IsWindows() ? path.Replace('\\', '/') : path;
+        return title.Length == 0 ? (displayPath, string.Empty) : (title, displayPath);
+    }
 
     private static string Detail(Pin pin, bool compatible, WorkbenchLocalization locale) =>
         compatible ? DisplayPin(pin) : $"{DisplayPin(pin)} · {locale.Text(Incompatible)}";
