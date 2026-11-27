@@ -12,6 +12,7 @@ namespace RetroIde.IntegrationTests;
 public sealed partial class EmulatorBundleIntegrationTests
 {
     /// <summary>Verifies that an opened session holds the exact package selected by its project.</summary>
+    /// <remarks>TEST-RETRO-010#ac-test-session-contract.</remarks>
     [Theory]
     [InlineData(SessionMode.Launch, SessionClosePolicy.StopOwnedHost)]
     [InlineData(SessionMode.Attach, SessionClosePolicy.Detach)]
@@ -36,6 +37,7 @@ public sealed partial class EmulatorBundleIntegrationTests
         {
             Assert.Equal(policy, running.InitialState.ClosePolicy);
             Assert.Equal(FirstPin.Version, running.Connection.Identity.BundleVersion, StringComparer.Ordinal);
+            Assert.Equal(running.InitialState, (await running.Control.ReadAsync(token)).Value);
             Assert.Equal(AdapterApi, factory.Request?.ContractVersion);
             if (mode == SessionMode.Launch)
             {
@@ -62,6 +64,7 @@ public sealed partial class EmulatorBundleIntegrationTests
     }
 
     /// <summary>Verifies that a reconnect never returns a different backend as the original instance.</summary>
+    /// <remarks>TEST-RETRO-010#ac-test-session-contract.</remarks>
     [Fact]
     public async Task Reconnect_to_a_replacement_instance_disposes_the_new_connection_and_releases_its_lease()
     {
@@ -83,6 +86,7 @@ public sealed partial class EmulatorBundleIntegrationTests
     }
 
     /// <summary>Verifies incompatible package bindings are rejected before starting a host.</summary>
+    /// <remarks>TEST-RETRO-010#ac-test-session-contract.</remarks>
     [Fact]
     public async Task A_mismatched_installed_binding_cannot_open_an_emulator_session()
     {

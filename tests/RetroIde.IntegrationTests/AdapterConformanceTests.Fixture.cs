@@ -8,7 +8,7 @@ namespace RetroIde.IntegrationTests;
 
 public sealed partial class AdapterConformanceTests
 {
-    private sealed class ControlAdapter : IEmulatorSession, IExecutionPort, IOperationReceiptPort
+    private sealed partial class ControlAdapter : IEmulatorSession, IExecutionPort, IOperationReceiptPort
     {
         private static readonly CapabilityDescriptor Receipts = new(IOperationReceiptPort.Capability, null,
             [IOperationReceiptPort.Reconcile], ImmutableDictionary<string, ulong>.Empty);
@@ -38,7 +38,8 @@ public sealed partial class AdapterConformanceTests
 
         internal SessionState MakeState(ulong cursor, ulong revision, SessionLifecycle lifecycle, bool includeExecution = true) =>
             new(Identity, lifecycle, ExecutionStatus.Running, revision, SessionClosePolicy.Detach,
-                new CapabilitySnapshot(revision, includeExecution ? [Execution, Cpu, Receipts, FutureCapability] : [Receipts, FutureCapability]),
+                new CapabilitySnapshot(revision, includeExecution
+                    ? [Execution, Cpu, Receipts, Video, Audio, FutureCapability] : [Receipts, Video, Audio, FutureCapability]),
                 new EventCursor(Identity, cursor));
 
         internal SessionOperation Scope(string actor) => new(Identity, Guid.NewGuid(), actor, Current.StateRevision);
@@ -58,7 +59,8 @@ public sealed partial class AdapterConformanceTests
 
         public bool TryGetPort<TPort>(CapabilityId capability, [NotNullWhen(true)] out TPort? port) where TPort : class, IEmulatorPort
         {
-            port = capability == IExecutionPort.Capability || capability == IOperationReceiptPort.Capability ? this as TPort : null;
+            port = capability == IExecutionPort.Capability || capability == IOperationReceiptPort.Capability ||
+                capability == IVideoPort.Capability || capability == IAudioPort.Capability ? this as TPort : null;
             return port is not null;
         }
 

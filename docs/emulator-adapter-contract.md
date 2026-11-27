@@ -100,6 +100,8 @@ The execution port advertises each action by its stable operation ID, optionally
 
 The first control subscription starts at the initial state's cursor. When the adapter reports an expired cursor or returns a sequence jump, the coordinator reports the gap, loads a snapshot that covers it, and subscribes after the snapshot's cursor. An older client can advance past unfamiliar event types using their common cursor and revision.
 
+Video capture and continuous subscriptions are independently advertised per display. Each consumer receives its own stream identity and bounded queue. The IDE keeps the newest three frames or sixteen audio packets and checks packet size against the advertised `max-packet-bytes` limit and its own hard ceiling. A sequence gap, clock change, timestamp reset, or format change marks a discontinuity on the next delivered packet. Media queues and their producers do not take the control mutation lock.
+
 ## Compatibility and backend mapping
 
 The bundle declares its supported adapter contract versions. The IDE loads the adapter against that contract and negotiates a common version before opening the backend session. Major changes require an explicit compatibility decision. Minor changes can add optional ports, fields, and events. Machine-specific functionality uses a namespaced, versioned extension port with a declared request and result schema. Unknown optional capabilities can be ignored by the generic IDE.
