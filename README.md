@@ -52,6 +52,8 @@ dotnet run --project eng/Nuke/RetroIde.Build.csproj --configuration Release -- D
 
 The target publishes the workbench and MCP stdio bridge, validates the bundled command resources, and places a release under the user’s XDG data directory. It registers **Retro IDE** in the application launcher and installs `retro-ide` and `retro-ide-mcp` in `~/.local/bin`. Previous releases stay available under `retro-ide/releases`.
 
+The workbench uses X11 when it can connect to the display. On a Wayland desktop with an unavailable X11 display, it opens directly through Wayland.
+
 ## Review the design
 
 Regenerate the screen SVGs and review them locally from the repository root with PowerShell and AssetReview installed.

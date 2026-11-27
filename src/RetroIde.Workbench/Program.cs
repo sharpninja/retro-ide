@@ -28,7 +28,7 @@ internal static class Program
             }
             else
                 exitCode = AppBuilder.Configure(() => app = new WorkbenchApp(logs))
-                    .UsePlatformDetect()
+                    .UseAvailableDesktop()
                     .LogToTrace()
                     .StartWithClassicDesktopLifetime(args);
         }
