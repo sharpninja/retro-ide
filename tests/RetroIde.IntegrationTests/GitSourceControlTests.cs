@@ -29,9 +29,13 @@ public sealed partial class GitSourceControlTests
     public void Reference_detects_layout_reset_and_missing_pane()
     {
         var legacy = LegacyLayout();
-        var migrated = legacy with { Main = legacy.Main with { Pinned = [.. legacy.Main.Pinned, new(Pane, "Left")] } };
+        var migrated = legacy with
+        {
+            Main = legacy.Main with { Pinned = [.. legacy.Main.Pinned, new(Pane, "Left"), new("language-servers", "Right")] },
+        };
         VerifyMigration(migrated);
         Assert.ThrowsAny<XunitException>(() => VerifyMigration(legacy));
+        Assert.ThrowsAny<XunitException>(() => VerifyMigration(migrated with { Main = migrated.Main with { Pinned = migrated.Main.Pinned[..^1] } }));
         Assert.ThrowsAny<XunitException>(() => VerifyMigration(migrated with { ActiveTool = null }));
     }
 
