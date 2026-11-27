@@ -4,7 +4,7 @@ using Xunit;
 namespace RetroIde.IntegrationTests;
 
 /// <summary>Verifies the versioned contract shared by the emulator manager and bindings.</summary>
-public sealed class AdapterConformanceTests
+public sealed partial class AdapterConformanceTests
 {
     private static readonly Version Initial = AdapterContract.CurrentVersion;
     private static readonly Version Later = new(1, 1);

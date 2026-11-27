@@ -10,6 +10,7 @@ internal sealed class PinnedEmulatorSession(IEmulatorSession session, SessionSta
 
     internal IEmulatorSession Connection { get; } = session;
     internal SessionState InitialState { get; } = initialState;
+    internal EmulatorSessionControl Control { get; } = new(session, initialState, logger);
 
     public async ValueTask DisposeAsync()
     {
