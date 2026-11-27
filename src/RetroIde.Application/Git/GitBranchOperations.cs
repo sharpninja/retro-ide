@@ -23,9 +23,9 @@ internal static partial class GitBranchOperations
         if (view is not IGitRegistration { SelectedGit: { } selection })
             return new("git_selection_required", "Select a Git worktree first.");
         var repo = selection.Repository;
-        if (!SamePath(path, repo.WorktreePath))
+        if (!NativeGit.SamePath(path, repo.WorktreePath))
             return new("git_worktree_mismatch", "The requested worktree differs from the current selection.");
-        if (!SamePath(selection.ScopeRoot, repo.WorktreePath))
+        if (!NativeGit.SamePath(selection.ScopeRoot, repo.WorktreePath))
             return new("git_branch_scope_required", "Open the worktree root before changing local branches.");
         if (!IsPotentialLocalName(name))
             return InvalidName();
@@ -149,13 +149,13 @@ internal static partial class GitBranchOperations
             return new("git_branch_unavailable", "The local branch is unavailable.");
         if (!string.Equals(local.ObjectId, expected, StringComparison.OrdinalIgnoreCase))
             return Changed();
-        if (refs.Worktrees.Any(tree => string.Equals(tree.Branch, fullName, StringComparison.Ordinal) && !SamePath(tree.Path, repo.WorktreePath)))
+        if (refs.Worktrees.Any(tree => string.Equals(tree.Branch, fullName, StringComparison.Ordinal) && !NativeGit.SamePath(tree.Path, repo.WorktreePath)))
             return new("git_branch_in_use", "The branch is checked out in another worktree.");
         return null;
     }
 
     private static GitHistoryOperations.Worktree? CurrentWorktree(GitHistoryOperations.RefState refs, GitWorktree repo) =>
-        Array.Find(refs.Worktrees, tree => SamePath(tree.Path, repo.WorktreePath));
+        Array.Find(refs.Worktrees, tree => NativeGit.SamePath(tree.Path, repo.WorktreePath));
 
     private static async Task<string[]?> GetChangesAsync(GitWorktree repo, string? head, string target, CancellationToken token)
     {
@@ -185,8 +185,6 @@ internal static partial class GitBranchOperations
         await RunAsync(repo, token, "check-ref-format", LocalRefs + name).ConfigureAwait(false) is not null &&
         await RunAsync(repo, token, "check-ref-format", "--branch", name!).ConfigureAwait(false) is not null;
 
-    private static bool SamePath(string left, string right) => string.Equals(left, right,
-        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     private static FeatureOutcome InvalidName() => new("git_branch_name_invalid", "Enter a valid local branch name.");
     private static FeatureOutcome Changed() => new("git_branch_changed", "HEAD or the target branch changed. Refresh references and retry.");
 

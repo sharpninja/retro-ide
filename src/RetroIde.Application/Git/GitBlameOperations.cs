@@ -19,8 +19,7 @@ internal static class GitBlameOperations
         if (view is not IGitRegistration { SelectedGit: { } selection })
             return new("git_selection_required", "Select a Git worktree first.");
         var repo = selection.Repository;
-        if (!string.Equals(repo.WorktreePath, input.WorktreePath,
-            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+        if (!NativeGit.SamePath(repo.WorktreePath, input.WorktreePath))
             return new("git_worktree_mismatch", "The requested worktree differs from the current selection.");
         if (input is { FirstLine: <= 0 } or { LastLine: <= 0 } || input.LastLine < input.FirstLine ||
             (input.CommitId is not null && !GitHistoryOperations.IsObjectId(input.CommitId)))

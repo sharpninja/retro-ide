@@ -45,7 +45,7 @@ public sealed partial class GitRemoteConcurrencyTests
             await using var relay = await change.ConnectStdioAsync(Path.Combine(fixture.Peer, ".git", "effective-endpoint.json"))
                 .ConfigureAwait(true);
             await SelectAsync(transfer, checkout).ConfigureAwait(true);
-            await SelectAsync(change, fixture.Primary).ConfigureAwait(true);
+            await SelectAsync(change, GitPath(fixture.Primary)).ConfigureAwait(true);
             var mutation = await ReviewEndpointChangeAsync(change, fixture, submodule, token).ConfigureAwait(true);
             var operation = await StartReviewedFetchAsync(transfer, checkout).ConfigureAwait(true);
             using var request = await listener.AcceptTcpClientAsync(token).ConfigureAwait(true);
@@ -78,7 +78,7 @@ public sealed partial class GitRemoteConcurrencyTests
     {
         await fixture.GitAsync(fixture.Primary, token, "-c", "protocol.file.allow=always", "submodule", "add",
             "--name", SubmoduleName, "--", fixture.Remote, SubmodulePath).ConfigureAwait(false);
-        var checkout = Path.Combine(fixture.Primary, SubmodulePath);
+        var checkout = GitPath(Path.GetFullPath(Path.Combine(fixture.Primary, SubmodulePath)));
         await fixture.GitAsync(checkout, token, "remote", "set-url", "origin", endpoint).ConfigureAwait(false);
         await fixture.GitAsync(checkout, token, "config", "--local", "http.proxy", "").ConfigureAwait(false);
         await fixture.GitAsync(fixture.Primary, token, "config", "--file", ".gitmodules", $"submodule.{SubmoduleName}.url",
@@ -94,7 +94,7 @@ public sealed partial class GitRemoteConcurrencyTests
         await fixture.GitAsync(checkout, token, "config", "--local", "http.proxy", "").ConfigureAwait(false);
         await IncludeEndpointAsync("main", endpoint).ConfigureAwait(false);
         await IncludeEndpointAsync(AlternateBranch, ReplacementEndpoint).ConfigureAwait(false);
-        return checkout;
+        return GitPath(checkout);
 
         async Task IncludeEndpointAsync(string branch, string url)
         {
@@ -108,7 +108,7 @@ public sealed partial class GitRemoteConcurrencyTests
     private static async Task<(string Tool, Dictionary<string, object?> Arguments)> ReviewEndpointChangeAsync(Connection connection,
         GitWorktreeFixture fixture, bool submodule, CancellationToken token)
     {
-        var checkout = fixture.Primary;
+        var checkout = GitPath(fixture.Primary);
         var context = await connection.CallAsync("workbench_get_context").ConfigureAwait(false);
         var arguments = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -146,4 +146,6 @@ public sealed partial class GitRemoteConcurrencyTests
 
     private static async Task<string> ReadEffectiveEndpointAsync(GitWorktreeFixture fixture, string path, CancellationToken token) =>
         (await fixture.GitAsync(path, token, "remote", "get-url", "origin").ConfigureAwait(false)).Trim();
+
+    private static string GitPath(string path) => OperatingSystem.IsWindows() ? path.Replace('\\', '/') : path;
 }

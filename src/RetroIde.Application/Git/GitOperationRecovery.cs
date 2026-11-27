@@ -267,9 +267,9 @@ internal static class GitOperationRecovery
     {
         if (view is not IGitRegistration { SelectedGit: { } selection } git)
             return new("git_selection_required", "Select a Git worktree first.");
-        if (!string.Equals(path, selection.Repository.WorktreePath, PathComparison))
+        if (!NativeGit.SamePath(path, selection.Repository.WorktreePath))
             return new("git_worktree_mismatch", "The requested worktree differs from the current selection.");
-        if (!string.Equals(selection.ScopeRoot, selection.Repository.WorktreePath, PathComparison))
+        if (!NativeGit.SamePath(selection.ScopeRoot, selection.Repository.WorktreePath))
             return new("git_operation_scope_required", "Open the worktree root before managing Git operations.");
         token.ThrowIfCancellationRequested();
         return await TryAsync(() => action(git, selection)).ConfigureAwait(false);

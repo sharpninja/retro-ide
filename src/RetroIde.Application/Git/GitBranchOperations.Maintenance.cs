@@ -20,9 +20,9 @@ internal static partial class GitBranchOperations
         if (view is not IGitRegistration { SelectedGit: { } selection })
             return new("git_selection_required", "Select a Git worktree first.");
         var repo = selection.Repository;
-        if (!SamePath(worktreePath, repo.WorktreePath))
+        if (!NativeGit.SamePath(worktreePath, repo.WorktreePath))
             return new("git_worktree_mismatch", "The requested worktree differs from the current selection.");
-        if (!SamePath(selection.ScopeRoot, repo.WorktreePath))
+        if (!NativeGit.SamePath(selection.ScopeRoot, repo.WorktreePath))
             return new("git_branch_scope_required", "Open the worktree root before changing local branches.");
         if (!GitHistoryOperations.IsObjectId(expected))
             return new("git_branch_object_invalid", "Supply a full commit object ID.");
@@ -67,7 +67,7 @@ internal static partial class GitBranchOperations
             return Changed();
 
         if (refs.Worktrees.Any(tree => string.Equals(tree.Branch, target.Name, StringComparison.Ordinal) &&
-            (plan.NewName is null || !SamePath(tree.Path, plan.Repository.WorktreePath))))
+            (plan.NewName is null || !NativeGit.SamePath(tree.Path, plan.Repository.WorktreePath))))
             return new("git_branch_in_use", "The branch is checked out in a worktree.");
         if (plan.NewName is { } rename)
             return FindLocalRef(refs, rename) is null ? null : new("git_branch_exists", "A local branch already has that name.");

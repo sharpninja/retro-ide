@@ -195,10 +195,9 @@ internal static partial class GitRemoteOperations
     {
         if (view is not IGitRegistration { SelectedGit: { } selection })
             return new("git_selection_required", "Select a Git worktree first.");
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        if (!string.Equals(path, selection.Repository.WorktreePath, comparison))
+        if (!NativeGit.SamePath(path, selection.Repository.WorktreePath))
             return new("git_worktree_mismatch", "The requested worktree differs from the current selection.");
-        if (!string.Equals(selection.ScopeRoot, selection.Repository.WorktreePath, comparison))
+        if (!NativeGit.SamePath(selection.ScopeRoot, selection.Repository.WorktreePath))
             return new("git_remote_scope_required", "Open the worktree root before managing its remotes.");
         return await TryAsync(async () =>
         {

@@ -99,11 +99,16 @@ internal static class NativeGit
     internal static bool IsRepositoryOverride(string name) =>
         WorkspaceOverrides.Contains(name, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
 
+    internal static bool SamePath(string? left, string? right) =>
+        OperatingSystem.IsWindows()
+            ? PathComparer.Equals(left?.Replace('\\', '/'), right?.Replace('\\', '/'))
+            : PathComparer.Equals(left, right);
+
     /// <summary>Compares a worktree and both administrative directories using native path rules.</summary>
     internal static bool IsSameWorktree(GitWorktree left, GitWorktree right) =>
-        PathComparer.Equals(left.WorktreePath, right.WorktreePath) &&
-        PathComparer.Equals(left.GitDirectory, right.GitDirectory) &&
-        PathComparer.Equals(left.CommonDirectory, right.CommonDirectory);
+        SamePath(left.WorktreePath, right.WorktreePath) &&
+        SamePath(left.GitDirectory, right.GitDirectory) &&
+        SamePath(left.CommonDirectory, right.CommonDirectory);
 
     /// <summary>Checks path containment using native separators and volume rules.</summary>
     internal static bool ContainsPath(string root, string path)

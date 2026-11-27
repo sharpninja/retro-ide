@@ -111,8 +111,7 @@ internal static partial class GitFileOperations
         if (view is not IGitRegistration { SelectedGit: { } selection })
             return new("git_selection_required", "Select a Git worktree first.");
         var repo = selection.Repository;
-        if (!string.Equals(repo.WorktreePath, worktreePath,
-            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+        if (!NativeGit.SamePath(repo.WorktreePath, worktreePath))
             return new("git_worktree_mismatch", "The requested worktree differs from the current selection.");
 
         try
