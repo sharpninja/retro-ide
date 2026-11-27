@@ -48,7 +48,7 @@ internal interface IGitRegistration
 
     /// <summary>Revalidates the captured worktree and protects the listed source paths, or all source paths when null.</summary>
     Task<GitIntegrationLease> BeginIntegrationAsync(GitSelection selection, string[]? paths, CancellationToken token,
-        GitWorktree? relatedWorktree = null);
+        string? relatedWorktreePath = null);
 
     /// <summary>Releases workspace roots belonging to a successfully removed checkout.</summary>
     Task ForgetRemovedWorktreeAsync(GitWorktree repository);

@@ -86,6 +86,8 @@ internal sealed class GitStatusMonitor : IDisposable
         var path = name.Replace(Path.DirectorySeparatorChar, '/');
         if (path.EndsWith(".lock", StringComparison.Ordinal))
             return false;
+        if (path.StartsWith("modules/", StringComparison.Ordinal))
+            return path[(path.LastIndexOf('/') + 1)..] is "HEAD" or "index" or "config" or "packed-refs";
         return path is "index" or "HEAD" or "packed-refs" or "config" or "config.worktree" or "info/exclude" or
             "MERGE_HEAD" or "CHERRY_PICK_HEAD" or "REVERT_HEAD" or "rebase-apply" or "rebase-merge" or "sequencer" or "refs" ||
             path.StartsWith("refs/", StringComparison.Ordinal) || path.StartsWith("sequencer/", StringComparison.Ordinal);

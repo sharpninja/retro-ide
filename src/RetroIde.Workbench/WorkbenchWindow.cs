@@ -107,6 +107,7 @@ public sealed partial class WorkbenchWindow : Window
         session.SourceControl.PromptRecoveryAsync = PromptGitRecoveryAsync;
         session.SourceControl.PromptStashesAsync = ShowGitStashesAsync;
         session.SourceControl.PromptPatchesAsync = ShowGitPatchesAsync;
+        session.SourceControl.PromptSubmodulesAsync = ShowGitSubmodulesAsync;
         session.Layout.Factory.DefaultHostWindowLocator = () =>
         {
             var floating = new HostWindow { Icon = BrandingPanel.CreateIcon() };
@@ -138,6 +139,7 @@ public sealed partial class WorkbenchWindow : Window
             session.SourceControl.PromptRecoveryAsync = null;
             session.SourceControl.PromptStashesAsync = null;
             session.SourceControl.PromptPatchesAsync = null;
+            session.SourceControl.PromptSubmodulesAsync = null;
             session.Controller.Unregister(session.View);
         };
 
@@ -232,6 +234,19 @@ public sealed partial class WorkbenchWindow : Window
         if (token.IsCancellationRequested || _closed)
             return;
         var dialog = new GitStashDialog(_session.SourceControl) { FlowDirection = FlowDirection };
+        using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
+        {
+            if (dialog.IsVisible)
+                dialog.Close();
+        }));
+        await dialog.ShowDialog(this).ConfigureAwait(true);
+    }
+
+    private async Task ShowGitSubmodulesAsync(CancellationToken token)
+    {
+        if (token.IsCancellationRequested || _closed)
+            return;
+        var dialog = new GitSubmoduleDialog(_session.SourceControl) { FlowDirection = FlowDirection };
         using var cancel = token.Register(() => Dispatcher.UIThread.Post(() =>
         {
             if (dialog.IsVisible)

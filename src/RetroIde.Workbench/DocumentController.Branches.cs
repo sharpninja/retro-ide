@@ -13,10 +13,9 @@ internal sealed partial class DocumentController
     private readonly HashSet<string> _switchingScopes = new(
         OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
 
-    internal IGitBranchSwitch? BeginBranchSwitch(GitWorktree repo, string[]? relativePaths)
+    internal IGitBranchSwitch? BeginBranchSwitch(string root, string[]? relativePaths)
     {
         Dispatcher.UIThread.VerifyAccess();
-        var root = repo.WorktreePath;
         var paths = relativePaths?.Select(path => Path.GetFullPath(path, root)).ToArray() ?? [];
         var wide = relativePaths is null;
         if (_switchingWorktrees.Contains(root) || paths.Any(IsSwitchingPath) ||

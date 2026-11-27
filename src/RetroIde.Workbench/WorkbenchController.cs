@@ -334,6 +334,14 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
                     DispatchToViewAsync(git, registration, _registry.Git.SkipOperation, skip, request),
                 GitStash.ListInput list when string.Equals(request.CommandId, _registry.Git.ListStashes.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.ListStashes, list, request),
+                GitSubmoduleOperations.ListInput submodules when string.Equals(request.CommandId, _registry.Git.ListSubmodules.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.ListSubmodules, submodules, request),
+                GitSubmoduleOperations.TargetInput initModule when string.Equals(request.CommandId, _registry.Git.InitSubmodule.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.InitSubmodule, initModule, request),
+                GitSubmoduleOperations.TargetInput updateModule when string.Equals(request.CommandId, _registry.Git.UpdateSubmodule.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.UpdateSubmodule, updateModule, request),
+                GitSubmoduleOperations.TargetInput syncModule when string.Equals(request.CommandId, _registry.Git.SyncSubmodule.Id, StringComparison.Ordinal) =>
+                    DispatchToViewAsync(git, registration, _registry.Git.SyncSubmodule, syncModule, request),
                 GitStash.CreateInput createStash when string.Equals(request.CommandId, _registry.Git.CreateStash.Id, StringComparison.Ordinal) =>
                     DispatchToViewAsync(git, registration, _registry.Git.CreateStash, createStash, request),
                 GitStash.EntryInput inspect when string.Equals(request.CommandId, _registry.Git.InspectStash.Id, StringComparison.Ordinal) =>
@@ -529,16 +537,17 @@ public sealed class WorkbenchController : SimpleControllerBase, IWorkbenchDispat
         public bool CloseHistory(Guid viewKey) => Controller._documents?.CloseHistory(viewKey) == true;
 
         public IGitBranchSwitch? BeginBranchSwitch(GitWorktree repository, string[] paths) =>
-            Controller._documents?.BeginBranchSwitch(repository, paths);
+            Controller._documents?.BeginBranchSwitch(repository.WorktreePath, paths);
 
         public Task<GitIntegrationLease> BeginIntegrationAsync(GitSelection selection, string[]? paths, CancellationToken token,
-            GitWorktree? relatedWorktree = null) =>
+            string? relatedWorktreePath = null) =>
             Dispatcher.UIThread.InvokeAsync(() =>
             {
                 token.ThrowIfCancellationRequested();
                 if (!ReferenceEquals(Controller.Resolve(View.ViewKey), this) || !ReferenceEquals(SelectedGit, selection))
                     return new GitIntegrationLease(null, "git_selection_changed");
-                return new GitIntegrationLease(Controller._documents?.BeginBranchSwitch(relatedWorktree ?? selection.Repository, paths));
+                return new GitIntegrationLease(Controller._documents?.BeginBranchSwitch(
+                    relatedWorktreePath ?? selection.Repository.WorktreePath, paths));
             }).GetTask();
 
         public Task ForgetRemovedWorktreeAsync(GitWorktree repository) =>

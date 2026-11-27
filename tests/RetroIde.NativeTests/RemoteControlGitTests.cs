@@ -86,6 +86,7 @@ internal static partial class RemoteControlGitTests
             await VerifyRecoveryAsync(window, session, sample, token).ConfigureAwait(true);
             await VerifyStashAsync(window, sample, token).ConfigureAwait(true);
             await VerifyPatchAsync(window, session.SourceControl, sample, token).ConfigureAwait(true);
+            await VerifySubmodulesAsync(window, session.SourceControl, sample, token).ConfigureAwait(true);
 
             async Task<JsonElement> MutateAsync(string tool, Dictionary<string, object?> arguments)
             {

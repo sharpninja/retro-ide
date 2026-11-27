@@ -42,6 +42,17 @@ internal static class WorkbenchText
     internal const string GitStashUntracked = "git.stash.untracked";
     internal const string GitStashIndex = "git.stash.index";
     internal const string GitPatchTitle = "git.patch.title";
+    internal const string GitSubmodulesTitle = "git.submodule.title";
+    internal const string GitSubmoduleEmpty = "git.submodule.empty";
+    internal const string GitSubmoduleConflicted = "git.submodule.state.conflicted";
+    internal const string GitSubmoduleUnavailable = "git.submodule.state.unavailable";
+    internal const string GitSubmoduleUnconfigured = "git.submodule.state.unconfigured";
+    internal const string GitSubmoduleConfigured = "git.submodule.state.configured";
+    internal const string GitSubmoduleDifferentHead = "git.submodule.state.different-head";
+    internal const string GitSubmoduleCurrent = "git.submodule.state.current";
+    internal const string GitSubmoduleDirty = "git.submodule.state.dirty";
+    internal const string GitSubmoduleIndexCommit = "git.submodule.index-commit";
+    internal const string GitSubmoduleHead = "git.submodule.head";
     internal const string GitPatchIndex = "git.patch.index";
     internal const string GitPatchWorktree = "git.patch.worktree";
     internal const string GitPatchLayer = "git.patch.layer";
@@ -140,6 +151,8 @@ internal static class WorkbenchText
             GitStashTitle, GitStashMessage, GitStashUntracked, GitStashIndex,
             BrandingDescription, BrandingOpenRepository, BrandingRepositoryUnavailable,
             GitPatchTitle, GitPatchIndex, GitPatchWorktree, GitPatchLayer, GitPatchPaths, GitPatchEmpty, GitPatchFileError,
+            GitSubmodulesTitle, GitSubmoduleEmpty, GitSubmoduleConflicted, GitSubmoduleUnavailable, GitSubmoduleUnconfigured,
+            GitSubmoduleConfigured, GitSubmoduleDifferentHead, GitSubmoduleCurrent, GitSubmoduleDirty, GitSubmoduleIndexCommit, GitSubmoduleHead,
             GitInitAction, GitCloneAction, GitSetupSource, GitSetupDestination, GitSetupBrowse, GitSetupBrowseError, GitSetupCancel,
             GitCommitMessage, GitAmendNotice, GitNoCommit, GitNoStagedChanges,
             GitHistoryTitle, GitHistoryRefs, GitHistoryGraph, GitHistoryWorktrees,

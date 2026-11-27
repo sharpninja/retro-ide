@@ -113,7 +113,7 @@ internal static class GitWorktreeOperations
     private static async Task<FeatureOutcome> RemoveAsync(IGitRegistration git, GitSelection source, TargetInput input,
         Target reviewed, CancellationToken token)
     {
-        var lease = await git.BeginIntegrationAsync(source, paths: null, token, reviewed.Repository).ConfigureAwait(false);
+        var lease = await git.BeginIntegrationAsync(source, paths: null, token, reviewed.Repository.WorktreePath).ConfigureAwait(false);
         if (lease.ErrorCode is not null)
             return GitOperationRecovery.ChangedSelection();
         if (lease.Guard is not { } guard)

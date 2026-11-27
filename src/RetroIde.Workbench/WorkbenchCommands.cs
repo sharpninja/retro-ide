@@ -53,6 +53,11 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor ExportGitPatch = Create("git.patch.export", "Alt+Shift+E");
     public static readonly CommandDescriptor ReviewGitPatch = Create("git.patch.review", "Alt+Shift+O");
     public static readonly CommandDescriptor ApplyGitPatch = Create("git.patch.apply", "Alt+Shift+Y");
+    public static readonly CommandDescriptor OpenGitSubmodules = Create("git.submodule.open", "Ctrl+Shift+F7");
+    public static readonly CommandDescriptor RefreshGitSubmodules = Create("git.submodule.list", "Alt+Shift+F7");
+    public static readonly CommandDescriptor InitGitSubmodule = Create("git.submodule.init", "Ctrl+Shift+F8");
+    public static readonly CommandDescriptor UpdateGitSubmodule = Create("git.submodule.update", "Alt+Shift+F8");
+    public static readonly CommandDescriptor SyncGitSubmodule = Create("git.submodule.sync", "Ctrl+Shift+F9");
     public static readonly CommandDescriptor OpenGitHistory = Create("git.history.open", "Ctrl+Alt+L");
     public static readonly CommandDescriptor CurrentGitHistory = Create("git.history.current", "Ctrl+Alt+Shift+L");
     public static readonly CommandDescriptor ShowGitRefHistory = Create("git.history.ref", "Ctrl+Alt+Shift+B");
@@ -91,6 +96,7 @@ internal static class WorkbenchCommands
             RefreshGitDiff, OpenGitBlame, RefreshGitBlame, StageGitHunks, UnstageGitHunks, CreateCommit, AmendCommit, ContinueGitOperation, AbortGitOperation, SkipGitOperation,
             StartGitOperation, ResetToGitCommit, OpenGitStashes, RefreshGitStashes, InspectGitStash, CreateGitStash, ApplyGitStash,
             PopGitStash, DropGitStash, OpenGitPatches, ExportGitPatch, ReviewGitPatch, ApplyGitPatch,
+            OpenGitSubmodules, RefreshGitSubmodules, InitGitSubmodule, UpdateGitSubmodule, SyncGitSubmodule,
             OpenGitHistory, CurrentGitHistory,
             ShowGitRefHistory, PreviousGitHistoryPage, NextGitHistoryPage, InspectGitCommit, CreateGitBranch, SwitchGitBranch,
             CreateGitTag, InspectGitTag, DeleteGitTag,
