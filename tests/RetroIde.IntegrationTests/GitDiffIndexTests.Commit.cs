@@ -27,7 +27,7 @@ public sealed partial class GitDiffIndexTests
         await sample.GitAsync(checkout, token, "config", "--local", "user.name", "Retro Workbench Test");
         await sample.GitAsync(checkout, token, "config", "--local", "user.email", "workbench@example.invalid");
         await sample.GitAsync(checkout, token, "config", "--local", "commit.gpgsign", "false");
-        var hooks = Directory.CreateDirectory(Path.Combine(checkout, ".git", "workbench test hooks"));
+        var hooks = Directory.CreateDirectory(Path.Combine(checkout, ".git", "workbench's test hooks"));
         await sample.GitAsync(checkout, token, "config", "--local", "core.hooksPath", hooks.FullName);
         var hook = Path.Combine(hooks.FullName, "pre-commit");
         var index = Path.Combine(checkout, ".git", "index");
@@ -97,9 +97,17 @@ public sealed partial class GitDiffIndexTests
 
         Assert.Equal("git_commit_state_changed", (await CommitAsync("git_amend", state, "Stale amend")).GetProperty("code").GetString());
         await sample.GitAsync(checkout, token, "add", "--", path);
+        var rewriteHook = Path.Combine(hooks.FullName, "post-rewrite");
+        await File.WriteAllTextAsync(rewriteHook,
+            "#!/bin/sh\nprintf '%s\\n' \"$1\" > .git/fixture-rewrite\ncat >> .git/fixture-rewrite\n", token);
+        if (!OperatingSystem.IsWindows())
+            File.SetUnixFileMode(rewriteHook, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         var amended = await CommitAsync("git_amend", await GetCommitStateAsync(), "Amend staged changes");
         Assert.Equal("ok", amended.GetProperty("code").GetString());
-        Assert.NotEqual(firstHead, amended.GetProperty("data").GetProperty("head").GetString());
+        var amendedHead = amended.GetProperty("data").GetProperty("head").GetString();
+        Assert.NotEqual(firstHead, amendedHead);
+        Assert.Equal(["amend", firstHead + " " + amendedHead],
+            await File.ReadAllLinesAsync(Path.Combine(checkout, ".git", "fixture-rewrite"), token));
         Assert.Equal(originalHead, (await sample.GitAsync(checkout, token, "rev-parse", "HEAD^")).Trim());
         Assert.Contains(WorkingMark, await sample.GitAsync(checkout, token, "show", "HEAD:" + path), StringComparison.Ordinal);
         Assert.Equal("Amend staged changes", (await sample.GitAsync(checkout, token, "log", "-1", "--format=%s")).Trim());
