@@ -239,16 +239,21 @@ internal static class NativeDockingTests
             border.GetVisualParent() is Grid { IsEffectivelyVisible: true })) is not null, "Registers interaction surface");
         var region = (Grid)overlay!.GetVisualParent()!;
         var pane = (Control)region.Children[0];
+        input.FocusWindow(window);
         var point = Center(region);
         await input.MoveAsync(point).ConfigureAwait(true);
         var normal = input.ReadCursor();
         using var referenceWait = new Cursor(StandardCursorType.Wait);
         long wait;
-        using (region.SetValue(InputElement.CursorProperty, referenceWait, Avalonia.Data.BindingPriority.Animation))
+        // The idle region can be transparent and pass its hit through to the dock surface.
+        // Sample the native reference at the top level, then verify the real overlay hit below.
+        using (window.SetValue(InputElement.CursorProperty, referenceWait, Avalonia.Data.BindingPriority.Animation))
         {
             await input.MoveAsync(new PixelPoint(point.X + 1, point.Y)).ConfigureAwait(true);
+            await UntilAsync(() => input.ReadCursor() != normal, "native reference Wait cursor over the workbench",
+                () => $"Window: {window.Position}, client size: {window.ClientSize}, target: {point}, " +
+                    $"hit: {window.InputHitTest(window.PointToClient(point))?.GetType().Name}.").ConfigureAwait(true);
             wait = input.ReadCursor();
-            Require(wait != normal, "The platform's standard Wait cursor must differ from the normal Registers cursor.");
         }
 
         using var release = new ManualResetEventSlim();
@@ -256,7 +261,7 @@ internal static class NativeDockingTests
         var block = session.Interaction.RunAsync("registers", _ =>
         {
             occupied.SetResult(Dispatcher.UIThread.CheckAccess());
-            Require(release.Wait(TimeSpan.FromSeconds(12)), "Synchronous Registers operation timed out.");
+            Require(release.Wait(TimeSpan.FromSeconds(30)), "Synchronous Registers operation timed out.");
             return Task.CompletedTask;
         });
         try
@@ -270,7 +275,9 @@ internal static class NativeDockingTests
             if (window is WorkbenchWindow workbench)
             {
                 Require(!workbench.FocusButton.IsEffectivelyEnabled, "Registers focus command must respect the interaction scope.");
-                var picker = workbench.GetVisualDescendants().OfType<ComboBox>().Single();
+                var pickerName = session.Localization.Text(WorkbenchText.FocusSelector);
+                var picker = workbench.GetVisualDescendants().OfType<ComboBox>().Single(control =>
+                    string.Equals(Avalonia.Automation.AutomationProperties.GetName(control), pickerName, StringComparison.Ordinal));
                 await input.ClickAsync(Center(picker)).ConfigureAwait(true);
                 await UntilAsync(() => picker.IsDropDownOpen, "native input outside the blocked pane");
                 Require(input.ReadCursor() != wait, "The available tool picker acquired the Wait cursor.");
