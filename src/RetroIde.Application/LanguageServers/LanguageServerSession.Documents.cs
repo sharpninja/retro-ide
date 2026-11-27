@@ -27,18 +27,20 @@ internal sealed partial class LanguageServerSession
             previous = null;
         }
         if (previous is null)
-            return await OpenCoreAsync(uri, source, language, token).ConfigureAwait(false);
+            return await OpenCoreAsync(uri, source, language, source.SavedRevision, token).ConfigureAwait(false);
         if (previous.Context.Revision > source.Context.Revision)
             throw new LanguageDocumentChangedException();
 
         var updated = previous;
-        if (previous.Context.Revision != source.Context.Revision)
+        var revisionChanged = previous.Context.Revision != source.Context.Revision;
+        if (revisionChanged && _change == 0 && _openClose)
         {
-            if (_change == 0 && _openClose)
-            {
-                await CloseCoreAsync(uri, token).ConfigureAwait(false);
-                return await OpenCoreAsync(uri, source, language, token).ConfigureAwait(false);
-            }
+            await CloseCoreAsync(uri, token).ConfigureAwait(false);
+            // Reopening sends the current text. A newer save still needs its own notification.
+            updated = await OpenCoreAsync(uri, source, language, previous.SavedRevision, token).ConfigureAwait(false);
+        }
+        else if (revisionChanged)
+        {
             if (_change == 0 && source.Context.Revision != source.SavedRevision)
                 throw new NotSupportedException("The language server cannot synchronize this unsaved document.");
 
@@ -83,11 +85,12 @@ internal sealed partial class LanguageServerSession
         return updated;
     }
 
-    private async Task<OpenDocument> OpenCoreAsync(string uri, LanguageDocument source, string language, CancellationToken token)
+    private async Task<OpenDocument> OpenCoreAsync(string uri, LanguageDocument source, string language,
+        long savedRevision, CancellationToken token)
     {
         if (!_openClose && _change == 0 && source.Context.Revision != source.SavedRevision)
             throw new NotSupportedException("The language server cannot synchronize this unsaved document.");
-        var tracked = new OpenDocument(source.Context, NextDocumentVersion(uri), source.Text, source.SavedRevision);
+        var tracked = new OpenDocument(source.Context, NextDocumentVersion(uri), source.Text, savedRevision);
         _documents[uri] = tracked;
         if (_openClose)
         {
