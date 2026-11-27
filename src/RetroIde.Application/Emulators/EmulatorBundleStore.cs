@@ -74,12 +74,9 @@ internal sealed partial class EmulatorBundleStore(string root)
 
     private static Pin Normalize(Pin pin, string runtimeIdentifier)
     {
-        if (!EmulatorBundleManifest.IsIdentifier(pin.Bucket) || !EmulatorBundleManifest.IsIdentifier(pin.Bundle) ||
-            !EmulatorBundleManifest.IsReleaseVersion(pin.Version) || !GitHistoryOperations.IsObjectId(pin.ManifestRevision))
-            throw new ArgumentException("A bundle pin must contain valid bucket, bundle, version, and Git revision values.", nameof(pin));
         if (!EmulatorBundleManifest.IsIdentifier(runtimeIdentifier))
             throw new ArgumentException("A host runtime identifier must be portable.", nameof(runtimeIdentifier));
-        return pin with { ManifestRevision = pin.ManifestRevision.ToLowerInvariant() };
+        return pin.Normalized();
     }
 
     private string InstallPath(Pin pin, string runtimeIdentifier)
@@ -176,7 +173,16 @@ internal sealed partial class EmulatorBundleStore(string root)
 
     private static string ForwardSlashes(string path) => OperatingSystem.IsWindows() ? path.Replace('\\', '/') : path;
 
-    internal sealed record Pin(string Bucket, string Bundle, string Version, string ManifestRevision);
+    internal sealed record Pin(string Bucket, string Bundle, string Version, string ManifestRevision)
+    {
+        internal Pin Normalized()
+        {
+            if (!EmulatorBundleManifest.IsIdentifier(Bucket) || !EmulatorBundleManifest.IsIdentifier(Bundle) ||
+                !EmulatorBundleManifest.IsReleaseVersion(Version) || !GitHistoryOperations.IsObjectId(ManifestRevision))
+                throw new ArgumentException("A bundle pin must contain valid bucket, bundle, version, and Git revision values.");
+            return this with { ManifestRevision = ManifestRevision.ToLowerInvariant() };
+        }
+    }
 
     internal sealed record Receipt(int SchemaVersion, Pin Pin, string RuntimeIdentifier, string ArchiveSha256, string ManifestSha256);
 

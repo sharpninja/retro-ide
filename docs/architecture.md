@@ -132,6 +132,8 @@ The **Emulators** manager discovers, installs, updates, rolls back, and removes 
 
 Use a Git repository with one JSON manifest per emulator at `bucket/<id>.json`. Publishers upload versioned archives to release hosting, then commit manifests that point to those artifacts. The manager refreshes catalog metadata from the configured Git source and records the exact commit used to read each manifest. This follows Scoop's Git bucket and JSON manifest convention with a Retro IDE bundle format. [Scoop buckets](https://github.com/ScoopInstaller/Scoop/wiki/Buckets) · [Scoop app manifests](https://github.com/ScoopInstaller/Scoop/wiki/App-Manifests)
 
+Each configured source has its own bare cache. Refresh reads regular manifest blobs at the remote's default commit and publishes the new catalog reference after every manifest validates. A failed refresh leaves the last valid reference readable offline. The cache retains verified commits so project pins can still resolve after the publisher rewrites a branch. A previously seen bundle version keeps its host targets, archive digests, entry points, adapter contract versions, and debugger profile definitions. Descriptive metadata and archive mirrors can change without changing the release.
+
 | Manifest field | Contract |
 | --- | --- |
 | `schemaVersion`, `id`, `version` | Format `1`, stable lowercase bundle ID, and immutable SemVer release version. Publish a new version when an archive or its entry points change. |

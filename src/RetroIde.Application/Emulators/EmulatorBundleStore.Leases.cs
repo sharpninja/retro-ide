@@ -57,13 +57,11 @@ internal sealed partial class EmulatorBundleStore
 
     private static FileStream? TryOpenExclusive(string directory)
     {
-        const int WindowsSharingViolation = unchecked((int)0x80070020);
-        const int LinuxWouldBlock = 11;
         try
         {
             return new FileStream(LeasePath(directory), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         }
-        catch (IOException error) when (error.HResult == (OperatingSystem.IsWindows() ? WindowsSharingViolation : LinuxWouldBlock))
+        catch (IOException error) when (BundleFileLock.IsContended(error))
         {
             return null;
         }
