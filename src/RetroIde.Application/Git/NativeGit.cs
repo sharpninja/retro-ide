@@ -96,6 +96,9 @@ internal static class NativeGit
         ["--no-optional-locks", "--literal-pathspecs", "--git-dir", repo.GitDirectory,
             "--work-tree", repo.WorktreePath, "-c", "core.fsmonitor=false"];
 
+    internal static bool IsRepositoryOverride(string name) =>
+        WorkspaceOverrides.Contains(name, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
     /// <summary>Compares a worktree and both administrative directories using native path rules.</summary>
     internal static bool IsSameWorktree(GitWorktree left, GitWorktree right) =>
         PathComparer.Equals(left.WorktreePath, right.WorktreePath) &&
