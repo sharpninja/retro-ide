@@ -108,11 +108,11 @@ All seven incomplete test-first entries from `60457dc` now have criterion-specif
 
 #### Phase 03 independent review
 
-The 2026-11-27 review of `023e0d7` returned DISAGREE at 96 accuracy and 95 completeness overall. It accepted the language-server slice. Earlier accepted Phase 01, 02, and 03C behavior passed regression review. [Current verdict](../receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md) · [Previous verdict](../receipts/hv/20261127T083643-phase-03-renewed.verdict.md)
+The 2026-11-27 review of `6a8164f` returned DISAGREE at 97 accuracy and 96 completeness. It confirmed the branch and submodule endpoint repairs and found that commit and amend can still run configuration-changing hooks outside the shared lock. Earlier accepted slices passed regression review. [Current verdict](../receipts/hv/20261127T104314-phase-03-hook-review.verdict.md) · [Language-server acceptance](../receipts/hv/20261127T092733-phase-03-endpoint-review.verdict.md)
 
 | Task | Verdict | Accuracy | Completeness | Status |
 | --- | --- | --- | --- | --- |
-| 03A · `EXEC-TODO-008` | DISAGREE | 96 | 95 | Open. Protect transfers from effective endpoint changes caused by submodule URL sync and branch-dependent configuration. Retain live overlap tests for both paths. Direct remote edit exclusion and reviewed commits on unborn and detached HEAD passed. |
+| 03A · `EXEC-TODO-008` | DISAGREE | 97 | 96 | Open. Coordinate native commit and amend hooks with named transfers. Verify hook changes, includes from other checkouts, queued cancellation, and submodule replacement while waiting. The two earlier endpoint races and forward-slash Windows paths passed. |
 | 03B · `EXEC-TODO-009` | AGREE | 99 | 99 | Complete. The live workbench and framed server observed successful saves on first synchronization and before editor close. The earlier coalesced save cases passed. |
 | 03C · `EXEC-TODO-010` | AGREE | 99 | 99 | Complete. Scoped native success, cancellation, failure and foreign-result denial passed across HTTP and stdio. |
 
