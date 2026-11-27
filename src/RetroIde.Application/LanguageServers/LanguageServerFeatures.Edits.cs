@@ -40,8 +40,7 @@ internal sealed partial class LanguageServerFeatures
         if (view is not ILanguageRegistration registration || registration.ReadLanguageDocument(input.Document) is not { } document)
             return Task.FromResult(DocumentChanged());
         var selection = input.Offset is not null;
-        var request = new LanguageRequest(selection ? "textDocument/rangeFormatting" : "textDocument/formatting",
-            selection ? "documentRangeFormattingProvider" : "documentFormattingProvider", Parameters: context =>
+        var request = new LanguageRequest(selection ? LspDocumentMethods.RangeFormatting : LspDocumentMethods.Formatting, Parameters: context =>
             {
                 var options = new { input.TabSize, input.InsertSpaces };
                 return input.Offset is { } offset
@@ -57,7 +56,7 @@ internal sealed partial class LanguageServerFeatures
     {
         if (string.IsNullOrWhiteSpace(input.NewName) || input.NewName.Length > 256 || input.NewName.Contains('\0'))
             return Task.FromResult(new FeatureOutcome("invalid_language_name", "Enter a valid new symbol name."));
-        return QueryAsync(input.Document, new("textDocument/rename", "renameProvider", Parameters: context =>
+        return QueryAsync(input.Document, new(LspDocumentMethods.Rename, Parameters: context =>
             new { textDocument = context.Document, position = context.Position(input.Offset), input.NewName }),
             view, token, static (result, registration, cancellation) => PrepareEditAsync(result, registration, cancellation),
             captureBuffers: true);
@@ -71,7 +70,7 @@ internal sealed partial class LanguageServerFeatures
             return Task.FromResult(DocumentChanged());
 
         var diagnostics = registration.LanguageServers.Diagnostics(document).Items;
-        return QueryAsync(input.Document, new("textDocument/codeAction", "codeActionProvider", Parameters: context =>
+        return QueryAsync(input.Document, new(LspDocumentMethods.CodeAction, Parameters: context =>
         {
             object actionContext = input.Only is { } only ? new { diagnostics, only } : new { diagnostics };
             return new
@@ -117,7 +116,7 @@ internal sealed partial class LanguageServerFeatures
         if (action.TryGetProperty("edit", out _) || action.TryGetProperty("disabled", out _) || action.TryGetProperty("command", out _))
             return PrepareActionAsync(new(input.Document, offer.Server, action) { CapturedBuffers = offer.CapturedBuffers }, registration, token);
 
-        return QueryAsync(input.Document, new("codeAction/resolve", "codeActionProvider", Parameters: _ => action),
+        return QueryAsync(input.Document, new(LspDocumentMethods.CodeActionResolve, Parameters: _ => action),
             view, token, (result, live, cancellation) =>
                 PrepareActionAsync(result with { CapturedBuffers = offer.CapturedBuffers }, live, cancellation));
     }

@@ -12,6 +12,38 @@ internal sealed partial class DocumentViewModel
     private long _languageRequest;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(LanguageCompleteCommand), nameof(LanguageHoverCommand), nameof(LanguageSignatureHelpCommand),
+        nameof(LanguageDefinitionCommand), nameof(LanguageDeclarationCommand), nameof(LanguageTypeDefinitionCommand),
+        nameof(LanguageImplementationCommand), nameof(LanguageReferencesCommand), nameof(LanguageSymbolsCommand),
+        nameof(LanguageDiagnosticsCommand), nameof(LanguageFormatCommand), nameof(LanguageRenameCommand), nameof(LanguageCodeActionsCommand))]
+    public partial LanguageDocumentCapabilities LanguageCapabilities { get; private set; } = LanguageDocumentCapabilities.Unavailable;
+
+    internal void UpdateLanguageCapabilities(LanguageDocumentCapabilities next)
+    {
+        var current = LanguageCapabilities;
+        if (current.SessionId == next.SessionId && current.Methods.SequenceEqual(next.Methods, StringComparer.Ordinal))
+            return;
+
+        if (current.SessionId != next.SessionId || current.Methods.Any(method => !next.Supports(method)))
+            ClearLanguagePresentation();
+        LanguageCapabilities = next;
+    }
+
+    private bool CanComplete() => LanguageCapabilities.Supports(LspDocumentMethods.Completion);
+    private bool CanHover() => LanguageCapabilities.Supports(LspDocumentMethods.Hover);
+    private bool CanReadSignatures() => LanguageCapabilities.Supports(LspDocumentMethods.SignatureHelp);
+    private bool CanFindDefinition() => LanguageCapabilities.Supports(LspDocumentMethods.Definition);
+    private bool CanFindDeclaration() => LanguageCapabilities.Supports(LspDocumentMethods.Declaration);
+    private bool CanFindTypeDefinition() => LanguageCapabilities.Supports(LspDocumentMethods.TypeDefinition);
+    private bool CanFindImplementation() => LanguageCapabilities.Supports(LspDocumentMethods.Implementation);
+    private bool CanFindReferences() => LanguageCapabilities.Supports(LspDocumentMethods.References);
+    private bool CanReadSymbols() => LanguageCapabilities.Supports(LspDocumentMethods.Symbols);
+    private bool CanReadDiagnostics() => LanguageCapabilities.Supports(LspDocumentMethods.Diagnostics);
+    private bool CanFormat() => LanguageCapabilities.Supports(EditorPosition.SelectionLength == 0
+        ? LspDocumentMethods.Formatting : LspDocumentMethods.RangeFormatting);
+    private bool CanReadCodeActions() => LanguageCapabilities.Supports(LspDocumentMethods.CodeAction);
+
+    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(OpenLanguageResultCommand))]
     public partial LanguageEditorRow? SelectedLanguageRow { get; set; }
 
@@ -23,41 +55,41 @@ internal sealed partial class DocumentViewModel
     [NotifyCanExecuteChangedFor(nameof(LanguageRenameCommand))]
     public partial string? LanguageRenameText { get; set; }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanComplete))]
     private Task LanguageCompleteAsync(CancellationToken token) => QueryAtCaretAsync(_features.Language.Complete, LanguageEditorResult.Completions, token);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanHover))]
     private Task LanguageHoverAsync(CancellationToken token) => QueryAtCaretAsync(_features.Language.Hover, LanguageEditorResult.Hover, token);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanReadSignatures))]
     private Task LanguageSignatureHelpAsync(CancellationToken token) =>
         QueryAtCaretAsync(_features.Language.SignatureHelp, LanguageEditorResult.Signatures, token);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanFindDefinition))]
     private Task LanguageDefinitionAsync(CancellationToken token) => NavigateAsync(_features.Language.Definition, token);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanFindDeclaration))]
     private Task LanguageDeclarationAsync(CancellationToken token) => NavigateAsync(_features.Language.Declaration, token);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanFindTypeDefinition))]
     private Task LanguageTypeDefinitionAsync(CancellationToken token) => NavigateAsync(_features.Language.TypeDefinition, token);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanFindImplementation))]
     private Task LanguageImplementationAsync(CancellationToken token) => NavigateAsync(_features.Language.Implementation, token);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanFindReferences))]
     private Task LanguageReferencesAsync(CancellationToken token) => PresentAsync(_features.Language.References,
         new LanguageServerFeatures.ReferencesInput(Capture(), EditorPosition.Caret), LanguageEditorResult.Navigation, token);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanReadSymbols))]
     private Task LanguageSymbolsAsync(CancellationToken token) => PresentAsync(_features.Language.Symbols,
         new LanguageServerFeatures.DocumentInput(Capture()), result => LanguageEditorResult.Symbols(result, new Uri(FullPath).AbsoluteUri), token);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanReadDiagnostics))]
     private Task LanguageDiagnosticsAsync(CancellationToken token) => PresentAsync(_features.Language.Diagnostics,
         new LanguageServerFeatures.DocumentInput(Capture()), result => LanguageEditorResult.Diagnostics(result, new Uri(FullPath).AbsoluteUri), token);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanFormat))]
     private Task LanguageFormatAsync(CancellationToken token)
     {
         var position = EditorPosition;
@@ -66,13 +98,14 @@ internal sealed partial class DocumentViewModel
             EndOffset: position.SelectionLength > 0 ? position.SelectionStart + position.SelectionLength : null), LanguageEditorResult.Preview, token);
     }
 
-    private bool CanRenameLanguageSymbol() => !string.IsNullOrWhiteSpace(LanguageRenameText);
+    private bool CanRenameLanguageSymbol() =>
+        LanguageCapabilities.Supports(LspDocumentMethods.Rename) && !string.IsNullOrWhiteSpace(LanguageRenameText);
 
     [RelayCommand(CanExecute = nameof(CanRenameLanguageSymbol))]
     private Task LanguageRenameAsync(CancellationToken token) => PresentAsync(_features.Language.Rename,
         new LanguageServerFeatures.RenameInput(Capture(), EditorPosition.Caret, LanguageRenameText ?? ""), LanguageEditorResult.Preview, token);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanReadCodeActions))]
     private Task LanguageCodeActionsAsync(CancellationToken token)
     {
         var position = EditorPosition;

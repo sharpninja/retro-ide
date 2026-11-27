@@ -35,13 +35,12 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
 {
     private readonly LanguageServerConfiguration _configuration;
     private readonly ILogger _logger;
-    private readonly Action _diagnosticsChanged;
+    private readonly Action _stateChanged;
     private readonly LspProcess _rpc;
     private readonly SemaphoreSlim _updates = new(1);
     private readonly Lock _closeGate = new();
     private readonly ConcurrentDictionary<string, OpenDocument> _documents = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, DiagnosticSet> _diagnostics = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, string> _registrations = new(StringComparer.Ordinal);
     private readonly string _rootUri;
     private Task? _close;
     private bool _initialized;
@@ -49,14 +48,13 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
     private bool _save;
     private bool _includeSaveText;
     private int _change;
-    private JsonElement _capabilities;
 
-    private LanguageServerSession(LanguageServerConfiguration[] roots, Process process, ILogger logger, Action diagnosticsChanged,
+    private LanguageServerSession(LanguageServerConfiguration[] roots, Process process, ILogger logger, Action stateChanged,
         Func<LanguageServerSession, JsonElement, CancellationToken, Task<LanguageServerEditReply>> reviewEdit)
     {
         _configuration = roots[0];
         _logger = logger;
-        _diagnosticsChanged = diagnosticsChanged;
+        _stateChanged = stateChanged;
         _rootUri = FileUri(_configuration.Directory);
         _folders = roots.Select(Folder.For).ToArray();
         _rpc = new LspProcess(process, logger, OnNotification, OnRequest, (parameters, token) => reviewEdit(this, parameters, token));
@@ -74,7 +72,7 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
         Volatile.Read(ref _folders).Select(folder => folder.RootId).ToArray());
 
     internal static async Task<LanguageServerSession> StartAsync(LanguageServerConfiguration[] roots, ILogger logger,
-        Action diagnosticsChanged, Func<LanguageServerSession, JsonElement, CancellationToken, Task<LanguageServerEditReply>> reviewEdit,
+        Action stateChanged, Func<LanguageServerSession, JsonElement, CancellationToken, Task<LanguageServerEditReply>> reviewEdit,
         CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
@@ -91,7 +89,7 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
         foreach (var argument in configuration.Arguments)
             start.ArgumentList.Add(argument);
         var process = Process.Start(start) ?? throw new IOException("The language server did not start.");
-        var session = new LanguageServerSession(roots, process, logger, diagnosticsChanged, reviewEdit);
+        var session = new LanguageServerSession(roots, process, logger, stateChanged, reviewEdit);
         try
         {
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -126,31 +124,38 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
                 },
                 textDocument = new
                 {
-                    completion = new { completionItem = new { insertReplaceSupport = true } },
-                    hover = new { contentFormat = new[] { "plaintext", "markdown" } },
-                    definition = new { linkSupport = true },
-                    declaration = new { linkSupport = true },
-                    typeDefinition = new { linkSupport = true },
-                    implementation = new { linkSupport = true },
+                    filters = new { relativePatternSupport = true },
+                    completion = new { dynamicRegistration = true, completionItem = new { insertReplaceSupport = true } },
+                    hover = new { dynamicRegistration = true, contentFormat = new[] { "plaintext", "markdown" } },
+                    signatureHelp = new { dynamicRegistration = true },
+                    definition = new { dynamicRegistration = true, linkSupport = true },
+                    declaration = new { dynamicRegistration = true, linkSupport = true },
+                    typeDefinition = new { dynamicRegistration = true, linkSupport = true },
+                    implementation = new { dynamicRegistration = true, linkSupport = true },
+                    references = new { dynamicRegistration = true },
+                    formatting = new { dynamicRegistration = true },
+                    rangeFormatting = new { dynamicRegistration = true },
+                    rename = new { dynamicRegistration = true },
                     codeAction = new
                     {
-                        disabledSupport = true,
+                        dynamicRegistration = true, disabledSupport = true,
                         codeActionLiteralSupport = new { codeActionKind = new { valueSet = new[] { "", "quickfix", "refactor", "source" } } },
                         resolveSupport = new { properties = new[] { "edit" } },
                     },
                     publishDiagnostics = new { versionSupport = true },
-                    documentSymbol = new { hierarchicalDocumentSymbolSupport = true },
+                    documentSymbol = new { dynamicRegistration = true, hierarchicalDocumentSymbolSupport = true },
                 },
             },
         }, token).ConfigureAwait(false);
-        _capabilities = reply.GetProperty("capabilities");
-        Encoding = _capabilities.TryGetProperty("positionEncoding", out var position) ? position.GetString() ?? "utf-16" : "utf-16";
+        var capabilities = reply.GetProperty("capabilities");
+        Encoding = capabilities.TryGetProperty("positionEncoding", out var position) ? position.GetString() ?? "utf-16" : "utf-16";
         if (Encoding is not ("utf-8" or "utf-16" or "utf-32"))
             throw new InvalidDataException("The language server did not negotiate a supported position encoding.");
         if (reply.TryGetProperty("serverInfo", out var serverInfo) && serverInfo.TryGetProperty("name", out var name))
             Name = name.GetString();
-        ReadSynchronization(_capabilities);
-        ReadFolderSupport(_capabilities);
+        ReadSynchronization(capabilities);
+        ReadFolderSupport(capabilities);
+        ReadStaticDocumentCapabilities(capabilities);
         await _rpc.NotifyAsync("initialized", new { }, token).ConfigureAwait(false);
         _initialized = true;
     }
@@ -178,21 +183,10 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
             throw new InvalidDataException("The language server advertised an unknown document synchronization mode.");
     }
 
-    internal bool Supports(string method, string provider)
-    {
-        if (_registrations.Values.Contains(method, StringComparer.Ordinal))
-            return true;
-        if (_capabilities.ValueKind != JsonValueKind.Object || !_capabilities.TryGetProperty(provider, out var value))
-            return false;
-        return method is "codeAction/resolve" or "completionItem/resolve"
-            ? value.ValueKind == JsonValueKind.Object && TryTrue(value, "resolveProvider")
-            : value.ValueKind is JsonValueKind.True or JsonValueKind.Object;
-    }
-
     internal async Task<LanguageQueryResult> QueryAsync(LanguageDocument document, LanguageServerConfiguration configuration,
         string language, LanguageRequest query, Func<bool> currentDocument, CancellationToken token)
     {
-        if (!Supports(query.Method, query.Provider))
+        if (!Supports(query.Method, language, document.Path, configuration.Directory))
             throw new NotSupportedException("The language server does not advertise this feature.");
 
         var uri = FileUri(document.Path);
@@ -205,6 +199,8 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
             if (!ContainsRoot(document.Context.RootId) || !currentDocument())
                 throw new LanguageDocumentChangedException();
             var tracked = await SynchronizeCoreAsync(uri, document, language, token).ConfigureAwait(false);
+            if (!Supports(query.Method, language, document.Path, configuration.Directory))
+                throw new NotSupportedException("The document capability was withdrawn.");
             var arguments = query.Build(uri, tracked.Text, Encoding);
             revisionToken = tracked.Requests.Token;
             linked = CancellationTokenSource.CreateLinkedTokenSource(token, revisionToken);
@@ -222,6 +218,8 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
                     throw new IOException("The language server disconnected during the document request.");
                 if (!IsRunning || !_documents.TryGetValue(uri, out var current) || current.Context != document.Context)
                     throw new LanguageDocumentChangedException();
+                if (!Supports(query.Method, language, document.Path, configuration.Directory))
+                    throw new NotSupportedException("The document capability was withdrawn.");
                 return new LanguageQueryResult(document.Context, StatusFor(configuration), result);
             }
             catch (OperationCanceledException) when (!token.IsCancellationRequested && !_rpc.IsRunning)

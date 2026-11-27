@@ -16,6 +16,7 @@ internal sealed partial class Program(LspConnection connection, string preferred
     private bool _deferCompletions;
     private bool _crashOnFirstCompletion;
     private bool _navigation;
+    private int? _verifiedSyncMode;
     private string? _renameExtraUri;
     private string? _traceDirectory;
 
@@ -54,6 +55,7 @@ internal sealed partial class Program(LspConnection connection, string preferred
                 if (!packet.TryGetProperty("method", out var method))
                 {
                     ObserveWorkspaceEditResponse(packet);
+                    ObserveCapabilityResponse(packet);
                     continue;
                 }
                 packet.TryGetProperty("id", out var id);
@@ -88,7 +90,10 @@ internal sealed partial class Program(LspConnection connection, string preferred
                 Initialize(id, parameters);
                 break;
             case "initialized":
+                break;
             case "textDocument/didSave":
+                if (_verifiedSyncMode is not null)
+                    Trace("did-save", parameters.GetRawText());
                 break;
             case "workspace/didChangeWorkspaceFolders":
                 ChangeFolders(parameters.GetProperty("event"));
@@ -117,6 +122,7 @@ internal sealed partial class Program(LspConnection connection, string preferred
                     return 17;
                 }
                 RequestWorkspaceEdit(parameters);
+                ChangeFixtureCapabilities(parameters);
                 CompleteDocument(id, parameters);
                 break;
             case "$/cancelRequest":
@@ -170,6 +176,10 @@ internal sealed partial class Program(LspConnection connection, string preferred
         _crashOnFirstCompletion = options.ValueKind == JsonValueKind.Object &&
             options.TryGetProperty("crashOnFirstCompletion", out var crash) && crash.ValueKind == JsonValueKind.True;
         ReadWorkspaceEditFixture(options, parameters);
+        ReadCapabilityFixture(options, parameters);
+        if (options.ValueKind == JsonValueKind.Object && options.TryGetProperty("syncKind", out var sync) &&
+            sync.ValueKind == JsonValueKind.Number && sync.TryGetInt32(out var kind) && kind is >= 0 and <= 2)
+            _verifiedSyncMode = kind;
         var folderMode = options.ValueKind == JsonValueKind.Object && options.TryGetProperty("workspaceFolderMode", out var mode)
             ? mode.GetString() : null;
         _navigation = options.ValueKind == JsonValueKind.Object && options.TryGetProperty("navigation", out var navigation)
@@ -188,9 +198,13 @@ internal sealed partial class Program(LspConnection connection, string preferred
                 capabilities = new
                 {
                     positionEncoding = _encoding,
-                    textDocumentSync = new { openClose = true, change = 2, save = true },
+                    textDocumentSync = new
+                    {
+                        openClose = true, change = _verifiedSyncMode ?? 2,
+                        save = _verifiedSyncMode is null ? (object)true : new { includeText = true },
+                    },
                     completionProvider = new { },
-                    hoverProvider = _navigation,
+                    hoverProvider = _navigation && !_dynamicDocuments,
                     referencesProvider = _navigation,
                     definitionProvider = _navigation,
                     declarationProvider = _navigation,
@@ -309,7 +323,10 @@ internal sealed partial class Program(LspConnection connection, string preferred
         foreach (var change in parameters.GetProperty("contentChanges").EnumerateArray())
         {
             var replacement = change.GetProperty("text").GetString()!;
-            if (change.TryGetProperty("range", out var range))
+            var ranged = change.TryGetProperty("range", out var range);
+            if (_verifiedSyncMode is 0 || _verifiedSyncMode is { } preferred && ranged != (preferred == 2))
+                throw new InvalidDataException("The client used a different text synchronization mode than the fixture advertised.");
+            if (ranged)
             {
                 var start = Offset(text, range.GetProperty("start"));
                 var end = Offset(text, range.GetProperty("end"));

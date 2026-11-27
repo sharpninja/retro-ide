@@ -50,13 +50,13 @@ internal sealed partial class LanguageServerFeatures
 
     internal Feature<CompleteInput> Complete { get; } = new("language.document.complete", "language_complete",
         "Request completions at a UTF-16 editor offset in the live document revision.",
-        static (input, view, token) => QueryAsync(input.Document, new("textDocument/completion", "completionProvider", input.Offset),
+        static (input, view, token) => QueryAsync(input.Document, new(LspDocumentMethods.Completion, input.Offset),
             view, token, (result, registration, cancellation) => StoreCompletionsAsync(result, registration, input.Offset, cancellation)),
         typeof(LanguageQueryResult));
 
     internal Feature<DocumentInput> Symbols { get; } = new("language.document.symbols", "language_document_symbols",
         "List the document symbols advertised for the live unsaved document revision.",
-        static (input, view, token) => QueryAsync(input.Document, new("textDocument/documentSymbol", "documentSymbolProvider"), view, token),
+        static (input, view, token) => QueryAsync(input.Document, new(LspDocumentMethods.Symbols), view, token),
         typeof(LanguageQueryResult));
 
     internal Feature<DocumentInput> Diagnostics { get; } = new("language.document.diagnostics", "language_get_diagnostics",
@@ -64,6 +64,12 @@ internal sealed partial class LanguageServerFeatures
         static (input, view) => view is ILanguageRegistration registration && registration.ReadLanguageDocument(input.Document) is { } document
             ? FeatureOutcome.Success("Language server diagnostics read.", registration.LanguageServers.Diagnostics(document))
             : DocumentChanged(), typeof(LanguageDiagnosticResult));
+
+    internal Feature<DocumentInput> Capabilities { get; } = new("language.document.capabilities", "language_get_document_capabilities",
+        "Read the active language server's currently supported methods for this document.", false,
+        static (input, view) => view is ILanguageRegistration registration && registration.ReadLanguageDocument(input.Document) is { } document
+            ? FeatureOutcome.Success("Language capabilities read.", registration.LanguageServers.DocumentCapabilities(document.Context.RootId, document.Path))
+            : DocumentChanged(), typeof(LanguageDocumentCapabilities));
 
     internal Feature<GetContextInput> Problems { get; } = new("language.problems.list", "language_list_problems",
         "List current language-server diagnostics for open workspace documents.",

@@ -66,6 +66,7 @@ internal sealed partial class DocumentController : SimpleControllerBase
             view.PropertyChanged += OnDocumentStateChanged;
             view.LanguageContentChanged += OnLanguageContentChanged;
             _dispatch.LanguageServers.Observe(view.CaptureLanguageDocument());
+            RefreshLanguageCapabilities(view);
             _layout.AddTransientDocument(document);
         }
 
@@ -82,6 +83,16 @@ internal sealed partial class DocumentController : SimpleControllerBase
 
     internal LanguageDocument? ReadLanguageDocument(DocumentContext context) =>
         TryResolve(context, out var view) ? view.CaptureLanguageDocument() : null;
+
+    internal void RefreshLanguageCapabilities()
+    {
+        foreach (var document in _open.Values)
+            if (document.Source is { } source)
+                RefreshLanguageCapabilities(source);
+    }
+
+    private void RefreshLanguageCapabilities(DocumentViewModel view) =>
+        view.UpdateLanguageCapabilities(_dispatch.LanguageServers.DocumentCapabilities(view.RootId, view.FullPath));
 
     private void OnLanguageContentChanged(object? sender, EventArgs args)
     {

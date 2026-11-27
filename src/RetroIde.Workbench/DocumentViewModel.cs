@@ -55,7 +55,19 @@ internal sealed partial class DocumentViewModel : ObservableObject, IView
     [McpContext]
     public long Revision { get; private set; }
     internal long SavedRevision { get; private set; }
-    internal (int Caret, int SelectionStart, int SelectionLength) EditorPosition { get; set; }
+    private (int Caret, int SelectionStart, int SelectionLength) _editorPosition;
+
+    internal (int Caret, int SelectionStart, int SelectionLength) EditorPosition
+    {
+        get => _editorPosition;
+        set
+        {
+            var formatScopeChanged = (_editorPosition.SelectionLength == 0) != (value.SelectionLength == 0);
+            _editorPosition = value;
+            if (formatScopeChanged)
+                LanguageFormatCommand.NotifyCanExecuteChanged();
+        }
+    }
     internal string Scope => $"source-{DocumentId:N}";
 
     public event EventHandler<ViewCommandRequested>? CommandRequested;

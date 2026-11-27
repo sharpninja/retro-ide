@@ -162,6 +162,11 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
         return true;
     }
 
+    internal LanguageDocumentCapabilities DocumentCapabilities(Guid rootId, string path) =>
+        FindDocumentSlot(rootId, path) is { Session: { IsRunning: true } session } slot &&
+        slot.Configuration.GetLanguage(path) is { } language
+            ? session.DocumentCapabilities(slot.Configuration, language, path) : LanguageDocumentCapabilities.Unavailable;
+
     internal LanguageDiagnosticResult Diagnostics(LanguageDocument document) =>
         FindDocumentSlot(document)?.Session is { IsRunning: true } session
             ? session.Diagnostics(document) : new(document.Context, null, []);
@@ -241,13 +246,14 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
         }
     }
 
-    private Slot? FindDocumentSlot(LanguageDocument document)
+    private Slot? FindDocumentSlot(LanguageDocument document) => FindDocumentSlot(document.Context.RootId, document.Path);
+
+    private Slot? FindDocumentSlot(Guid rootId, string path)
     {
-        var rootId = document.Context.RootId;
         if (!_explorer.Roots.Any(root => root.Id == rootId))
             return null;
         return _servers.Values.FirstOrDefault(slot => slot.Configuration.RootId == rootId &&
-            slot.Configuration.GetLanguage(document.Path) is not null);
+            slot.Configuration.GetLanguage(path) is not null);
     }
 
     private async Task SynchronizeAsync(Slot slot, LanguageDocument document, CancellationToken token)

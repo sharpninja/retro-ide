@@ -12,7 +12,7 @@ internal sealed partial class LanguageServerSession
     internal bool SupportsWorkspaceFolders { get; private set; }
 
     internal bool CanNotifyFolderChanges => SupportsWorkspaceFolders &&
-        (_folderChangeNotifications || _folderRegistrationId is not null || _registrations.Values.Contains(FolderChange, StringComparer.Ordinal));
+        (_folderChangeNotifications || _folderRegistrationId is not null || IsRegistered(FolderChange));
 
     private void ReadFolderSupport(JsonElement capabilities)
     {

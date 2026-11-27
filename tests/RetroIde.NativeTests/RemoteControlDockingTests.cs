@@ -24,6 +24,7 @@ internal static class RemoteControlDockingTests
             await RemoteControlLanguageEditorTests.RunAsync().ConfigureAwait(true);
             await RemoteControlLanguageEditorTests.RunPanesAsync().ConfigureAwait(true);
             await RemoteControlLanguageEditorTests.RunServerEditsAsync().ConfigureAwait(true);
+            await RemoteControlLanguageEditorTests.RunCapabilitiesAsync().ConfigureAwait(true);
             await RemoteControlGitTests.RunAsync().ConfigureAwait(true);
             using var session = new WorkbenchSession(Guid.NewGuid());
             var window = new WorkbenchWindow(session);

@@ -9,12 +9,12 @@ internal sealed partial class LanguageServerFeatures
 
     internal Feature<CompleteInput> Hover { get; } = new("language.document.hover", "language_hover",
         "Read language-server hover information at the UTF-16 editor offset.",
-        static (input, view, token) => QueryAsync(input.Document, new("textDocument/hover", "hoverProvider", input.Offset), view, token),
+        static (input, view, token) => QueryAsync(input.Document, new(LspDocumentMethods.Hover, input.Offset), view, token),
         typeof(LanguageQueryResult));
 
     internal Feature<CompleteInput> SignatureHelp { get; } = new("language.document.signature-help", "language_signature_help",
         "Read supported call signatures at the UTF-16 editor offset.",
-        static (input, view, token) => QueryAsync(input.Document, new("textDocument/signatureHelp", "signatureHelpProvider", input.Offset), view, token),
+        static (input, view, token) => QueryAsync(input.Document, new(LspDocumentMethods.SignatureHelp, input.Offset), view, token),
         typeof(LanguageQueryResult));
 
     internal Feature<CompleteInput> Definition { get; } = LocationFeature("definition", "definition", "definition", "Find definitions at the editor offset.");
@@ -24,7 +24,7 @@ internal sealed partial class LanguageServerFeatures
 
     internal Feature<ReferencesInput> References { get; } = new("language.document.references", "language_references",
         "Find references at the UTF-16 editor offset.",
-        static (input, view, token) => QueryAsync(input.Document, new("textDocument/references", "referencesProvider",
+        static (input, view, token) => QueryAsync(input.Document, new(LspDocumentMethods.References,
             Parameters: position => new
             {
                 textDocument = position.Document, position = position.Position(input.Offset),
@@ -37,7 +37,7 @@ internal sealed partial class LanguageServerFeatures
 
     private static Feature<CompleteInput> LocationFeature(string id, string name, string method, string description) =>
         new("language.document." + id, "language_" + name, description,
-            (input, view, token) => QueryAsync(input.Document, new("textDocument/" + method, method + "Provider", input.Offset),
+            (input, view, token) => QueryAsync(input.Document, new("textDocument/" + method, input.Offset),
                 view, token, ReadLocationsAsync), typeof(LanguageNavigationResult));
 
     private static Task<FeatureOutcome> ReadLocationsAsync(LanguageQueryResult result, ILanguageRegistration _, CancellationToken token)

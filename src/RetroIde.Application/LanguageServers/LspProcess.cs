@@ -196,9 +196,13 @@ internal sealed class LspProcess : IAsyncDisposable
     private Task RespondAsync(string method, JsonElement id, JsonElement parameters)
     {
         var (handled, result) = _request(method, parameters);
-        return handled
-            ? WriteAsync(new { jsonrpc = "2.0", id, result }, _lifetime.Token)
-            : WriteAsync(new { jsonrpc = "2.0", id, error = new { code = -32601, message = "The client method is unavailable." } }, _lifetime.Token);
+        if (handled)
+            return WriteAsync(new { jsonrpc = "2.0", id, result }, _lifetime.Token);
+
+        var (code, message) = method is "client/registerCapability" or "client/unregisterCapability"
+            ? (-32602, "The capability registration is invalid or unsupported.")
+            : (-32601, "The client method is unavailable.");
+        return WriteAsync(new { jsonrpc = "2.0", id, error = new { code, message } }, _lifetime.Token);
     }
 
     private Task StartServerEditAsync(JsonElement id, JsonElement parameters)

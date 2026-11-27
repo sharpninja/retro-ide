@@ -83,6 +83,7 @@ public sealed partial class WorkbenchController
 
     private void RefreshLanguagePanes()
     {
+        _documents?.RefreshLanguageCapabilities();
         if (_languageServersView is null && _problemsView is null)
             return;
         var roots = _workspaceExplorer.Roots.ToArray();

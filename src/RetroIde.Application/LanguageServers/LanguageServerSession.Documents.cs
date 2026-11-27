@@ -4,6 +4,16 @@ namespace RetroIde.Application.LanguageServers;
 
 internal sealed partial class LanguageServerSession
 {
+    // Protected by _updates. Reopening a URI on the same transport must not reuse an old version.
+    private readonly Dictionary<string, int> _documentVersions = new(StringComparer.Ordinal);
+
+    private int NextDocumentVersion(string uri)
+    {
+        var version = checked(_documentVersions.GetValueOrDefault(uri) + 1);
+        _documentVersions[uri] = version;
+        return version;
+    }
+
     private async Task<OpenDocument> SynchronizeCoreAsync(string uri, LanguageDocument source, string language,
         CancellationToken token)
     {
@@ -32,7 +42,7 @@ internal sealed partial class LanguageServerSession
             if (_change == 0 && source.Context.Revision != source.SavedRevision)
                 throw new NotSupportedException("The language server cannot synchronize this unsaved document.");
 
-            updated = new OpenDocument(source.Context, checked(previous.Version + 1), source.Text, previous.SavedRevision);
+            updated = new OpenDocument(source.Context, NextDocumentVersion(uri), source.Text, previous.SavedRevision);
             _diagnostics.TryRemove(uri, out _);
             _documents[uri] = updated;
             if (_change != 0)
@@ -77,7 +87,7 @@ internal sealed partial class LanguageServerSession
     {
         if (!_openClose && _change == 0 && source.Context.Revision != source.SavedRevision)
             throw new NotSupportedException("The language server cannot synchronize this unsaved document.");
-        var tracked = new OpenDocument(source.Context, 1, source.Text, source.SavedRevision);
+        var tracked = new OpenDocument(source.Context, NextDocumentVersion(uri), source.Text, source.SavedRevision);
         _documents[uri] = tracked;
         if (_openClose)
         {
@@ -122,7 +132,7 @@ internal sealed partial class LanguageServerSession
             return;
 
         _diagnostics[uri] = new DiagnosticSet(current.Context, items.EnumerateArray().Select(item => item.Clone()).ToArray());
-        _diagnosticsChanged();
+        _stateChanged();
     }
 
     private (bool Handled, object? Result) OnRequest(string method, JsonElement parameters) => method switch
@@ -149,36 +159,5 @@ internal sealed partial class LanguageServerSession
                 return null;
         }
         return settings;
-    }
-
-    private bool ChangeRegistration(JsonElement parameters, bool remove)
-    {
-        if (parameters.ValueKind != JsonValueKind.Object)
-            return false;
-        var key = remove ? "unregisterations" : "registrations";
-        if (!parameters.TryGetProperty(key, out var choices) || choices.ValueKind != JsonValueKind.Array)
-            return false;
-        var changes = new List<(string Id, string Method)>();
-        foreach (var item in choices.EnumerateArray())
-        {
-            if (item.ValueKind != JsonValueKind.Object || !item.TryGetProperty("id", out var id) || id.ValueKind != JsonValueKind.String ||
-                !item.TryGetProperty("method", out var member) || member.ValueKind != JsonValueKind.String ||
-                id.GetString() is not { Length: > 0 } name ||
-                member.GetString() is not ("workspace/didChangeConfiguration" or FolderChange))
-                return false;
-            changes.Add((name, member.GetString()!));
-        }
-        foreach (var change in changes)
-        {
-            if (remove)
-            {
-                _registrations.TryRemove(change.Id, out _);
-                if (string.Equals(_folderRegistrationId, change.Id, StringComparison.Ordinal))
-                    _folderRegistrationId = null;
-            }
-            else
-                _registrations[change.Id] = change.Method;
-        }
-        return true;
     }
 }

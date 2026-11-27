@@ -1,6 +1,6 @@
 namespace RetroIde.Application.LanguageServers;
 
-internal sealed record LanguageRequest(string Method, string Provider, int? Offset = null,
+internal sealed record LanguageRequest(string Method, int? Offset = null,
     Func<LanguageRequest.Context, object>? Parameters = null)
 {
     internal object Build(string uri, string text, string encoding)
