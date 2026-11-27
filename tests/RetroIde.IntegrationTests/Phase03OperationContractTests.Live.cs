@@ -12,6 +12,8 @@ namespace RetroIde.IntegrationTests;
 
 public sealed partial class Phase03OperationContractTests
 {
+    private const string OperationActor = "phase03-operation";
+
     /// <summary>Applies the mock-gated assertions to a real Git subprocess and two SDK client transports.</summary>
     /// <remarks>2026-11-26. TEST-RETRO-015#ac-test-mcp-operation. Verifies scope, cancelled subprocess release, and completed results at the running workbench boundary.</remarks>
     [AvaloniaFact]
@@ -40,7 +42,7 @@ public sealed partial class Phase03OperationContractTests
         {
             await using var host = await LoopbackMcpHost.StartAsync(session.Registry, session.Controller, session.View.Address, token)
                 .ConfigureAwait(true);
-            var grant = host.CreateAttachment("phase03-operation-owner", canMutate: true);
+            var grant = host.CreateAttachment(OperationActor, canMutate: true);
             using var client = grant.CreateHttpClient();
             await using var direct = await ConnectAsync(grant, client, token).ConfigureAwait(true);
 
@@ -65,7 +67,8 @@ public sealed partial class Phase03OperationContractTests
         McpClient direct, AttachmentDescriptor grant, CancellationToken token)
     {
         await using var bridge = await ConnectStdioAsync(folder, grant, token).ConfigureAwait(false);
-        var unrelatedGrant = host.CreateAttachment("phase03-operation-foreign", canMutate: true);
+        // Reusing the actor label still creates a different grant.
+        var unrelatedGrant = host.CreateAttachment(OperationActor, canMutate: true);
         using var unrelatedHttp = unrelatedGrant.CreateHttpClient();
         await using var unrelated = await ConnectAsync(unrelatedGrant, unrelatedHttp, token).ConfigureAwait(false);
         using var listener = new TcpListener(IPAddress.Loopback, 0);
@@ -87,6 +90,8 @@ public sealed partial class Phase03OperationContractTests
         var endpoint = (IPEndPoint)listener.LocalEndpoint;
         await GitAsync(checkout, token, "remote", "add", "stalled",
             FormattableString.Invariant($"http://127.0.0.1:{endpoint.Port}/fetch")).ConfigureAwait(false);
+        await GitAsync(checkout, token, "remote", "add", "missing",
+            Path.Combine(folder.FullName, "unpublished.git")).ConfigureAwait(false);
 
         using var port = new LiveOperationPort(direct, bridge, unrelated, checkout, listener);
         var root = await port.MutateAsync(direct, "workspace_open_root", new(StringComparer.Ordinal)
@@ -102,6 +107,7 @@ public sealed partial class Phase03OperationContractTests
 
         await VerifyCancelledFetchAsync(port, token).ConfigureAwait(false);
         await VerifyCompletedFetchAsync(port, token).ConfigureAwait(false);
+        await VerifyFailedFetchAsync(port, token).ConfigureAwait(false);
         Assert.Equal(await GitAsync(remote, token, "rev-parse", "refs/heads/main").ConfigureAwait(false),
             await GitAsync(checkout, token, "rev-parse", TrackingRef).ConfigureAwait(false));
     }
@@ -167,8 +173,14 @@ public sealed partial class Phase03OperationContractTests
     {
         private TcpClient? _connection;
 
-        public async Task<StartedOperation> StartFetchAsync(bool stalled, CancellationToken token)
+        public async Task<StartedOperation> StartFetchAsync(FetchMode mode, CancellationToken token)
         {
+            var remote = mode switch
+            {
+                FetchMode.Stalled => "stalled",
+                FetchMode.Fails => "missing",
+                _ => "origin",
+            };
             var remotes = await CallAsync(direct, "git_list_remotes", new(StringComparer.Ordinal)
             {
                 ["worktreePath"] = checkout,
@@ -177,13 +189,13 @@ public sealed partial class Phase03OperationContractTests
             var started = await MutateAsync(direct, "git_fetch", new(StringComparer.Ordinal)
             {
                 ["worktreePath"] = checkout,
-                ["name"] = stalled ? "stalled" : "origin",
+                ["name"] = remote,
                 ["revision"] = remotes.GetProperty("data").GetProperty("revision").GetString(),
                 ["background"] = true,
             }, token).ConfigureAwait(false);
             Assert.Equal("ok", Code(started));
             var handle = started.GetProperty("data");
-            if (stalled)
+            if (mode == FetchMode.Stalled)
                 _connection = await listener.AcceptTcpClientAsync(token).ConfigureAwait(false);
 
             return new(handle.GetProperty("operationId").GetGuid(), started.GetProperty("operationId").GetGuid(),
@@ -207,7 +219,11 @@ public sealed partial class Phase03OperationContractTests
             var result = await CallAsync(Client(caller), "workbench_operation_result", Handle(id), token).ConfigureAwait(false);
             var code = Code(result);
             if (!string.Equals(code, "ok", StringComparison.Ordinal))
+            {
+                Assert.True(!result.TryGetProperty("data", out var data) || data.ValueKind == JsonValueKind.Null,
+                    "A rejected result must not carry the original operation's data.");
                 return new(code, Guid.Empty, null);
+            }
 
             var original = result.GetProperty("data");
             return new(code, original.GetProperty("operationId").GetGuid(), Code(original));
