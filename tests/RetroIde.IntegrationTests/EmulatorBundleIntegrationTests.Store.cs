@@ -1,5 +1,6 @@
 using System.Text;
 using RetroIde.Application.Emulators;
+using RetroIde.Testing;
 using Xunit;
 using Pin = RetroIde.Application.Emulators.EmulatorBundleStore.Pin;
 
@@ -158,6 +159,6 @@ public sealed partial class EmulatorBundleIntegrationTests
         internal EmulatorBundleStore Store => new(Directory);
         internal CancellationToken CancellationToken => TestContext.Current.CancellationToken;
 
-        public void Dispose() => _root.Delete(recursive: true);
+        public void Dispose() => GitWorktreeFixture.DeleteOwnedDirectory(_root);
     }
 }

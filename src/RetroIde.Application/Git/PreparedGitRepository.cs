@@ -183,15 +183,10 @@ internal sealed class PreparedGitRepository : IDisposable
             if (!Directory.Exists(path))
                 return;
 
-            if (recursive && OperatingSystem.IsWindows())
-            {
-                // The staging clone owns its copied Git objects. Leave filesystem links alone.
-                var enumeration = new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint };
-                foreach (var file in new DirectoryInfo(path).EnumerateFiles("*", enumeration))
-                    if (file.IsReadOnly)
-                        file.IsReadOnly = false;
-            }
-            Directory.Delete(path, recursive);
+            if (recursive)
+                NativeGit.DeleteOwnedCopy(path);
+            else
+                Directory.Delete(path);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
     }

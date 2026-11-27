@@ -104,6 +104,19 @@ internal static class NativeGit
             ? PathComparer.Equals(left?.Replace('\\', '/'), right?.Replace('\\', '/'))
             : PathComparer.Equals(left, right);
 
+    internal static void DeleteOwnedCopy(string path)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            // A private clone owns its Git objects. Skip filesystem links when changing attributes.
+            var enumeration = new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint };
+            foreach (var file in new DirectoryInfo(path).EnumerateFiles("*", enumeration))
+                if (file.IsReadOnly)
+                    file.IsReadOnly = false;
+        }
+        Directory.Delete(path, recursive: true);
+    }
+
     /// <summary>Compares a worktree and both administrative directories using native path rules.</summary>
     internal static bool IsSameWorktree(GitWorktree left, GitWorktree right) =>
         SamePath(left.WorktreePath, right.WorktreePath) &&

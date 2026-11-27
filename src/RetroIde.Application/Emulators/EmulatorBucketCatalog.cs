@@ -111,7 +111,7 @@ internal sealed class EmulatorBucketCatalog(string root)
         finally
         {
             if (Directory.Exists(staging))
-                Directory.Delete(staging, recursive: true);
+                NativeGit.DeleteOwnedCopy(staging);
         }
     }
 
