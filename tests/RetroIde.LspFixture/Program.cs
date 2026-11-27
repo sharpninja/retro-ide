@@ -369,8 +369,17 @@ internal sealed partial class Program(LspConnection connection, string preferred
 
     private void Trace(string name, string value)
     {
-        if (_traceDirectory is { } directory)
-            File.WriteAllText(Path.Combine(directory, name), value);
+        if (_traceDirectory is not { } directory)
+            return;
+
+        var path = Path.Combine(directory, name);
+        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            File.WriteAllText(temporary, value);
+            File.Move(temporary, path, overwrite: true);
+        }
+        finally { File.Delete(temporary); }
     }
 
     /// <summary>Releases a held completion with its original contents, or returns the native cancellation error.</summary>
