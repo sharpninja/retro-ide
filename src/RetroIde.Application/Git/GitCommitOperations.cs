@@ -106,6 +106,7 @@ internal static class GitCommitOperations
         var index = Path.Combine(repository.GitDirectory, "index");
         var temporary = Path.Combine(repository.GitDirectory, $"retro-ide-commit-{Guid.NewGuid():N}");
         var messagePath = temporary + ".message";
+        using var guard = new GitCommitGuard(temporary);
         var committed = false;
         string? head = null;
         try
@@ -122,8 +123,12 @@ internal static class GitCommitOperations
 
             if (expected.Index is not null)
                 await File.WriteAllBytesAsync(temporary, expected.Index, token).ConfigureAwait(false);
+            if (!await guard.PrepareAsync(repository, expected.State, token).ConfigureAwait(false))
+                return new("git_commit_guard_unavailable", "Git could not verify the staged tree or enable the reviewed commit guard.");
+
             await File.WriteAllTextAsync(messagePath, message, token).ConfigureAwait(false);
             var args = NativeGit.WorktreeArguments(repository);
+            guard.Configure(args);
             args.AddRange(["commit", "--no-edit", $"--file={messagePath}"]);
             if (amend)
                 args.Add("--amend");
@@ -134,17 +139,15 @@ internal static class GitCommitOperations
             var result = await NativeGit.RunCaptureAsync(repository.WorktreePath, args, CancellationToken.None,
                 indexPath: temporary, captureError: true).ConfigureAwait(false);
             if (result.ExitCode != 0)
-                return CommitFailure(result);
+                return guard.Rejected ? Changed() : CommitFailure(result);
 
             committed = true;
             var query = NativeGit.WorktreeArguments(repository);
             query.AddRange(["rev-parse", "--verify", "HEAD"]);
             head = (await NativeGit.RunAsync(repository.WorktreePath, query, CancellationToken.None).ConfigureAwait(false))?.Trim();
-            if (GitIndexLock.Read(temporary) is not { } updated)
-                return Committed(indexPublished: false);
-            if (!GitIndexLock.ContentsEqual(updated, expected.Index))
-                held.Publish(updated, expected.Index is not null);
-            return Committed(indexPublished: true);
+            // The original index already contains the reviewed entries. Hooks can change the
+            // temporary index even after Git creates the commit, so never copy it back.
+            return Committed(indexPublished: GitIndexLock.ContentsEqual(GitIndexLock.Read(index), expected.Index));
         }
         catch (Win32Exception) { return new("git_unavailable", "Git could not be started."); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
