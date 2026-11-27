@@ -9,7 +9,7 @@ namespace RetroIde.Application.Git;
 internal static partial class GitRemoteOperations
 {
     private static readonly byte[] RevisionKey = RandomNumberGenerator.GetBytes(32);
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> ConfigurationWrites = new(
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> ConfigurationGates = new(
         OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
     internal sealed record ListInput(string WorktreePath);
     internal sealed record ConfigureInput(string WorktreePath, string Name, string Revision, string? Value = null, bool Push = false);
@@ -38,36 +38,41 @@ internal static partial class GitRemoteOperations
             var problem = await ValidateChangeAsync(repo, snapshot, input, change, token).ConfigureAwait(false);
             if (problem is not null)
                 return problem;
-            return Authorize(selection, cancellation => ConfigureReviewedAsync(repo, input, change, cancellation));
+            return Authorize(selection, cancellation => WithConfigurationGateAsync(repo, cancellation,
+                () => ConfigureReviewedAsync(repo, input, change, cancellation)));
         }, token);
 
     private static async Task<FeatureOutcome> ConfigureReviewedAsync(GitWorktree repo, ConfigureInput input, Change change,
         CancellationToken token)
     {
-        // Linked worktrees share remote settings through their common Git directory.
-        var gate = ConfigurationWrites.GetOrAdd(repo.CommonDirectory, static _ => new SemaphoreSlim(1));
-        await gate.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            var current = await ReadConfigAsync(repo, token).ConfigureAwait(false);
-            if (!Matches(current, input.Revision))
-                return Changed();
+        var current = await ReadConfigAsync(repo, token).ConfigureAwait(false);
+        if (!Matches(current, input.Revision))
+            return Changed();
 
-            string[] command = change switch
-            {
-                Change.Add => ["remote", "add", "--", input.Name, input.Value!],
-                Change.SetUrl when input.Push => ["remote", "set-url", "--push", "--", input.Name, input.Value!],
-                Change.SetUrl => ["remote", "set-url", "--", input.Name, input.Value!],
-                Change.Rename => ["remote", "rename", "--", input.Name, input.Value!],
-                _ => ["remote", "remove", "--", input.Name],
-            };
-            token.ThrowIfCancellationRequested();
-            var result = await RunAsync(repo, CancellationToken.None, command).ConfigureAwait(false);
-            if (result.ExitCode != 0)
-                return new("git_remote_config_failed", "Git could not update the selected remote.");
-            return FeatureOutcome.Success("Git remote settings updated.",
-                (await ReadConfigAsync(repo, CancellationToken.None).ConfigureAwait(false)).Display);
-        }
+        string[] command = change switch
+        {
+            Change.Add => ["remote", "add", "--", input.Name, input.Value!],
+            Change.SetUrl when input.Push => ["remote", "set-url", "--push", "--", input.Name, input.Value!],
+            Change.SetUrl => ["remote", "set-url", "--", input.Name, input.Value!],
+            Change.Rename => ["remote", "rename", "--", input.Name, input.Value!],
+            _ => ["remote", "remove", "--", input.Name],
+        };
+        token.ThrowIfCancellationRequested();
+        var result = await RunAsync(repo, CancellationToken.None, command).ConfigureAwait(false);
+        if (result.ExitCode != 0)
+            return new("git_remote_config_failed", "Git could not update the selected remote.");
+        return FeatureOutcome.Success("Git remote settings updated.",
+            (await ReadConfigAsync(repo, CancellationToken.None).ConfigureAwait(false)).Display);
+    }
+
+    internal static async Task<FeatureOutcome> WithConfigurationGateAsync(GitWorktree repository, CancellationToken token,
+        Func<Task<FeatureOutcome>> operation)
+    {
+        // Native transfers resolve their remote name while Git runs. Use the same gate
+        // for configuration edits and transfers across all worktrees sharing that config.
+        var gate = ConfigurationGates.GetOrAdd(repository.CommonDirectory, static _ => new SemaphoreSlim(1));
+        await gate.WaitAsync(token).ConfigureAwait(false);
+        try { return await operation().ConfigureAwait(false); }
         finally { gate.Release(); }
     }
 
@@ -83,7 +88,7 @@ internal static partial class GitRemoteOperations
             if (!remote.FetchMappings.All(IsTrackingRefspec))
                 return new("git_fetch_refspec_unsupported", "Fetch must target remote tracking refs or tags.");
 
-            return Authorize(selection, async cancellation =>
+            return Authorize(selection, cancellation => WithConfigurationGateAsync(repo, cancellation, async () =>
             {
                 if (!Matches(await ReadConfigAsync(repo, cancellation).ConfigureAwait(false), input.Revision))
                     return Changed();
@@ -98,7 +103,7 @@ internal static partial class GitRemoteOperations
                 var status = await NativeGit.ReadStatusAsync(selection, CancellationToken.None).ConfigureAwait(false);
                 var tracking = status is null ? null : new TrackingStatus(status.Branch, status.Upstream, status.Ahead, status.Behind);
                 return FeatureOutcome.Success("Git remote fetched.", new FetchResult(repo, input.Name, tracking));
-            });
+            }));
         }, token);
 
     private static async Task<FeatureOutcome?> ValidateChangeAsync(GitWorktree repo, ConfigSnapshot state, ConfigureInput input,

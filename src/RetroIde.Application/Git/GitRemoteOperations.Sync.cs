@@ -22,7 +22,8 @@ internal static partial class GitRemoteOperations
         {
             if (await CheckTargetAsync(selection.Repository, target, pull: false, token).ConfigureAwait(false) is { } failure)
                 return failure;
-            return Authorize(selection, cancellation => PushCoreAsync(selection, target, input, cancellation));
+            return Authorize(selection, cancellation => WithConfigurationGateAsync(selection.Repository, cancellation,
+                () => PushCoreAsync(selection, target, input, cancellation)));
         }, token);
     }
 
@@ -60,7 +61,8 @@ internal static partial class GitRemoteOperations
                 return failure;
             return Finish(selection, () => new FeatureOutcome("ok", "Git pull authorized.")
             {
-                ExecuteAuthorizedAsync = cancellation => TryAsync(() => PullCoreAsync(selection, (IGitRegistration)view, target, input.Strategy, cancellation)),
+                ExecuteAuthorizedAsync = cancellation => TryAsync(() => WithConfigurationGateAsync(selection.Repository, cancellation,
+                    () => PullCoreAsync(selection, (IGitRegistration)view, target, input.Strategy, cancellation))),
             });
         }, token);
     }

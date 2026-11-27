@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace RetroIde.Application.Git;
 
 internal static class GitLfsOperations
@@ -7,9 +5,6 @@ internal static class GitLfsOperations
     internal sealed record StatusInput(string WorktreePath);
     internal sealed record ActionInput(string WorktreePath, string ExpectedRevision, string? Remote = null);
     internal enum Operation { Fetch, Checkout, Pull }
-
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new(
-        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
 
     internal static Task<FeatureOutcome> StatusAsync(StatusInput input, IWorkbenchRegistration view, CancellationToken token) =>
         WithSourceAsync(input.WorktreePath, view, async (_, selection) =>
@@ -23,43 +18,38 @@ internal static class GitLfsOperations
             new FeatureOutcome("ok", "Git LFS operation authorized.")
             {
                 ExecuteAuthorizedAsync = cancellation => GitOperationRecovery.TryAsync(
-                    () => ExecuteAsync(git, selection, input, operation, cancellation)),
+                    () => GitRemoteOperations.WithConfigurationGateAsync(selection.Repository, cancellation,
+                        () => ExecuteAsync(git, selection, input, operation, cancellation))),
             })), token);
 
     private static async Task<FeatureOutcome> ExecuteAsync(IGitRegistration git, GitSelection selection, ActionInput input,
         Operation operation, CancellationToken token)
     {
         var repo = selection.Repository;
-        var gate = Gates.GetOrAdd(repo.CommonDirectory, static _ => new SemaphoreSlim(1));
-        await gate.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            if (!await SourceAvailableAsync(repo, token).ConfigureAwait(false))
-                return SourceUnavailable();
-            var status = await GitLfsState.ReadAsync(repo, token).ConfigureAwait(false);
-            if (!status.IsInstalled)
-                return new("git_lfs_unavailable", "Native Git LFS is unavailable on this host.");
-            if (!string.Equals(status.Revision, input.ExpectedRevision, StringComparison.Ordinal))
-                return Changed();
-            if (status.Head is not { } head)
-                return new("git_lfs_head_unavailable", "The selected worktree has no committed HEAD.");
+        if (!await SourceAvailableAsync(repo, token).ConfigureAwait(false))
+            return SourceUnavailable();
+        var status = await GitLfsState.ReadAsync(repo, token).ConfigureAwait(false);
+        if (!status.IsInstalled)
+            return new("git_lfs_unavailable", "Native Git LFS is unavailable on this host.");
+        if (!string.Equals(status.Revision, input.ExpectedRevision, StringComparison.Ordinal))
+            return Changed();
+        if (status.Head is not { } head)
+            return new("git_lfs_head_unavailable", "The selected worktree has no committed HEAD.");
 
-            if (operation == Operation.Checkout)
-                return await CheckoutAsync(git, selection, status, "Git LFS files checked out.", token).ConfigureAwait(false);
-            if (input.Remote is not { } name || !status.Remotes.Contains(name, StringComparer.Ordinal))
-                return new("git_lfs_remote_unavailable", "Choose a configured Git remote.");
+        if (operation == Operation.Checkout)
+            return await CheckoutAsync(git, selection, status, "Git LFS files checked out.", token).ConfigureAwait(false);
+        if (input.Remote is not { } name || !status.Remotes.Contains(name, StringComparer.Ordinal))
+            return new("git_lfs_remote_unavailable", "Choose a configured Git remote.");
 
-            var fetched = await RunNativeAsync(repo, token, "fetch", "--", name, head).ConfigureAwait(false);
-            if (fetched.ExitCode != 0)
-                return new("git_lfs_fetch_failed", "Git LFS could not fetch the recorded commit. Check the selected remote and its authentication.");
-            var cached = await GitLfsState.ReadAsync(repo, token).ConfigureAwait(false);
-            if (!string.Equals(cached.Head, head, StringComparison.OrdinalIgnoreCase))
-                return Changed();
-            return operation == Operation.Pull
-                ? await CheckoutAsync(git, selection, cached, "Git LFS files fetched and checked out.", token).ConfigureAwait(false)
-                : FeatureOutcome.Success("Git LFS objects fetched.", cached);
-        }
-        finally { gate.Release(); }
+        var fetched = await RunNativeAsync(repo, token, "fetch", "--", name, head).ConfigureAwait(false);
+        if (fetched.ExitCode != 0)
+            return new("git_lfs_fetch_failed", "Git LFS could not fetch the recorded commit. Check the selected remote and its authentication.");
+        var cached = await GitLfsState.ReadAsync(repo, token).ConfigureAwait(false);
+        if (!string.Equals(cached.Head, head, StringComparison.OrdinalIgnoreCase))
+            return Changed();
+        return operation == Operation.Pull
+            ? await CheckoutAsync(git, selection, cached, "Git LFS files fetched and checked out.", token).ConfigureAwait(false)
+            : FeatureOutcome.Success("Git LFS objects fetched.", cached);
     }
 
     private static async Task<FeatureOutcome> CheckoutAsync(IGitRegistration git, GitSelection selection, GitLfsState.Status reviewed,
