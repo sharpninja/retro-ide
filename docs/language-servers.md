@@ -20,7 +20,7 @@ Normal workbench close saves profiles and their enabled state with the workspace
 
 Compatible profiles for distinct, non-overlapping roots share a process when the server advertises workspace-folder support. Compatibility requires matching executable, arguments, initialization options, settings, and language associations. Servers that accept folder change notifications retain the same process when a root joins or leaves. For servers that only accept an initial folder list, Retro IDE starts a replacement with the new list and reopens the buffers. Servers without folder support run separately per root. [LSP workspace folders](https://github.com/microsoft/language-server-protocol/blob/gh-pages/_specifications/lsp/3.17/workspace/workspaceFolders.md)
 
-Use the public context returned by `editor_get_document` with `language_complete`, `language_document_symbols`, or `language_get_diagnostics`. Completion accepts a zero-based UTF-16 offset in the editor buffer. Retro IDE translates that offset into the server's negotiated encoding and correlates the result with the captured buffer revision.
+Use the public context returned by `editor_get_document` with `language_complete`, `language_document_symbols`, or `language_get_diagnostics`. Completion accepts a zero-based UTF-16 offset in the editor buffer. Retro IDE translates that offset into the server's negotiated encoding and correlates the result with the captured buffer revision. Pass the returned `completionOfferId` and selected item index to `language_preview_completion`. Apply the result with `language_apply_edit` while the document and server are current.
 
 `language_hover` and `language_signature_help` return the server's result for a UTF-16 editor offset. The definition, declaration, type definition, implementation, and references tools return location ranges in the negotiated server encoding. Pass a selected result and its session ID to `language_open_location` to activate the exact source location. The target must be a file under a registered workspace root. [LSP definition response](https://github.com/microsoft/language-server-protocol/blob/gh-pages/_specifications/lsp/3.17/language/definition.md)
 
@@ -30,7 +30,9 @@ A preview expires after five minutes. A changed or closed buffer, changed target
 
 ## Editor features
 
-| Area | IDE behavior |
+Each source tab has completion, hover, and format commands. Expand **Language Tools** for signature help, navigation, document symbols, diagnostics, code actions, and rename. Open a selected location or preview a selected code action from the result list. Selecting a plain-text completion applies a single edit immediately. Completions with additional edits, formatting, rename, and code actions show their original and replacement text for review. All applied edits remain in the source buffers until saved and can be undone.
+
+| Area | Target IDE behavior |
 | --- | --- |
 | Editing assistance | Completion and supported completion-item resolve, hover, signature help, snippets, semantic highlighting, and inlay hints. |
 | Navigation | Go to definition, declaration, type definition, or implementation when supported. Find references and use document and workspace symbols. Open a result in the corresponding editor tab. |

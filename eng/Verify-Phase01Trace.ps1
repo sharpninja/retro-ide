@@ -17,6 +17,7 @@ $nativeEntryPoints = @(
     'M:RetroIde.NativeTests.ProductionAttachmentTests.RunAsync'
     'M:RetroIde.NativeTests.RemoteControlDockingTests.RunAsync'
     'M:RetroIde.NativeTests.RemoteControlGitTests.RunAsync'
+    'M:RetroIde.NativeTests.RemoteControlLanguageEditorTests.RunAsync'
     'M:RetroIde.NativeTests.RemoteControlWorkflowTests.RunAsync'
 )
 $loaded = @{}

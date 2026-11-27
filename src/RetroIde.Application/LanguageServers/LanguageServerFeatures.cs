@@ -50,7 +50,8 @@ internal sealed partial class LanguageServerFeatures
 
     internal Feature<CompleteInput> Complete { get; } = new("language.document.complete", "language_complete",
         "Request completions at a UTF-16 editor offset in the live document revision.",
-        static (input, view, token) => QueryAsync(input.Document, new("textDocument/completion", "completionProvider", input.Offset), view, token),
+        static (input, view, token) => QueryAsync(input.Document, new("textDocument/completion", "completionProvider", input.Offset),
+            view, token, (result, registration, cancellation) => StoreCompletionsAsync(result, registration, input.Offset, cancellation)),
         typeof(LanguageQueryResult));
 
     internal Feature<DocumentInput> Symbols { get; } = new("language.document.symbols", "language_document_symbols",

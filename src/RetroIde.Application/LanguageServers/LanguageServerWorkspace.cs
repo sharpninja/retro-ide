@@ -19,6 +19,7 @@ internal sealed partial class LanguageServerWorkspace : IAsyncDisposable
 
     internal LanguageReviewStore<LanguageEditPlan> Edits { get; } = new();
     internal LanguageReviewStore<LanguageCodeActionList> Actions { get; } = new();
+    internal LanguageReviewStore<LanguageCompletionOffer> Completions { get; } = new();
 
     internal LanguageServerWorkspace(WorkspaceExplorer explorer, ILogger logger)
     {

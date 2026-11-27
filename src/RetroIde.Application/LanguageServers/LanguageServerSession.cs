@@ -22,7 +22,7 @@ internal sealed record LanguageDocument(DocumentContext Context, string Path, st
 internal sealed record LanguageServerStatus(Guid RootId, string Executable, string State, Guid? SessionId = null,
     string? PositionEncoding = null, int? ProcessId = null, string? Name = null,
     string ProfileId = LanguageProfileKey.DefaultProfile, Guid[]? WorkspaceRootIds = null);
-internal sealed record LanguageQueryResult(DocumentContext Document, LanguageServerStatus Server, JsonElement Result)
+internal sealed record LanguageQueryResult(DocumentContext Document, LanguageServerStatus Server, JsonElement Result, Guid? CompletionOfferId = null)
 {
     internal LanguageDocument[]? CapturedBuffers { get; init; }
 }
@@ -122,7 +122,7 @@ internal sealed partial class LanguageServerSession : IAsyncDisposable
                 },
                 textDocument = new
                 {
-                    completion = new { },
+                    completion = new { completionItem = new { insertReplaceSupport = true } },
                     hover = new { contentFormat = new[] { "plaintext", "markdown" } },
                     definition = new { linkSupport = true },
                     declaration = new { linkSupport = true },

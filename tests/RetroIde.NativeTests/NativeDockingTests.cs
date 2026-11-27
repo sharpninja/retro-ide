@@ -20,7 +20,8 @@ internal static class NativeDockingTests
             if (args is ["--remote-control-desktop"])
                 return RemoteControlDesktop.Run();
             var brandingOnly = args is ["--remote-control-branding"];
-            if (args is not ([] or ["--remote-control"]) && !brandingOnly)
+            var languageOnly = args is ["--remote-control-language-editor"];
+            if (args is not ([] or ["--remote-control"]) && !brandingOnly && !languageOnly)
                 throw new ArgumentException("Use --remote-control to run without desktop keyboard or mouse input.");
 
             var remoteControl = args.Length != 0;
@@ -28,10 +29,11 @@ internal static class NativeDockingTests
             app.SetupWithoutStarting();
             using var finished = new CancellationTokenSource();
             var result = brandingOnly ? RemoteControlBrandingTests.RunAsync(finished) :
+                languageOnly ? RunLanguageEditorAsync(finished) :
                 remoteControl ? RemoteControlDockingTests.RunAsync(finished) : RunAsync(finished);
             Dispatcher.UIThread.MainLoop(finished.Token);
             result.GetAwaiter().GetResult();
-            if (!brandingOnly)
+            if (!brandingOnly && !languageOnly)
                 Task.Run(() => ProductionAttachmentTests.RunAsync(useNativeShortcut: !remoteControl)).GetAwaiter().GetResult();
             return 0;
         }
@@ -40,6 +42,12 @@ internal static class NativeDockingTests
             Console.Error.WriteLine(ex);
             return 1;
         }
+    }
+
+    private static async Task RunLanguageEditorAsync(CancellationTokenSource finished)
+    {
+        try { await RemoteControlLanguageEditorTests.RunAsync().ConfigureAwait(true); }
+        finally { finished.Cancel(); }
     }
 
     /// <summary>

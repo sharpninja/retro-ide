@@ -3,7 +3,7 @@ using RetroIde.Application.Workspaces;
 
 namespace RetroIde.Application.LanguageServers;
 
-internal sealed record LanguageTextEdit(int Offset, int Length, string NewText);
+internal sealed record LanguageTextEdit(int Offset, int Length, string NewText, string? PreviousText = null);
 internal sealed record LanguageEditTarget(Guid RootId, string RelativePath, LanguageTextEdit[] Edits);
 internal sealed record LanguageEditPreview(Guid PreviewId, DocumentContext Document, LanguageServerStatus Server, LanguageEditTarget[] Targets);
 internal sealed record LanguageCodeActionList(Guid OfferId, DocumentContext Document, LanguageServerStatus Server, JsonElement[] Actions)
@@ -14,7 +14,8 @@ internal sealed record LanguageCodeActionList(Guid OfferId, DocumentContext Docu
 internal sealed record LanguageEditPlan(Guid Id, DocumentContext Origin, LanguageServerStatus Server, LanguageBufferEdit[] Documents)
 {
     internal LanguageEditPreview Describe() => new(Id, Origin, Server, Documents.Select(item =>
-        new LanguageEditTarget(item.File.Address.Entry.RootId, item.File.Address.Entry.RelativePath, item.Edits)).ToArray());
+        new LanguageEditTarget(item.File.Address.Entry.RootId, item.File.Address.Entry.RelativePath, item.Edits.Select(edit =>
+            edit with { PreviousText = item.File.Text.Substring(edit.Offset, edit.Length) }).ToArray())).ToArray());
 }
 
 internal sealed record LanguageBufferEdit(LanguageTargetFile File, LanguageTextEdit[] Edits);

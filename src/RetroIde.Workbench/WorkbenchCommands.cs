@@ -94,6 +94,22 @@ internal static class WorkbenchCommands
     public static readonly CommandDescriptor PullGitRemote = Create("git.remote.pull", "Ctrl+Alt+Shift+P");
     public static readonly CommandDescriptor SetGitUpstream = Create("git.branch.upstream", "Ctrl+Alt+U");
 
+    public static readonly CommandDescriptor LanguageComplete = Create("language.document.complete", "Ctrl+Space");
+    public static readonly CommandDescriptor LanguageHover = Create("language.document.hover", "Ctrl+Shift+Space");
+    public static readonly CommandDescriptor LanguageSignature = Create("language.document.signature-help", "Ctrl+Alt+Space");
+    public static readonly CommandDescriptor LanguageDefinition = Create("language.document.definition", "F12");
+    public static readonly CommandDescriptor LanguageDeclaration = Create("language.document.declaration", "Ctrl+F12");
+    public static readonly CommandDescriptor LanguageType = Create("language.document.type-definition", "Ctrl+Shift+F12");
+    public static readonly CommandDescriptor LanguageImplementation = Create("language.document.implementation", "Alt+F12");
+    public static readonly CommandDescriptor LanguageReferences = Create("language.document.references", "Shift+F12");
+    public static readonly CommandDescriptor LanguageSymbols = Create("language.document.symbols", "Ctrl+Shift+OemPeriod");
+    public static readonly CommandDescriptor LanguageDiagnostics = Create("language.document.diagnostics", "Ctrl+Shift+F4");
+    public static readonly CommandDescriptor LanguageFormat = Create("language.document.format", "Ctrl+Shift+F5");
+    public static readonly CommandDescriptor LanguageRename = Create("language.document.rename", "F2");
+    public static readonly CommandDescriptor LanguageActions = Create("language.document.code-actions", "Ctrl+OemPeriod");
+    public static readonly CommandDescriptor LanguageOpenResult = Create("language.document.result.open", "Ctrl+Shift+Enter");
+    public static readonly CommandDescriptor LanguageApply = Create("language.document.edit.apply", "Alt+Shift+Enter");
+
     // A document key binding can be active inside a main or floating workbench window.
     // All commands in this catalog can share that input route, so check them together.
     private static readonly CommandDescriptor[] Commands =
@@ -109,7 +125,10 @@ internal static class WorkbenchCommands
             CreateGitTag, InspectGitTag, DeleteGitTag,
             RefreshGitWorktrees, AddGitWorktree, OpenGitWorktree, LockGitWorktree, UnlockGitWorktree, RemoveGitWorktree,
             RenameGitBranch, DeleteGitBranch, ShowGitRemotes, RefreshGitRemotes, AddGitRemote, EditGitRemote,
-            RenameGitRemote, RemoveGitRemote, FetchGitRemote, PushGitRemote, PullGitRemote, SetGitUpstream];
+            RenameGitRemote, RemoveGitRemote, FetchGitRemote, PushGitRemote, PullGitRemote, SetGitUpstream,
+            LanguageComplete, LanguageHover, LanguageSignature, LanguageDefinition, LanguageDeclaration, LanguageType,
+            LanguageImplementation, LanguageReferences, LanguageSymbols, LanguageDiagnostics, LanguageFormat, LanguageRename,
+            LanguageActions, LanguageOpenResult, LanguageApply];
 
     internal static void ValidateBundledResources()
     {

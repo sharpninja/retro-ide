@@ -10,6 +10,9 @@ internal static class WorkbenchText
     internal const string FileMenu = "menu.file";
     internal const string ViewMenu = "menu.view";
     internal const string LanguageMenu = "menu.language";
+    internal const string LanguageNewSymbol = "document.language.new-symbol";
+    internal const string LanguageTools = "document.language.tools";
+    internal const string LanguageNoResults = "document.language.no-results";
     internal const string GitMenu = "menu.git";
     internal const string GitStaged = "git.status.group.staged";
     internal const string GitWorking = "git.status.group.working";
@@ -149,7 +152,7 @@ internal static class WorkbenchText
     private const string UnavailableRoot = "explorer.root.unavailable";
 
     internal static IReadOnlyList<string> Required { get; } =
-        [FileMenu, ViewMenu, LanguageMenu, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
+        [FileMenu, ViewMenu, LanguageMenu, LanguageNewSymbol, LanguageTools, LanguageNoResults, SearchQuery, SearchReplacement, SearchMatchCase, FocusSelector, NoEmulator,
             ExplorerLoading, ExplorerUnavailable, GitMenu, GitStaged, GitWorking, GitConflicts, GitDiffStaged, GitDiffWorking, GitDiffHunks,
             GitBlameWorking, GitBlameLine, GitBlameAuthor, GitBlameCommit, GitBlameSource, GitBlameUncommitted,
             GitAbortExplanation, GitSkipExplanation, GitMergeOperation, GitRebaseOperation, GitCherryPickOperation, GitRevertOperation, GitOtherOperation,

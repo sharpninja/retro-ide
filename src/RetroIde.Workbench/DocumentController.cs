@@ -371,6 +371,8 @@ internal sealed partial class DocumentController : SimpleControllerBase
                 CompleteAsync(view, _features.Documents.Close, close, request),
             _ => null,
         };
+        if (request.Completion is null)
+            DispatchLanguageCommand(view, request);
     }
 
     private void OnDiffCommandRequested(object? sender, ViewCommandRequested request)

@@ -11,7 +11,7 @@ using TextMateSharp.Grammars;
 
 namespace RetroIde.Workbench;
 
-internal static class DocumentSurface
+internal static partial class DocumentSurface
 {
     private static readonly RegistryOptions Grammars = new(ThemeName.DarkPlus);
 
@@ -36,10 +36,14 @@ internal static class DocumentSurface
             },
         };
         var panel = CreateSearchPanel(surface, editor, view);
+        var language = CreateLanguageBar(surface, view);
+        var languageResult = CreateLanguageResult(surface, view);
+        DockPanel.SetDock(language, Avalonia.Controls.Dock.Top);
+        DockPanel.SetDock(languageResult, Avalonia.Controls.Dock.Bottom);
         DockPanel.SetDock(tools, Avalonia.Controls.Dock.Top);
         DockPanel.SetDock(panel, Avalonia.Controls.Dock.Top);
         DockPanel.SetDock(status, Avalonia.Controls.Dock.Bottom);
-        surface.Children.AddRange([tools, panel, status, editor]);
+        surface.Children.AddRange([tools, panel, language, status, languageResult, editor]);
         BindEditor(editor, view);
         return surface;
     }

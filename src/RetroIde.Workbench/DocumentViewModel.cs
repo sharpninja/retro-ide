@@ -32,6 +32,7 @@ internal sealed partial class DocumentViewModel : ObservableObject, IView
         Buffer.Changed += (_, _) =>
         {
             Revision++;
+            ClearLanguagePresentation();
             IsDirty = !string.Equals(Buffer.Text, _savedText, StringComparison.Ordinal);
             LanguageContentChanged?.Invoke(this, EventArgs.Empty);
         };
@@ -177,7 +178,7 @@ internal sealed partial class DocumentViewModel : ObservableObject, IView
     private Task SaveAsync(CancellationToken token) =>
         SendAsync(_features.Explorer.SaveDocument.Id, new ExplorerFeatures.SaveDocumentInput(Capture()), token);
 
-    private async Task SendAsync(string id, object input, CancellationToken token)
+    private async Task<OperationResult?> SendAsync(string id, object input, CancellationToken token)
     {
         Dispatcher.UIThread.VerifyAccess();
         var request = new ViewCommandRequested(Guid.NewGuid(), id, _workbench.Address, ViewKey, input, token);
@@ -185,6 +186,10 @@ internal sealed partial class DocumentViewModel : ObservableObject, IView
         if (request.Completion is { } completion)
             await completion.ConfigureAwait(true);
         else
-            Receive(OperationResult.Failure(request.RequestId, "view_closed", "The source tab registration is no longer live."));
+        {
+            request.Result = OperationResult.Failure(request.RequestId, "view_closed", "The source tab registration is no longer live.");
+            Receive(request.Result);
+        }
+        return request.Result;
     }
 }

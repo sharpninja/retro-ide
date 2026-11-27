@@ -9,5 +9,6 @@
     <PackageReference Include="SharpNinja.Avalonia.RemoteControl.Runtime" />
     <ProjectReference Include="../../src/RetroIde.Workbench/RetroIde.Workbench.csproj" />
     <ProjectReference Include="../../src/RetroIde.Mcp.Stdio/RetroIde.Mcp.Stdio.csproj" />
+    <ProjectReference Include="../RetroIde.LspFixture/RetroIde.LspFixture.csproj" />
   </ItemGroup>
 </Project>
