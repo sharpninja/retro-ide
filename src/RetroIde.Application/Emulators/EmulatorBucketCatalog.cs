@@ -104,7 +104,7 @@ internal sealed class EmulatorBucketCatalog(string root)
         try
         {
             var result = await NativeGit.RunAsync(cache, TransportArguments(
-                ["clone", "--bare", "--no-local", "--no-tags", "--template=", "--", source.Repository.AbsoluteUri, staging]), token)
+                ["clone", "--bare", "--no-local", "--no-tags", "--template=", "--", source.Repository.AbsoluteUri, GitPath(staging)]), token)
                 .ConfigureAwait(false);
             if (result is null)
                 throw new IOException("The configured Git bucket could not be cloned.");
@@ -237,11 +237,14 @@ internal sealed class EmulatorBucketCatalog(string root)
         NativeGit.RunAsync(repository, RepositoryArguments(repository, command), token);
 
     private static List<string> RepositoryArguments(string repository, IReadOnlyList<string> command) =>
-        ["--no-replace-objects", "--git-dir", repository, "-c", "core.hooksPath=" + Path.Combine(repository, "disabled-hooks"), .. command];
+        ["--no-replace-objects", "--git-dir", GitPath(repository), "-c", "core.longpaths=true",
+         "-c", "core.hooksPath=" + GitPath(Path.Combine(repository, "disabled-hooks")), .. command];
 
     private static List<string> TransportArguments(IReadOnlyList<string> command) =>
-        ["-c", "protocol.allow=never", "-c", "protocol.https.allow=always", "-c", "protocol.http.allow=always",
+        ["-c", "core.longpaths=true", "-c", "protocol.allow=never", "-c", "protocol.https.allow=always", "-c", "protocol.http.allow=always",
          "-c", "protocol.ssh.allow=always", "-c", "protocol.file.allow=always", "-c", "protocol.ext.allow=never", .. command];
+
+    private static string GitPath(string path) => OperatingSystem.IsWindows() ? path.Replace('\\', '/') : path;
 
     private static string HashKey(string value) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
