@@ -11,7 +11,7 @@ using Connection = RetroIde.IntegrationTests.GitWorkspaceStateTests.WorkspaceCon
 namespace RetroIde.IntegrationTests;
 
 /// <summary>Verifies overlapping native Git worktree requests against shared remote configuration.</summary>
-public sealed class GitRemoteConcurrencyTests
+public sealed partial class GitRemoteConcurrencyTests
 {
     /// <remarks>TR-RETRO-GIT-013#ac-git-state-consistency; TEST-RETRO-013#ac-test-git-stage-and-push.</remarks>
     [AvaloniaFact]
