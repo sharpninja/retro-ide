@@ -1,0 +1,55 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#74a9d0,color:#74a9d0
+
+        10("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 10 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        11("<div style='font-weight: bold'>IDE ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.ComponentModel and SimpleMVC]</div><div style='font-size: 80%; margin-top:10px'>Implement IView with a stable<br />ViewKey. Raise<br />CommandRequested, receive<br />correlated results on the UI<br />thread, and expose observable<br />properties through<br />ObservableObject.</div>")
+        style 11 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        14("<div style='font-weight: bold'>Project Explorer</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia and Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Dockable tree of project and<br />folder roots. Restores stable<br />roots, expansion and<br />selection. Loads children on<br />demand, refreshes affected<br />expanded branches, and offers<br />Open and Reveal for the<br />active workspace.</div>")
+        style 14 fill:#17665b,stroke:#10473f,color:#ffffff
+        22("<div style='font-weight: bold'>Source Editor</div><div style='font-size: 70%; margin-top: 0px'>[Component: AvaloniaEdit.TextEditor]</div><div style='font-size: 80%; margin-top:10px'>Keeps independent tab<br />buffers, selection, caret,<br />undo and redo through<br />floating and redocking.<br />Provides find and replace,<br />syntax and plain fallback,<br />and diagnostic fixture<br />navigation. Live build<br />diagnostics and debugger<br />markers are later<br />integrations.</div>")
+        style 22 fill:#17665b,stroke:#10473f,color:#ffffff
+        24("<div style='font-weight: bold'>IDE State (Model)</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Provides observable<br />workspace, presentation<br />culture, active document and<br />target, selected session,<br />availability, operation<br />state, interaction blocks by<br />scope, and diagnostics.</div>")
+        style 24 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        4("<div style='font-weight: bold'>Workbench and Docking (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia and Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Hosts menus, command bars,<br />keyboard bindings, documents,<br />and docked tools. Presents<br />command metadata and<br />localization, and applies the<br />system wait cursor to<br />logically blocked UI.</div>")
+        style 4 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch and result<br />delivery for views registered<br />directly with it. Provides<br />the shared execution entry<br />point for typed requests from<br />all controllers into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+      end
+
+      47[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, Git<br />metadata, and portable<br />emulator pins and history in<br />each project's<br />.retroide/emulator.json.</div>")]
+      style 47 fill:#275c60,stroke:#1b4043,color:#ffffff
+    end
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+    47[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, Git<br />metadata, and portable<br />emulator pins and history in<br />each project's<br />.retroide/emulator.json.</div>")]
+    style 47 fill:#275c60,stroke:#1b4043,color:#ffffff
+
+    1-. "<div>1. Open a project or folder<br />and use Project Explorer</div><div style='font-size: 70%'></div>" .->4
+    4-. "<div>2. Show project and folder<br />roots for the workspace</div><div style='font-size: 70%'></div>" .->14
+    14-. "<div>3. Request the children for<br />the expanded root</div><div style='font-size: 70%'></div>" .->11
+    11-. "<div>4. Route the explorer query<br />through its registered<br />controller</div><div style='font-size: 70%'>[IView events]</div>" .->8
+    8-. "<div>5. Read children for the<br />captured workspace root</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>6. Enumerate the selected<br />directory</div><div style='font-size: 70%'>[Local filesystem]</div>" .->47
+    10-. "<div>7. Publish the updated<br />explorer branch</div><div style='font-size: 70%'></div>" .->24
+    14-. "<div>8. Open the selected file<br />under its workspace root</div><div style='font-size: 70%'></div>" .->11
+    11-. "<div>9. Raise the Open Document<br />command</div><div style='font-size: 70%'>[IView events]</div>" .->8
+    8-. "<div>10. Resolve the selected<br />document and its editor tab</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>11. Open the captured project<br />or folder file</div><div style='font-size: 70%'>[Local filesystem]</div>" .->47
+    10-. "<div>12. Publish the new or active<br />document tab</div><div style='font-size: 70%'></div>" .->24
+    4-. "<div>13. Show the source file in<br />the AvaloniaEdit tab</div><div style='font-size: 70%'></div>" .->22
+
+  end

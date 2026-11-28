@@ -1,0 +1,55 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    60("<div style='font-weight: bold'>Adapter Conformance Fixture</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Supplies a fixture binding<br />factory and typed provider<br />ports for Phase 04 contract<br />verification.</div>")
+    style 60 fill:#50446e,stroke:#382f4d,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#74a9d0,color:#74a9d0
+
+        26("<div style='font-weight: bold'>Session Coordinator</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorSessionCoordinator and PinnedEmulatorSession]</div><div style='font-size: 80%; margin-top:10px'>Negotiates the installed<br />binding's contract, validates<br />the opened session identity<br />and close policy, and<br />transfers the package lease<br />to the pinned session.<br />Fixture adapters verify<br />launch, attach, reconnect,<br />and release.</div>")
+        style 26 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        27("<div style='font-weight: bold'>Typed Session Control</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorSessionControl]</div><div style='font-size: 80%; margin-top:10px'>Checks captured identity,<br />grants, capabilities,<br />revisions, and payloads<br />before routing to advertised<br />ports. Correlates exact<br />retries, operation receipts,<br />and uncertain outcomes.</div>")
+        style 27 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        28("<div style='font-weight: bold'>Session Subscriptions</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorSubscriptions and BufferedEmulatorMedia]</div><div style='font-size: 80%; margin-top:10px'>Reserves provider<br />subscriptions, tracks ordered<br />control cursors and gaps, and<br />buffers media independently.<br />Drains pending and paused<br />subscriptions before the<br />provider connection closes.</div>")
+        style 28 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        42("<div style='font-weight: bold'>Pinned Adapter Resolver</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorWorkspace and EmulatorBundleStore]</div><div style='font-size: 80%; margin-top:10px'>Resolves the project's<br />selected installed bundle for<br />the host and contract<br />version. Checks the<br />installation receipt and<br />binding entry point, exposes<br />verified profile references,<br />and supplies a lease for<br />session open.</div>")
+        style 42 fill:#24557b,stroke:#74a9d0,color:#ffffff
+      end
+
+      47[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, Git<br />metadata, and portable<br />emulator pins and history in<br />each project's<br />.retroide/emulator.json.</div>")]
+      style 47 fill:#275c60,stroke:#1b4043,color:#ffffff
+      48[("<div style='font-weight: bold'>Local Emulator Bundle Store</div><div style='font-size: 70%; margin-top: 0px'>[Container: Per-user filesystem and file leases]</div><div style='font-size: 80%; margin-top:10px'>Holds verified, versioned<br />installations, bindings,<br />optional declarative debugger<br />profiles, installation<br />receipts, and cached bucket<br />metadata. Active leases<br />prevent removal.</div>")]
+      style 48 fill:#24557b,stroke:#74a9d0,color:#ffffff
+    end
+
+    47[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, Git<br />metadata, and portable<br />emulator pins and history in<br />each project's<br />.retroide/emulator.json.</div>")]
+    style 47 fill:#275c60,stroke:#1b4043,color:#ffffff
+    48[("<div style='font-weight: bold'>Local Emulator Bundle Store</div><div style='font-size: 70%; margin-top: 0px'>[Container: Per-user filesystem and file leases]</div><div style='font-size: 80%; margin-top:10px'>Holds verified, versioned<br />installations, bindings,<br />optional declarative debugger<br />profiles, installation<br />receipts, and cached bucket<br />metadata. Active leases<br />prevent removal.</div>")]
+    style 48 fill:#24557b,stroke:#74a9d0,color:#ffffff
+    60("<div style='font-weight: bold'>Adapter Conformance Fixture</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Supplies a fixture binding<br />factory and typed provider<br />ports for Phase 04 contract<br />verification.</div>")
+    style 60 fill:#50446e,stroke:#382f4d,color:#ffffff
+
+    42-. "<div>1. Resolve the exact pin from<br />the selected project</div><div style='font-size: 70%'></div>" .->47
+    42-. "<div>2. Verify the cached<br />installation and acquire its<br />active-version lease</div><div style='font-size: 70%'></div>" .->48
+    42-. "<div>3. Pass the leased<br />installation and launch or<br />attach plan</div><div style='font-size: 70%'></div>" .->26
+    26-. "<div>4. Activate the fixture<br />factory, describe versions,<br />negotiate launch or attach,<br />and open</div><div style='font-size: 70%'>[Phase 04 conformance only]</div>" .->60
+    60-. "<div>5. Return the compatible<br />session identity, close<br />policy, and initial state</div><div style='font-size: 70%'></div>" .->26
+    26-. "<div>6. Bind advertised typed<br />ports to the verified session</div><div style='font-size: 70%'></div>" .->27
+    27-. "<div>7. Subscribe to control<br />events and independent<br />bounded media</div><div style='font-size: 70%'></div>" .->28
+    28-. "<div>8. Open control and media<br />subscriptions after reserving<br />their slots</div><div style='font-size: 70%'>[Phase 04 conformance only]</div>" .->60
+    60-. "<div>9. Return sequenced events<br />and independent media items</div><div style='font-size: 70%'></div>" .->28
+    27-. "<div>10. Reconcile correlated<br />operations or reconnect to<br />the same instance as<br />supported</div><div style='font-size: 70%'>[Phase 04 conformance only]</div>" .->60
+    60-. "<div>11. Return the correlated<br />result and fresh state</div><div style='font-size: 70%'></div>" .->27
+    26-. "<div>12. Cancel session lifetime,<br />await pending reads, and join<br />media pumps</div><div style='font-size: 70%'></div>" .->28
+    28-. "<div>13. Dispose active or paused<br />provider subscriptions during<br />drain</div><div style='font-size: 70%'>[Phase 04 conformance only]</div>" .->60
+    26-. "<div>14. Dispose the connection<br />after subscription cleanup</div><div style='font-size: 70%'>[Phase 04 conformance only]</div>" .->60
+    26-. "<div>15. Release the<br />installed-version lease after<br />connection disposal</div><div style='font-size: 70%'></div>" .->48
+
+  end

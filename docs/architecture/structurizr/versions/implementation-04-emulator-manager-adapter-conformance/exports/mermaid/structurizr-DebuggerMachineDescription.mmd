@@ -1,0 +1,64 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    52("<div style='font-weight: bold'>ViceSharp</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External .NET Commodore<br />emulator host with published<br />gRPC contracts.</div>")
+    click 52 https://github.com/sharpninja/vice-sharp "https://github.com/sharpninja/vice-sharp"
+    style 52 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#74a9d0,color:#74a9d0
+
+        11("<div style='font-weight: bold'>IDE ViewModels (View)</div><div style='font-size: 70%; margin-top: 0px'>[Component: CommunityToolkit.Mvvm.ComponentModel and SimpleMVC]</div><div style='font-size: 80%; margin-top:10px'>Implement IView with a stable<br />ViewKey. Raise<br />CommandRequested, receive<br />correlated results on the UI<br />thread, and expose observable<br />properties through<br />ObservableObject.</div>")
+        style 11 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        24("<div style='font-weight: bold'>IDE State (Model)</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Provides observable<br />workspace, presentation<br />culture, active document and<br />target, selected session,<br />availability, operation<br />state, interaction blocks by<br />scope, and diagnostics.</div>")
+        style 24 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        26("<div style='font-weight: bold'>Session Coordinator</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorSessionCoordinator and PinnedEmulatorSession]</div><div style='font-size: 80%; margin-top:10px'>Negotiates the installed<br />binding's contract, validates<br />the opened session identity<br />and close policy, and<br />transfers the package lease<br />to the pinned session.<br />Fixture adapters verify<br />launch, attach, reconnect,<br />and release.</div>")
+        style 26 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        32("<div style='font-weight: bold'>Debugger and Guest Inspectors</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Displays CPU-specific<br />registers, platform<br />disassembly, bounded memory<br />and bank selection, reference<br />timing, and advertised live<br />clock-phase or bus data.<br />Captures the user's<br />byte-order display choice and<br />exposes available raw and<br />guest inspection.</div>")
+        style 32 fill:#275c60,stroke:#d9a669,color:#ffffff
+        33("<div style='font-weight: bold'>Debugger Target Model</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET]</div><div style='font-size: 80%; margin-top:10px'>Validates the active<br />session's descriptor, CPU and<br />map revision. Projects<br />supporting views and bounded<br />inspection scope. Applies<br />Emulator default,<br />Little-endian, or Big-endian<br />to multibyte display values.</div>")
+        style 33 fill:#275c60,stroke:#d9a669,color:#ffffff
+        34("<div style='font-weight: bold'>CPU References and Display Profiles</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET, declarative profile data]</div><div style='font-size: 80%; margin-top:10px'>Resolves versioned register<br />and flag definitions, opcode<br />encodings, addressing rules,<br />reference timing and platform<br />display profiles for the<br />6502, 6809, Z80, 8080, 8086,<br />6800, and 68000 families.<br />Resolves package-supplied<br />declarative profiles to the<br />selected version.</div>")
+        style 34 fill:#275c60,stroke:#d9a669,color:#ffffff
+        42("<div style='font-weight: bold'>Pinned Adapter Resolver</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorWorkspace and EmulatorBundleStore]</div><div style='font-size: 80%; margin-top:10px'>Resolves the project's<br />selected installed bundle for<br />the host and contract<br />version. Checks the<br />installation receipt and<br />binding entry point, exposes<br />verified profile references,<br />and supplies a lease for<br />session open.</div>")
+        style 42 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        45("<div style='font-weight: bold'>ViceSharp Adapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: ViceSharp gRPC contracts]</div><div style='font-size: 80%; margin-top:10px'>Attaches to the configured<br />host and maps available<br />session metadata, debugger<br />descriptions, monitor, media,<br />snapshot, and diagnostics<br />services.</div>")
+        style 45 fill:#275c60,stroke:#d9a669,color:#ffffff
+      end
+
+      46[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout, workspace<br />roots and Explorer state,<br />preferences, language server<br />registrations, and configured<br />emulator buckets.</div>")]
+      style 46 fill:#24557b,stroke:#74a9d0,color:#ffffff
+      48[("<div style='font-weight: bold'>Local Emulator Bundle Store</div><div style='font-size: 70%; margin-top: 0px'>[Container: Per-user filesystem and file leases]</div><div style='font-size: 80%; margin-top:10px'>Holds verified, versioned<br />installations, bindings,<br />optional declarative debugger<br />profiles, installation<br />receipts, and cached bucket<br />metadata. Active leases<br />prevent removal.</div>")]
+      style 48 fill:#24557b,stroke:#74a9d0,color:#ffffff
+    end
+
+    46[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout, workspace<br />roots and Explorer state,<br />preferences, language server<br />registrations, and configured<br />emulator buckets.</div>")]
+    style 46 fill:#24557b,stroke:#74a9d0,color:#ffffff
+    48[("<div style='font-weight: bold'>Local Emulator Bundle Store</div><div style='font-size: 70%; margin-top: 0px'>[Container: Per-user filesystem and file leases]</div><div style='font-size: 80%; margin-top:10px'>Holds verified, versioned<br />installations, bindings,<br />optional declarative debugger<br />profiles, installation<br />receipts, and cached bucket<br />metadata. Active leases<br />prevent removal.</div>")]
+    style 48 fill:#24557b,stroke:#74a9d0,color:#ffffff
+    52("<div style='font-weight: bold'>ViceSharp</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External .NET Commodore<br />emulator host with published<br />gRPC contracts.</div>")
+    click 52 https://github.com/sharpninja/vice-sharp "https://github.com/sharpninja/vice-sharp"
+    style 52 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    26-. "<div>1. Resolve the pinned adapter<br />binding and negotiate the<br />descriptor capability</div><div style='font-size: 70%'></div>" .->42
+    42-. "<div>2. Load the binding from the<br />leased, verified installed<br />version</div><div style='font-size: 70%'></div>" .->48
+    42-. "<div>3. Request the active machine<br />of the authorized attach<br />session</div><div style='font-size: 70%'></div>" .->45
+    45-. "<div>4. Read the configured CPU,<br />machine mapping and supported<br />observations through the<br />backend interface</div><div style='font-size: 70%'>[gRPC]</div>" .->52
+    52-. "<div>5. Return available live<br />session data and negotiated<br />capabilities</div><div style='font-size: 70%'>[gRPC]</div>" .->45
+    45-. "<div>6. Normalize available data<br />into the versioned descriptor<br />and scoped map revision</div><div style='font-size: 70%'></div>" .->42
+    42-. "<div>7. Return the negotiated<br />descriptor or a stable<br />unavailable result</div><div style='font-size: 70%'></div>" .->26
+    26-. "<div>8. Bind only the selected<br />instance and apply its<br />current map revision</div><div style='font-size: 70%'></div>" .->33
+    33-. "<div>9. Resolve the exact CPU<br />variant and declared platform<br />profile</div><div style='font-size: 70%'></div>" .->34
+    34-. "<div>10. Read declared profile<br />data from the verified<br />package if required</div><div style='font-size: 70%'></div>" .->48
+    33-. "<div>11. Read the user's saved<br />display byte-order preference</div><div style='font-size: 70%'></div>" .->46
+    33-. "<div>12. Publish scoped debugger<br />rows or an available raw view</div><div style='font-size: 70%'></div>" .->24
+    11-. "<div>13. Observe the target<br />context, address limits and<br />available operations</div><div style='font-size: 70%'></div>" .->24
+    32-. "<div>14. Render target-specific<br />registers, disassembly,<br />memory and timing</div><div style='font-size: 70%'></div>" .->11
+
+  end

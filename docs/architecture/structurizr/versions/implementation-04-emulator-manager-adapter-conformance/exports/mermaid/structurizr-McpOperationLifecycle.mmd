@@ -1,0 +1,57 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    54("<div style='font-weight: bold'>Configured CLI or Desktop Agent</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Uses available scoped MCP<br />resources and commands; its<br />lifetime is independent of<br />the emulator session.</div>")
+    style 54 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#74a9d0,color:#74a9d0
+
+        10("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 10 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        17("<div style='font-weight: bold'>Git Service</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET handlers and native Git CLI]</div><div style='font-size: 80%; margin-top:10px'>Runs installed Git for a<br />captured checkout. Reads<br />machine state, validates<br />reviewed Git mutations,<br />publishes prepared index<br />updates, and reports typed<br />results for repository,<br />conflict, worktree,<br />submodule, and LFS workflows.</div>")
+        style 17 fill:#235c49,stroke:#62aa88,color:#ffffff
+        38("<div style='font-weight: bold'>Retro IDE MCP Host</div><div style='font-size: 70%; margin-top: 0px'>[Component: Official MCP C# SDK, Microsoft.Extensions.Hosting, ASP.NET Core]</div><div style='font-size: 80%; margin-top:10px'>Exposes registered IDE tools<br />through the shared CQRS<br />dispatcher. Generates schemas<br />from public ViewModel<br />contracts, verifies live<br />context and grants, and<br />returns scoped operation<br />handles for supported<br />background calls including<br />package refresh.</div>")
+        style 38 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        39("<div style='font-weight: bold'>Scoped Background Operations</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET WorkbenchOperations]</div><div style='font-size: 80%; margin-top:10px'>Tracks accepted and running<br />work, cancellation, and typed<br />success or failure. Checks<br />the original actor grant<br />before reading, cancelling,<br />or returning an operation<br />result.</div>")
+        style 39 fill:#235c49,stroke:#62aa88,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch and result<br />delivery for views registered<br />directly with it. Provides<br />the shared execution entry<br />point for typed requests from<br />all controllers into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+      end
+
+      49("<div style='font-weight: bold'>MCP Stdio Bridge</div><div style='font-size: 70%; margin-top: 0px'>[Container: .NET, ModelContextProtocol]</div><div style='font-size: 80%; margin-top:10px'>Launched by CLI clients to<br />attach MCP tools to the<br />selected running Retro IDE<br />instance.</div>")
+      style 49 fill:#235c49,stroke:#184033,color:#ffffff
+    end
+
+    49("<div style='font-weight: bold'>MCP Stdio Bridge</div><div style='font-size: 70%; margin-top: 0px'>[Container: .NET, ModelContextProtocol]</div><div style='font-size: 80%; margin-top:10px'>Launched by CLI clients to<br />attach MCP tools to the<br />selected running Retro IDE<br />instance.</div>")
+    style 49 fill:#235c49,stroke:#184033,color:#ffffff
+    54("<div style='font-weight: bold'>Configured CLI or Desktop Agent</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Uses available scoped MCP<br />resources and commands; its<br />lifetime is independent of<br />the emulator session.</div>")
+    style 54 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    54-. "<div>1. Invoke a registered Git<br />tool with captured context<br />and background enabled</div><div style='font-size: 70%'>[MCP Streamable HTTP on loopback]</div>" .->38
+    38-. "<div>2. Submit the typed request<br />with the caller's grant</div><div style='font-size: 70%'></div>" .->8
+    8-. "<div>3. Check the captured<br />workbench context and<br />background eligibility</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>4. Register the operation<br />with its original actor grant</div><div style='font-size: 70%'></div>" .->39
+    39-. "<div>5. Return the operation<br />handle</div><div style='font-size: 70%'></div>" .->10
+    8-. "<div>6. Return the accepted handle</div><div style='font-size: 70%'></div>" .->38
+    38-. "<div>7. Return the typed operation<br />handle over HTTP</div><div style='font-size: 70%'>[MCP]</div>" .->54
+    39-. "<div>8. Dispatch the operation<br />with its linked cancellation<br />token</div><div style='font-size: 70%'></div>" .->8
+    8-. "<div>9. Run the same typed Git<br />handler used by the workbench</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>10. Run the reviewed Git<br />operation</div><div style='font-size: 70%'></div>" .->17
+    54-. "<div>11. Request operation status<br />or cancellation, then request<br />the result</div><div style='font-size: 70%'>[MCP stdio]</div>" .->49
+    49-. "<div>12. Forward the scoped calls<br />to the same live IDE</div><div style='font-size: 70%'></div>" .->38
+    38-. "<div>13. Submit the authorized<br />operation-handle calls</div><div style='font-size: 70%'></div>" .->8
+    8-. "<div>14. Dispatch the<br />operation-handle request</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>15. Check the original grant<br />for status, cancellation, or<br />result</div><div style='font-size: 70%'></div>" .->39
+    39-. "<div>16. Return the status or<br />typed success, failure, or<br />cancellation</div><div style='font-size: 70%'></div>" .->10
+    8-. "<div>17. Return the scoped result<br />or a stable<br />handle-unavailable code</div><div style='font-size: 70%'></div>" .->38
+    38-. "<div>18. Send the typed reply to<br />the requesting bridge</div><div style='font-size: 70%'>[MCP Streamable HTTP on loopback]</div>" .->49
+    49-. "<div>19. Deliver the response over<br />stdio</div><div style='font-size: 70%'>[MCP stdio]</div>" .->54
+
+  end

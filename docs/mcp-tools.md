@@ -56,8 +56,10 @@ A bundle pin has `bucket`, `bundle`, `version`, and `manifestRevision` fields. P
 | `emulator_install_bundle` | `pin`, workbench `context`, optional `background` | The verified host installation or an operation handle. |
 | `emulator_update_bundle` | Installed `current` pin, reviewed catalog `target` pin, workbench `context`, optional `background` | Installs the current catalog release alongside the original. Returns the installation or an operation handle. |
 | `emulator_remove_bundle` | `pin`, workbench `context` | Removes the exact installation. A live session lease protects its release. |
-| `emulator_get_project_bundle` | `rootId` | The active emulator pin, selection history, and binding resolution for this host. When ready, the result includes the adapter ID, runtime identifier, and contract version. |
+| `emulator_get_project_bundle` | `rootId` | The active emulator pin, selection history, and binding resolution for this host. When ready, the result includes the adapter ID, runtime identifier, contract version, and verified debugger profile references. |
 | `emulator_select_bundle`, `emulator_rollback_bundle` | `rootId`, `pin`, workbench `context` | Persists the reviewed installed release as the project selection. Rollback chooses a compatible installed pin from that project's history. |
+
+Successful package mutations notify the registered Emulators pane on Avalonia. It coalesces pending refreshes and discards a late reply from an earlier project selection. A background bucket refresh uses the same scoped operation ID across both MCP transports. [Phase 04 verification](receipts/phase-04-emulator-manager-adapter-conformance.md)
 
 ## Phase 03 Git tools
 

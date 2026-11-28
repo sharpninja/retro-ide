@@ -134,6 +134,11 @@ documents:
     source: docs/receipts/phase-03-git-terminal-language-servers.md
     target: Phase-03-Verification.md
     platforms: [github, azure]
+  - id: phase04-verification
+    title: Phase 04 Verification
+    source: docs/receipts/phase-04-emulator-manager-adapter-conformance.md
+    target: Phase-04-Verification.md
+    platforms: [github, azure]
 navigation:
   - document: home
   - document: project-overview
@@ -152,6 +157,7 @@ navigation:
       - document: phase01-verification
       - document: phase02-verification
       - document: phase03-verification
+      - document: phase04-verification
   - document: functional
   - document: technical
   - document: testing

@@ -1,0 +1,49 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    60("<div style='font-weight: bold'>Adapter Conformance Fixture</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Supplies a fixture binding<br />factory and typed provider<br />ports for Phase 04 contract<br />verification.</div>")
+    style 60 fill:#50446e,stroke:#382f4d,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#74a9d0,color:#74a9d0
+
+        26("<div style='font-weight: bold'>Session Coordinator</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorSessionCoordinator and PinnedEmulatorSession]</div><div style='font-size: 80%; margin-top:10px'>Negotiates the installed<br />binding's contract, validates<br />the opened session identity<br />and close policy, and<br />transfers the package lease<br />to the pinned session.<br />Fixture adapters verify<br />launch, attach, reconnect,<br />and release.</div>")
+        style 26 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        27("<div style='font-weight: bold'>Typed Session Control</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorSessionControl]</div><div style='font-size: 80%; margin-top:10px'>Checks captured identity,<br />grants, capabilities,<br />revisions, and payloads<br />before routing to advertised<br />ports. Correlates exact<br />retries, operation receipts,<br />and uncertain outcomes.</div>")
+        style 27 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        28("<div style='font-weight: bold'>Session Subscriptions</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorSubscriptions and BufferedEmulatorMedia]</div><div style='font-size: 80%; margin-top:10px'>Reserves provider<br />subscriptions, tracks ordered<br />control cursors and gaps, and<br />buffers media independently.<br />Drains pending and paused<br />subscriptions before the<br />provider connection closes.</div>")
+        style 28 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        29("<div style='font-weight: bold'>Machine Descriptor and Memory Map</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET IMachineDescriptorPort and MachineMap]</div><div style='font-size: 80%; margin-top:10px'>Validates the session's<br />descriptor schema, CPU and<br />address spaces. Watches<br />ordered map revisions,<br />rechecks current capability<br />and map scope before mapped<br />operations, and retains<br />independently advertised raw<br />inspection.</div>")
+        style 29 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        30("<div style='font-weight: bold'>Verified Package Profiles</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET declarative profile validation]</div><div style='font-size: 80%; margin-top:10px'>Checks each declared debugger<br />profile's reference, schema,<br />path, and digest. Projects<br />available profile references<br />into project selection and<br />resolves the active<br />descriptor's reference under<br />its pinned package lease.</div>")
+        style 30 fill:#24557b,stroke:#74a9d0,color:#ffffff
+      end
+
+      48[("<div style='font-weight: bold'>Local Emulator Bundle Store</div><div style='font-size: 70%; margin-top: 0px'>[Container: Per-user filesystem and file leases]</div><div style='font-size: 80%; margin-top:10px'>Holds verified, versioned<br />installations, bindings,<br />optional declarative debugger<br />profiles, installation<br />receipts, and cached bucket<br />metadata. Active leases<br />prevent removal.</div>")]
+      style 48 fill:#24557b,stroke:#74a9d0,color:#ffffff
+    end
+
+    48[("<div style='font-weight: bold'>Local Emulator Bundle Store</div><div style='font-size: 70%; margin-top: 0px'>[Container: Per-user filesystem and file leases]</div><div style='font-size: 80%; margin-top:10px'>Holds verified, versioned<br />installations, bindings,<br />optional declarative debugger<br />profiles, installation<br />receipts, and cached bucket<br />metadata. Active leases<br />prevent removal.</div>")]
+    style 48 fill:#24557b,stroke:#74a9d0,color:#ffffff
+    60("<div style='font-weight: bold'>Adapter Conformance Fixture</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Supplies a fixture binding<br />factory and typed provider<br />ports for Phase 04 contract<br />verification.</div>")
+    style 60 fill:#50446e,stroke:#382f4d,color:#ffffff
+
+    26-. "<div>1. Use the pinned session<br />identity and advertised<br />capability revisions</div><div style='font-size: 70%'></div>" .->27
+    27-. "<div>2. Request and validate the<br />negotiated machine descriptor</div><div style='font-size: 70%'></div>" .->29
+    29-. "<div>3. Describe the active<br />fixture machine on its typed<br />port</div><div style='font-size: 70%'>[Phase 04 conformance only]</div>" .->60
+    60-. "<div>4. Return CPU variants,<br />address spaces, map revision,<br />and the optional profile<br />reference</div><div style='font-size: 70%'></div>" .->29
+    26-. "<div>5. Resolve the descriptor's<br />profile only while its<br />identity and map revision are<br />current</div><div style='font-size: 70%'></div>" .->30
+    30-. "<div>6. Verify the reference and<br />profile asset within the<br />leased package version</div><div style='font-size: 70%'></div>" .->48
+    60-. "<div>7. Report ordered map changes<br />or current capability state</div><div style='font-size: 70%'></div>" .->28
+    28-. "<div>8. Observe the current map,<br />recover event gaps, and<br />invalidate a withdrawn<br />description</div><div style='font-size: 70%'></div>" .->29
+    27-. "<div>9. Recheck identity, cursor,<br />capabilities, range, and map<br />revision before mapped access</div><div style='font-size: 70%'></div>" .->29
+    27-. "<div>10. Dispatch current mapped<br />access, or use separately<br />advertised raw inspection<br />during descriptor<br />unavailability</div><div style='font-size: 70%'>[Phase 04 conformance only]</div>" .->60
+    60-. "<div>11. Return the scoped result<br />or a stable conflict or<br />unsupported outcome</div><div style='font-size: 70%'></div>" .->27
+
+  end

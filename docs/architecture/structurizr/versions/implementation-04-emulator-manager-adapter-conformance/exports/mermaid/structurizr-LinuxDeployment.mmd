@@ -1,0 +1,46 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Deployment View: Linux Development"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    subgraph 270 ["Developer Workstation"]
+      style 270 fill:#ffffff,stroke:#1b4043,color:#ffffff
+
+      271("<div style='font-weight: bold'>Retro IDE Desktop</div><div style='font-size: 70%; margin-top: 0px'>[Container: .NET, Avalonia, Dock.Avalonia]</div><div style='font-size: 80%; margin-top:10px'>Owns the workbench, source<br />tools, package management,<br />and shared emulator session<br />contracts.</div>")
+      style 271 fill:#24557b,stroke:#74a9d0,color:#ffffff
+      272("<div style='font-weight: bold'>MCP Stdio Bridge</div><div style='font-size: 70%; margin-top: 0px'>[Container: .NET, ModelContextProtocol]</div><div style='font-size: 80%; margin-top:10px'>Launched by CLI clients to<br />attach MCP tools to the<br />selected running Retro IDE<br />instance.</div>")
+      style 272 fill:#235c49,stroke:#184033,color:#ffffff
+      275[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout, workspace<br />roots and Explorer state,<br />preferences, language server<br />registrations, and configured<br />emulator buckets.</div>")]
+      style 275 fill:#24557b,stroke:#74a9d0,color:#ffffff
+      277[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, Git<br />metadata, and portable<br />emulator pins and history in<br />each project's<br />.retroide/emulator.json.</div>")]
+      style 277 fill:#275c60,stroke:#1b4043,color:#ffffff
+      279[("<div style='font-weight: bold'>Local Emulator Bundle Store</div><div style='font-size: 70%; margin-top: 0px'>[Container: Per-user filesystem and file leases]</div><div style='font-size: 80%; margin-top:10px'>Holds verified, versioned<br />installations, bindings,<br />optional declarative debugger<br />profiles, installation<br />receipts, and cached bucket<br />metadata. Active leases<br />prevent removal.</div>")]
+      style 279 fill:#24557b,stroke:#74a9d0,color:#ffffff
+      281("<div style='font-weight: bold'>UAE Developer</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Owns the UAE40 profile,<br />control service, isolated<br />worker and UAE-specific<br />protocol and diagnostics. The<br />desktop-facing interface is<br />pending.</div>")
+      style 281 fill:#57636b,stroke:#3c454a,color:#ffffff
+      283("<div style='font-weight: bold'>VICE</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External x64sc process and<br />Commodore 64 runtime. Its<br />binary monitor is the<br />documented debugger<br />interface.</div>")
+      style 283 fill:#57636b,stroke:#3c454a,color:#ffffff
+      285("<div style='font-weight: bold'>ViceSharp</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External .NET Commodore<br />emulator host with published<br />gRPC contracts.</div>")
+      style 285 fill:#57636b,stroke:#3c454a,color:#ffffff
+      288("<div style='font-weight: bold'>Configured Language Servers</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Installed processes such as<br />clangd and rust-analyzer that<br />supply language analysis<br />through negotiated LSP<br />features.</div>")
+      style 288 fill:#57636b,stroke:#3c454a,color:#ffffff
+      291("<div style='font-weight: bold'>Native Repository Shell</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Runs the user's interactive<br />shell with the inherited<br />environment and the selected<br />Git worktree as its current<br />directory.</div>")
+      style 291 fill:#57636b,stroke:#3c454a,color:#ffffff
+    end
+
+    272-. "<div>Attaches to the same<br />registered IDE instance with<br />the client's granted context</div><div style='font-size: 70%'></div>" .->271
+    271-. "<div>Returns the invocation result<br />to the attached bridge</div><div style='font-size: 70%'>[MCP Streamable HTTP on loopback]</div>" .->272
+    271-. "<div>Restores roots, expansion and<br />selection across workbench<br />reopen</div><div style='font-size: 70%'></div>" .->275
+    271-. "<div>Receives external file<br />changes and monitors root<br />availability</div><div style='font-size: 70%'></div>" .->277
+    271-. "<div>Reads optional declarative<br />display profiles from the<br />leased, verified package<br />version</div><div style='font-size: 70%'></div>" .->279
+    271-. "<div>Launches or attaches through<br />UAE control when a<br />desktop-facing bridge is<br />available</div><div style='font-size: 70%'>[Planned UAE control bridge]</div>" .->281
+    271-. "<div>Starts x64sc and exchanges<br />supported debugger commands<br />and events</div><div style='font-size: 70%'>[Local process and loopback binary monitor]</div>" .->283
+    285-. "<div>Returns session data and<br />streams available events and<br />frames</div><div style='font-size: 70%'>[gRPC]</div>" .->271
+    271-. "<div>Attaches to a configured host<br />and uses its published<br />session services</div><div style='font-size: 70%'>[gRPC]</div>" .->285
+    288-. "<div>Returns results and sends<br />diagnostics and workspace<br />requests</div><div style='font-size: 70%'>[JSON-RPC over stdio]</div>" .->271
+    271-. "<div>Starts and manages server<br />processes, synchronizes<br />documents, and sends<br />negotiated LSP requests</div><div style='font-size: 70%'>[JSON-RPC over stdio]</div>" .->288
+    291-. "<div>Streams native output and<br />reports process exit</div><div style='font-size: 70%'>[Native PTY]</div>" .->271
+    271-. "<div>Starts the shell in the<br />verified worktree and sends<br />input and resize requests</div><div style='font-size: 70%'>[Native PTY]</div>" .->291
+
+  end

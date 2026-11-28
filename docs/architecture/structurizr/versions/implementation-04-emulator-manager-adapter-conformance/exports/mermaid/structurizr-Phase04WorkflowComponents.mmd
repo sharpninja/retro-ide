@@ -1,0 +1,108 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    54("<div style='font-weight: bold'>Configured CLI or Desktop Agent</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Uses available scoped MCP<br />resources and commands; its<br />lifetime is independent of<br />the emulator session.</div>")
+    style 54 fill:#57636b,stroke:#3c454a,color:#ffffff
+    55("<div style='font-weight: bold'>Emulator Bucket Repositories</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Configured Git sources<br />publish per-emulator JSON<br />manifests pointing to<br />versioned release archives.</div>")
+    style 55 fill:#57636b,stroke:#3c454a,color:#ffffff
+    56("<div style='font-weight: bold'>Emulator Release Artifact Hosting</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosts the versioned platform<br />archives referenced by the<br />bucket manifests.</div>")
+    style 56 fill:#57636b,stroke:#3c454a,color:#ffffff
+    60("<div style='font-weight: bold'>Adapter Conformance Fixture</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Supplies a fixture binding<br />factory and typed provider<br />ports for Phase 04 contract<br />verification.</div>")
+    style 60 fill:#50446e,stroke:#382f4d,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#74a9d0,color:#74a9d0
+
+        10("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 10 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        26("<div style='font-weight: bold'>Session Coordinator</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorSessionCoordinator and PinnedEmulatorSession]</div><div style='font-size: 80%; margin-top:10px'>Negotiates the installed<br />binding's contract, validates<br />the opened session identity<br />and close policy, and<br />transfers the package lease<br />to the pinned session.<br />Fixture adapters verify<br />launch, attach, reconnect,<br />and release.</div>")
+        style 26 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        27("<div style='font-weight: bold'>Typed Session Control</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorSessionControl]</div><div style='font-size: 80%; margin-top:10px'>Checks captured identity,<br />grants, capabilities,<br />revisions, and payloads<br />before routing to advertised<br />ports. Correlates exact<br />retries, operation receipts,<br />and uncertain outcomes.</div>")
+        style 27 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        28("<div style='font-weight: bold'>Session Subscriptions</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorSubscriptions and BufferedEmulatorMedia]</div><div style='font-size: 80%; margin-top:10px'>Reserves provider<br />subscriptions, tracks ordered<br />control cursors and gaps, and<br />buffers media independently.<br />Drains pending and paused<br />subscriptions before the<br />provider connection closes.</div>")
+        style 28 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        29("<div style='font-weight: bold'>Machine Descriptor and Memory Map</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET IMachineDescriptorPort and MachineMap]</div><div style='font-size: 80%; margin-top:10px'>Validates the session's<br />descriptor schema, CPU and<br />address spaces. Watches<br />ordered map revisions,<br />rechecks current capability<br />and map scope before mapped<br />operations, and retains<br />independently advertised raw<br />inspection.</div>")
+        style 29 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        30("<div style='font-weight: bold'>Verified Package Profiles</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET declarative profile validation]</div><div style='font-size: 80%; margin-top:10px'>Checks each declared debugger<br />profile's reference, schema,<br />path, and digest. Projects<br />available profile references<br />into project selection and<br />resolves the active<br />descriptor's reference under<br />its pinned package lease.</div>")
+        style 30 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        38("<div style='font-weight: bold'>Retro IDE MCP Host</div><div style='font-size: 70%; margin-top: 0px'>[Component: Official MCP C# SDK, Microsoft.Extensions.Hosting, ASP.NET Core]</div><div style='font-size: 80%; margin-top:10px'>Exposes registered IDE tools<br />through the shared CQRS<br />dispatcher. Generates schemas<br />from public ViewModel<br />contracts, verifies live<br />context and grants, and<br />returns scoped operation<br />handles for supported<br />background calls including<br />package refresh.</div>")
+        style 38 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        39("<div style='font-weight: bold'>Scoped Background Operations</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET WorkbenchOperations]</div><div style='font-size: 80%; margin-top:10px'>Tracks accepted and running<br />work, cancellation, and typed<br />success or failure. Checks<br />the original actor grant<br />before reading, cancelling,<br />or returning an operation<br />result.</div>")
+        style 39 fill:#235c49,stroke:#62aa88,color:#ffffff
+        40("<div style='font-weight: bold'>Emulators Management View</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia EmulatorsPane and EmulatorsViewModel]</div><div style='font-size: 80%; margin-top:10px'>Browses buckets, compatible<br />releases, and installed<br />versions. Shows project<br />version history, binding<br />readiness, and verified<br />profiles. Refreshes after UI<br />or MCP changes and discards<br />results for superseded<br />project selections.</div>")
+        style 40 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        41("<div style='font-weight: bold'>Emulator Bundle Manager</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorWorkspace, Git, JSON, SHA-256]</div><div style='font-size: 80%; margin-top:10px'>Reads Git bucket manifests at<br />a recorded commit, selects a<br />compatible host target,<br />verifies archives and entry<br />points, and publishes<br />immutable versions with<br />receipts. Persists project<br />pins and rollback history.</div>")
+        style 41 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        42("<div style='font-weight: bold'>Pinned Adapter Resolver</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorWorkspace and EmulatorBundleStore]</div><div style='font-size: 80%; margin-top:10px'>Resolves the project's<br />selected installed bundle for<br />the host and contract<br />version. Checks the<br />installation receipt and<br />binding entry point, exposes<br />verified profile references,<br />and supplies a lease for<br />session open.</div>")
+        style 42 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch and result<br />delivery for views registered<br />directly with it. Provides<br />the shared execution entry<br />point for typed requests from<br />all controllers into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+      end
+
+      46[("<div style='font-weight: bold'>Local Workspace Settings</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local files]</div><div style='font-size: 80%; margin-top:10px'>Stores IDE layout, workspace<br />roots and Explorer state,<br />preferences, language server<br />registrations, and configured<br />emulator buckets.</div>")]
+      style 46 fill:#24557b,stroke:#74a9d0,color:#ffffff
+      47[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, Git<br />metadata, and portable<br />emulator pins and history in<br />each project's<br />.retroide/emulator.json.</div>")]
+      style 47 fill:#275c60,stroke:#1b4043,color:#ffffff
+      48[("<div style='font-weight: bold'>Local Emulator Bundle Store</div><div style='font-size: 70%; margin-top: 0px'>[Container: Per-user filesystem and file leases]</div><div style='font-size: 80%; margin-top:10px'>Holds verified, versioned<br />installations, bindings,<br />optional declarative debugger<br />profiles, installation<br />receipts, and cached bucket<br />metadata. Active leases<br />prevent removal.</div>")]
+      style 48 fill:#24557b,stroke:#74a9d0,color:#ffffff
+      49("<div style='font-weight: bold'>MCP Stdio Bridge</div><div style='font-size: 70%; margin-top: 0px'>[Container: .NET, ModelContextProtocol]</div><div style='font-size: 80%; margin-top:10px'>Launched by CLI clients to<br />attach MCP tools to the<br />selected running Retro IDE<br />instance.</div>")
+      style 49 fill:#235c49,stroke:#184033,color:#ffffff
+    end
+
+    8-. "<div>Dispatches a typed command or<br />query in its captured<br />workspace context</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>Uses local layout and<br />Explorer persistence and the<br />saved display language</div><div style='font-size: 70%'>[Local files]</div>" .->46
+    10-. "<div>Resolves workspace roots,<br />enumerates directories, and<br />opens the selected files</div><div style='font-size: 70%'>[Local filesystem]</div>" .->47
+    10-. "<div>Invokes session, debugger,<br />media, and diagnostics<br />handlers</div><div style='font-size: 70%'></div>" .->26
+    10-. "<div>Invokes repository refresh<br />and emulator bundle lifecycle<br />handlers</div><div style='font-size: 70%'></div>" .->41
+    40-. "<div>Raises typed package requests<br />from its registered view</div><div style='font-size: 70%'></div>" .->8
+    8-. "<div>Returns the outcome to the<br />originating pane and notifies<br />the affected live<br />registration</div><div style='font-size: 70%'></div>" .->40
+    54-. "<div>Discovers and invokes IDE<br />tools on the selected<br />workbench</div><div style='font-size: 70%'>[MCP Streamable HTTP on loopback]</div>" .->38
+    54-. "<div>Discovers and invokes IDE<br />tools through the CLI<br />attachment</div><div style='font-size: 70%'>[MCP stdio]</div>" .->49
+    49-. "<div>Attaches to the same<br />registered IDE instance with<br />the client's granted context</div><div style='font-size: 70%'></div>" .->38
+    38-. "<div>Submits the authorized typed<br />request with workspace and<br />target context</div><div style='font-size: 70%'></div>" .->8
+    8-. "<div>Returns the typed result for<br />the originating tool<br />invocation</div><div style='font-size: 70%'></div>" .->38
+    38-. "<div>Returns structured tool<br />results and supported<br />progress</div><div style='font-size: 70%'>[MCP]</div>" .->54
+    38-. "<div>Returns the invocation result<br />to the attached bridge</div><div style='font-size: 70%'>[MCP Streamable HTTP on loopback]</div>" .->49
+    49-. "<div>Returns structured tool<br />results to the requesting CLI<br />client</div><div style='font-size: 70%'>[MCP stdio]</div>" .->54
+    10-. "<div>Starts a supported background<br />operation or handles an<br />authorized status, result, or<br />cancellation request</div><div style='font-size: 70%'></div>" .->39
+    39-. "<div>Runs the captured work<br />through the same dispatcher<br />with its operation and grant<br />lifetime</div><div style='font-size: 70%'></div>" .->8
+    39-. "<div>Supplies the scoped operation<br />handle, status, or typed<br />outcome</div><div style='font-size: 70%'></div>" .->10
+    26-. "<div>Resolves the selected adapter<br />and invokes normalized<br />operations</div><div style='font-size: 70%'></div>" .->42
+    42-. "<div>Supplies the verified binding<br />and installed-version lease</div><div style='font-size: 70%'></div>" .->26
+    26-. "<div>Creates scoped control for<br />the validated session<br />identity</div><div style='font-size: 70%'></div>" .->27
+    26-. "<div>Drains active subscriptions<br />before closing the connection<br />and releasing its lease</div><div style='font-size: 70%'></div>" .->28
+    26-. "<div>Retains the installed-version<br />lease until provider cleanup<br />completes</div><div style='font-size: 70%'></div>" .->48
+    26-. "<div>Resolves the current<br />descriptor's profile against<br />the session lease</div><div style='font-size: 70%'></div>" .->30
+    27-. "<div>Opens scoped control events<br />and independent bounded media</div><div style='font-size: 70%'></div>" .->28
+    27-. "<div>Validates descriptor<br />observations and mapped<br />access before adapter entry</div><div style='font-size: 70%'></div>" .->29
+    28-. "<div>Supplies ordered map changes<br />and event gaps</div><div style='font-size: 70%'></div>" .->29
+    26-. "<div>Negotiates a fixture binding,<br />checks initial state, and<br />disposes the connection</div><div style='font-size: 70%'>[Phase 04 conformance only]</div>" .->60
+    60-. "<div>Returns compatible fixture<br />identity, close policy, and<br />initial state</div><div style='font-size: 70%'></div>" .->26
+    27-. "<div>Dispatches scoped requests to<br />advertised typed fixture<br />ports</div><div style='font-size: 70%'>[Phase 04 conformance only]</div>" .->60
+    60-. "<div>Returns typed results,<br />including revision conflicts<br />and reports for outcome<br />reconciliation</div><div style='font-size: 70%'></div>" .->27
+    28-. "<div>Subscribes through separately<br />negotiated control and media<br />ports, and drains each<br />subscription during teardown</div><div style='font-size: 70%'>[Phase 04 conformance only]</div>" .->60
+    60-. "<div>Publishes ordered control<br />events and independent media<br />items</div><div style='font-size: 70%'></div>" .->28
+    29-. "<div>Requests the current<br />descriptor through its<br />advertised typed port</div><div style='font-size: 70%'>[Phase 04 conformance only]</div>" .->60
+    60-. "<div>Returns the session<br />descriptor, profile<br />reference, and map revision<br />or a typed unavailable result</div><div style='font-size: 70%'></div>" .->29
+    42-. "<div>Inspects profile references<br />for the selected installed<br />version</div><div style='font-size: 70%'></div>" .->30
+    30-. "<div>Verifies a declarative<br />profile against its manifest<br />and installed assets</div><div style='font-size: 70%'></div>" .->48
+    41-. "<div>Fetches configured Git<br />sources and reads versioned<br />manifests</div><div style='font-size: 70%'>[Git and JSON]</div>" .->55
+    41-. "<div>Downloads the archive named<br />for the compatible host<br />target</div><div style='font-size: 70%'>[HTTPS]</div>" .->56
+    41-. "<div>Installs verified binaries,<br />bindings, optional debugger<br />profile data and receipts<br />atomically</div><div style='font-size: 70%'></div>" .->48
+    41-. "<div>Reads and stores configured<br />Git bucket sources</div><div style='font-size: 70%'></div>" .->46
+    41-. "<div>Writes a verified project pin<br />and its rollback history</div><div style='font-size: 70%'></div>" .->47
+    41-. "<div>Projects binding readiness<br />and verified profiles for the<br />current project</div><div style='font-size: 70%'></div>" .->42
+    42-. "<div>Reads the exact project pin<br />and manifest revision</div><div style='font-size: 70%'></div>" .->47
+    42-. "<div>Resolves verified local entry<br />points and holds the selected<br />version for the session</div><div style='font-size: 70%'></div>" .->48
+    1-. "<div>Manages emulator packages and<br />chooses a verified version<br />for a project</div><div style='font-size: 70%'></div>" .->40
+
+  end

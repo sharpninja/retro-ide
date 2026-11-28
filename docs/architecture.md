@@ -16,7 +16,9 @@ Retro IDE exposes every supported feature as an MCP tool using the official .NET
 
 The [accepted Phase 01 C4 model](architecture/structurizr/README.md) records the running Avalonia workbench, shared focus command and both MCP transports. The desktop persists dock layout independently of emulator state. UI acceptance uses SharpNinja.Avalonia.RemoteControl on real windows, with isolated Linux coverage for X11 drag and system-cursor sampling. The [implementation plan](plans/PLAN-RETROIDE-001.md#local-verification-for-every-phase) applies local input-free UI verification to each phase.
 
-Phase 02 adds Project Explorer, editor tabs, and localization. Phase 03 adds native Git, the repository terminal, framed language-server sessions, and scoped operation handles. The Git write lease verifies the selected checkout after waiting before allowing a native write. The emulator bundle manager and real adapter lifecycle are later phases. [Phase 03 acceptance](receipts/phase-03-git-terminal-language-servers.md)
+Phase 02 adds Project Explorer, editor tabs, and localization. Phase 03 adds native Git, the repository terminal, framed language-server sessions, and scoped operation handles. The Git write lease verifies the selected checkout after waiting before allowing a native write. [Phase 03 acceptance](receipts/phase-03-git-terminal-language-servers.md)
+
+Phase 04 delivers Git-backed emulator bundles, pinned installations, the Emulators pane and its shared MCP operations, and the versioned emulator session and machine-description contracts. The deterministic fixtures verify session and subscription lifetime, capability negotiation, and live map routing. Phase 05 adds the production adapter bridges. Phase 06 uses the live descriptor in the debugger views. [Phase 04 verification](receipts/phase-04-emulator-manager-adapter-conformance.md)
 
 ## MVVM Toolkit, SimpleMVC, and CQRS
 

@@ -1,0 +1,64 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Retro IDE - Retro IDE Desktop"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+
+    54("<div style='font-weight: bold'>Configured CLI or Desktop Agent</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Uses available scoped MCP<br />resources and commands; its<br />lifetime is independent of<br />the emulator session.</div>")
+    style 54 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    subgraph 2 ["Retro IDE"]
+      style 2 fill:#ffffff,stroke:#1b4043,color:#1b4043
+
+      subgraph 3 ["Retro IDE Desktop"]
+        style 3 fill:#ffffff,stroke:#74a9d0,color:#74a9d0
+
+        10("<div style='font-weight: bold'>CQRS Unit of Work</div><div style='font-size: 70%; margin-top: 0px'>[Component: Custom .NET command and query handlers]</div><div style='font-size: 80%; margin-top:10px'>Owns IDE application logic.<br />Dispatches typed commands and<br />read-only queries to<br />registered handlers with<br />scoped context, validates<br />eligibility, and returns or<br />publishes their outcomes.</div>")
+        style 10 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+        38("<div style='font-weight: bold'>Retro IDE MCP Host</div><div style='font-size: 70%; margin-top: 0px'>[Component: Official MCP C# SDK, Microsoft.Extensions.Hosting, ASP.NET Core]</div><div style='font-size: 80%; margin-top:10px'>Exposes registered IDE tools<br />through the shared CQRS<br />dispatcher. Generates schemas<br />from public ViewModel<br />contracts, verifies live<br />context and grants, and<br />returns scoped operation<br />handles for supported<br />background calls including<br />package refresh.</div>")
+        style 38 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        40("<div style='font-weight: bold'>Emulators Management View</div><div style='font-size: 70%; margin-top: 0px'>[Component: Avalonia EmulatorsPane and EmulatorsViewModel]</div><div style='font-size: 80%; margin-top:10px'>Browses buckets, compatible<br />releases, and installed<br />versions. Shows project<br />version history, binding<br />readiness, and verified<br />profiles. Refreshes after UI<br />or MCP changes and discards<br />results for superseded<br />project selections.</div>")
+        style 40 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        41("<div style='font-weight: bold'>Emulator Bundle Manager</div><div style='font-size: 70%; margin-top: 0px'>[Component: .NET EmulatorWorkspace, Git, JSON, SHA-256]</div><div style='font-size: 80%; margin-top:10px'>Reads Git bucket manifests at<br />a recorded commit, selects a<br />compatible host target,<br />verifies archives and entry<br />points, and publishes<br />immutable versions with<br />receipts. Persists project<br />pins and rollback history.</div>")
+        style 41 fill:#24557b,stroke:#74a9d0,color:#ffffff
+        8("<div style='font-weight: bold'>Main MVC Controller</div><div style='font-size: 70%; margin-top: 0px'>[Component: GPS.SimpleMVC 2.0.0]</div><div style='font-size: 80%; margin-top:10px'>Owns dispatch and result<br />delivery for views registered<br />directly with it. Provides<br />the shared execution entry<br />point for typed requests from<br />all controllers into the<br />custom Unit of Work.</div>")
+        style 8 fill:#275c60,stroke:#4eb9aa,color:#ffffff
+      end
+
+      47[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, Git<br />metadata, and portable<br />emulator pins and history in<br />each project's<br />.retroide/emulator.json.</div>")]
+      style 47 fill:#275c60,stroke:#1b4043,color:#ffffff
+      49("<div style='font-weight: bold'>MCP Stdio Bridge</div><div style='font-size: 70%; margin-top: 0px'>[Container: .NET, ModelContextProtocol]</div><div style='font-size: 80%; margin-top:10px'>Launched by CLI clients to<br />attach MCP tools to the<br />selected running Retro IDE<br />instance.</div>")
+      style 49 fill:#235c49,stroke:#184033,color:#ffffff
+    end
+
+    1["<div style='font-weight: bold'>Retro Developer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Edits, builds, runs, tests,<br />and debugs software for a<br />selected retrocomputing<br />target.</div>"]
+    style 1 fill:#265462,stroke:#1a3a44,color:#ffffff
+    47[("<div style='font-weight: bold'>Workspace Project and Folder Files</div><div style='font-size: 70%; margin-top: 0px'>[Container: Local filesystem]</div><div style='font-size: 80%; margin-top:10px'>Contains selected projects,<br />source files, artifacts, Git<br />metadata, and portable<br />emulator pins and history in<br />each project's<br />.retroide/emulator.json.</div>")]
+    style 47 fill:#275c60,stroke:#1b4043,color:#ffffff
+    49("<div style='font-weight: bold'>MCP Stdio Bridge</div><div style='font-size: 70%; margin-top: 0px'>[Container: .NET, ModelContextProtocol]</div><div style='font-size: 80%; margin-top:10px'>Launched by CLI clients to<br />attach MCP tools to the<br />selected running Retro IDE<br />instance.</div>")
+    style 49 fill:#235c49,stroke:#184033,color:#ffffff
+    54("<div style='font-weight: bold'>Configured CLI or Desktop Agent</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Uses available scoped MCP<br />resources and commands; its<br />lifetime is independent of<br />the emulator session.</div>")
+    style 54 fill:#57636b,stroke:#3c454a,color:#ffffff
+
+    1-. "<div>1. Choose a compatible<br />installed release for the<br />current project</div><div style='font-size: 70%'></div>" .->40
+    40-. "<div>2. Raise the typed project<br />pin selection from the<br />registered pane</div><div style='font-size: 70%'></div>" .->8
+    8-. "<div>3. Dispatch with the captured<br />live project and view context</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>4. Apply the selection<br />through the shared package<br />handler</div><div style='font-size: 70%'></div>" .->41
+    41-. "<div>5. Save the exact installed<br />pin and history</div><div style='font-size: 70%'></div>" .->47
+    8-. "<div>6. Return the result to the<br />pane</div><div style='font-size: 70%'></div>" .->40
+    54-. "<div>7. Select an installed<br />version using the scoped HTTP<br />tool</div><div style='font-size: 70%'>[MCP Streamable HTTP on loopback]</div>" .->38
+    38-. "<div>8. Submit the same typed<br />request with the caller's<br />grant</div><div style='font-size: 70%'></div>" .->8
+    8-. "<div>9. Authorize the live<br />registration and dispatch the<br />package handler</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>10. Apply the authorized pin<br />change</div><div style='font-size: 70%'></div>" .->41
+    54-. "<div>11. Roll back or remove<br />through stdio</div><div style='font-size: 70%'>[MCP stdio]</div>" .->49
+    49-. "<div>12. Forward the authorized<br />tool call to the same<br />workbench</div><div style='font-size: 70%'></div>" .->38
+    38-. "<div>13. Submit the typed rollback<br />or removal request</div><div style='font-size: 70%'></div>" .->8
+    8-. "<div>14. Dispatch the registered<br />operation</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>15. Update the project pin or<br />installed inventory</div><div style='font-size: 70%'></div>" .->41
+    8-. "<div>16. Notify the live pane on<br />Avalonia to refresh its<br />current project</div><div style='font-size: 70%'></div>" .->40
+    40-. "<div>17. Request a coalesced read<br />for the current selection and<br />ignore superseded completions</div><div style='font-size: 70%'></div>" .->8
+
+  end

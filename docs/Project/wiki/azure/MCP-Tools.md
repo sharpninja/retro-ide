@@ -37,6 +37,30 @@ The Phase 02 implementation currently exposes these Project Explorer operations 
 
 Read-only attachments can list workspace roots and children and read a live document context. Root, expansion, selection, and editor mutations require a write-enabled attachment and the current public workbench context. Each branch read is scoped to an open root. Refresh the context after a successful mutation before sending the next write.
 
+## Emulator bucket tools
+
+The shared command registry exposes these bucket operations through Streamable HTTP and stdio. Bucket configuration is shared by workbenches using the same application data directory. Mutations require a write-enabled attachment and the current public workbench context.
+
+| Tool | Arguments | Result |
+| --- | --- | --- |
+| `emulator_list_buckets` | None | Configured buckets, last verified commit and releases for each bucket, and compatibility with the current host and adapter contract. Uses the local cache. |
+| `emulator_configure_bucket` | `bucketId`, absolute Git `repository` URL, workbench `context` | The saved bucket source. |
+| `emulator_refresh_bucket` | `bucketId`, workbench `context`, optional `background` | The verified catalog and its exact Git commit, or an operation handle when requested. A failed refresh preserves the last valid catalog. |
+| `emulator_remove_bucket` | `bucketId`, workbench `context` | The removed configuration ID. Installed bundles and project pins remain available. |
+
+A bundle pin has `bucket`, `bundle`, `version`, and `manifestRevision` fields. Package mutation tools use the same write-enabled attachment and workbench context as bucket mutations. Project tools accept an open project root ID from `workspace_list_roots`.
+
+| Tool | Arguments | Result |
+| --- | --- | --- |
+| `emulator_list_installed` | None | Verified host installations with exact pins and adapter compatibility. |
+| `emulator_install_bundle` | `pin`, workbench `context`, optional `background` | The verified host installation or an operation handle. |
+| `emulator_update_bundle` | Installed `current` pin, reviewed catalog `target` pin, workbench `context`, optional `background` | Installs the current catalog release alongside the original. Returns the installation or an operation handle. |
+| `emulator_remove_bundle` | `pin`, workbench `context` | Removes the exact installation. A live session lease protects its release. |
+| `emulator_get_project_bundle` | `rootId` | The active emulator pin, selection history, and binding resolution for this host. When ready, the result includes the adapter ID, runtime identifier, contract version, and verified debugger profile references. |
+| `emulator_select_bundle`, `emulator_rollback_bundle` | `rootId`, `pin`, workbench `context` | Persists the reviewed installed release as the project selection. Rollback chooses a compatible installed pin from that project's history. |
+
+Successful package mutations notify the registered Emulators pane on Avalonia. It coalesces pending refreshes and discards a late reply from an earlier project selection. A background bucket refresh uses the same scoped operation ID across both MCP transports. [Phase 04 verification](receipts/phase-04-emulator-manager-adapter-conformance.md)
+
 ## Phase 03 Git tools
 
 Phase 03 exposes native Git actions and the repository terminal through the same attached workbench over stdio and Streamable HTTP. Discovery takes a literal path within an open Project Explorer root. Use an empty `relativePath` to inspect the root itself. Use forward slashes in path arguments on both hosts, including Windows paths such as `C:/src/example`. [Phase 03 acceptance](receipts/phase-03-git-terminal-language-servers.md)

@@ -18,7 +18,7 @@
 | `RetroIde.Workbench` | Avalonia and Dock.Avalonia, ViewModels and controllers, composition, window/MDI routing, persisted layout, and dispatcher adapter. |
 | `RetroIde.Mcp` | Official MCP C# SDK tool discovery, schemas, scope, transport policy, operation tracking, and request/response mapping. Resolve ViewModel contexts through a registration port provided by the workbench. |
 | `RetroIde.Mcp.Stdio` | CLI attachment to a selected running IDE instance through its local endpoint. Use a per-launch attachment descriptor. Standard output carries only MCP messages. |
-| `RetroIde.Adapters.Abstractions` and provider projects | Versioned .NET bundle/adapter contracts and backend mappings as each provider lands. Keep desktop dependencies outside adapter hosts. |
+| `RetroIde.Emulation` and provider projects | Versioned .NET adapter contracts and backend mappings as each provider lands. Keep desktop dependencies outside adapter hosts. |
 | `RetroIde.UnitTests`, `RetroIde.IntegrationTests`, and `RetroIde.NativeTests` | Criterion-linked tests and negative controls. Use managed, rendered Avalonia, native window, SDK client, and provider tests through the appropriate production entry points. |
 | `RetroIde.AdapterFixture` | Test-only independent session process and runtime assembly evidence for shell layout persistence. |
 
@@ -123,6 +123,8 @@ Negotiated MCP Tasks and bounded diagnostic or image results remain in Phase 07.
 - Implement Git/Scoop-style bucket discovery, manifests, platform selection, hash-checked installs, version pins, receipts, cached/offline use, and transactional recovery. Verify immutable manifest revisions, archive path and entry-point checks, malformed and interrupted installs, side-by-side versions, leases that protect running versions, offline launches, rollback, and incompatible host or contract rejection in `EmulatorBundleIntegrationTests`. Use RemoteControl for Emulators and authorized MCP for the same package operations.
 - Implement published adapter and session contracts, typed capability ports, and event/stream semantics. Run `AdapterConformanceTests` against a deterministic adapter for launch and attach close policies, actor and revision, unknown mutation outcome reconciliation, ordered event gaps and resumption, bounded media backpressure, disconnect and reconnect, and compatibility with unknown optional extensions. Bind Emulators UI and MCP tools to the same resolver. [Adapter contract](../emulator-adapter-contract.md)
 - Define the optional versioned machine descriptor and verified package profile assets. Use `MachineDescriptorConformanceTests` and `MachineDescriptorCompatibilityTests` for exact CPU identity, map limits and revisions, scope, profile references, and legacy raw inspection. Verify the installed package selection in STB17. [Debugger descriptor contract](../emulator-adapter-contract.md#debugger-machine-description)
+
+**Phase 04 accepted.** Independent review scored 99 accuracy and 98 completeness for each Phase 04 slice and the phase overall. The reopened Phase 01 MCP package-parity scope scored 99/99. Fully verified criteria are recorded in QBrain. The Phase 05 production adapter and Phase 06 debugger presentation criteria retain their own gates. [Phase 04 verification](../receipts/phase-04-emulator-manager-adapter-conformance.md)
 
 ### 05 — Build, target launch, and real-backend lifecycle
 

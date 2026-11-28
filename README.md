@@ -6,7 +6,9 @@ Phases 01 and 02 passed independent review and native UI verification on Windows
 
 Phase 03 passed independent review at 99 accuracy and 98 completeness. Linux and LEGION2 each passed 284 managed tests and native RemoteControl. [Phase 03 acceptance](docs/receipts/phase-03-git-terminal-language-servers.md)
 
-The initial target presets are [UAE](profiles/uae.json), [VICE](profiles/vice.json), and [ViceSharp](profiles/vice-sharp.json). Each selects an emulator bundle from the planned **Emulators** manager. The [bundle publishing and adapter design](docs/architecture.md#emulator-bundles-and-buckets) describes the catalog, package lifecycle, and integration for each target.
+Phase 04 passed independent review at 99 accuracy and 98 completeness. **Emulators** manages compatible Git-bucket releases, transactional installs, pinned versions, rollback, and verified package profiles. Both hosts passed 394 managed tests and native RemoteControl. The shared adapter contract was exercised with deterministic fixtures. [Phase 04 verification](docs/receipts/phase-04-emulator-manager-adapter-conformance.md)
+
+The initial target presets are [UAE](profiles/uae.json), [VICE](profiles/vice.json), and [ViceSharp](profiles/vice-sharp.json). Phase 05 adds their live control bridges and verifies production launch and reattach. Phase 06 adds debugger presentation and persistent byte order. [Bundle publishing and adapter design](docs/architecture.md#emulator-bundles-and-buckets)
 
 The debugger design describes how an emulator package supplies the machine configuration and platform-specific debugger layouts. The [package debugger storyboard](docs/design/_manifest.md#stb17-package-debugger) follows the workflow through CPU selection, clock phases, banking, and the memory display byte-order preference.
 
@@ -34,7 +36,7 @@ Run the Nuke managed gate or select specific test classes from the repository ro
 ```powershell
 dotnet run --project eng/Nuke/RetroIde.Build.csproj -c Release -- Test --test-run-id managed-01
 dotnet run --project eng/Nuke/RetroIde.Build.csproj -c Release -- TestGroups --test-groups 'RetroIde.IntegrationTests:GitDiffIndexTests' --test-run-id git-01
-dotnet run --project eng/Nuke/RetroIde.Build.csproj -c Release -- ValidateTraceability --through-phase 03 --qbrain-export /path/to/effective-requirements.yaml
+dotnet run --project eng/Nuke/RetroIde.Build.csproj -c Release -- ValidateTraceability --through-phase 04 --qbrain-export /path/to/effective-requirements.yaml
 ```
 
 Run `TestNative` with the same Nuke project for the native-window suite. SharpNinja.Avalonia.RemoteControl drives the workbench without physical keyboard or mouse input. The suite checks the scoped Wait cursor, floating and redocking, mixed-root Explorer, editor workflows, localization, and Git tooling. On Linux, run it on an explicitly selected unused test display.
