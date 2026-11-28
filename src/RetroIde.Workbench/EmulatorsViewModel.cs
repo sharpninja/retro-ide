@@ -21,6 +21,7 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
     private readonly ILogger _logger;
     private CancellationTokenSource? _activeCommand;
     private Task _pendingWork = Task.CompletedTask;
+    private long _projectSelectionRevision;
     private bool _reloadRequested;
     private bool _closing;
 
@@ -53,7 +54,17 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
 
     partial void OnSelectedProjectChanged(Project? value)
     {
-        if (!IsBusy && value is not null)
+        _projectSelectionRevision++;
+        ActivePin = null;
+        ActiveBinding = null;
+        PreviousPins = [];
+        SelectedPrevious = null;
+        if (value is null)
+            return;
+
+        if (IsBusy)
+            _reloadRequested = true;
+        else
             ReadProjectCommand.Execute(null);
     }
 
@@ -177,9 +188,10 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
     private async Task LoadProjectAsync(CancellationToken token)
     {
         var selected = SelectedProject;
+        var revision = _projectSelectionRevision;
         var read = selected is null ? null :
             Data<EmulatorWorkspace.SelectionState>(await SendAsync(_registry.Emulators.Selection, new EmulatorFeatures.ProjectInput(selected.Id), token).ConfigureAwait(true));
-        if (SelectedProject != selected)
+        if (revision != _projectSelectionRevision)
             return;
         var previous = SelectedPrevious;
         ActivePin = read?.Selection?.Active;
