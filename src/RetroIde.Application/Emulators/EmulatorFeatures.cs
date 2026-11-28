@@ -44,7 +44,13 @@ internal sealed partial class EmulatorFeatures
                     return MissingProject();
                 return new FeatureOutcome("ok", "Emulator operation authorized.")
                 {
-                    ExecuteAuthorizedAsync = token => RunAsync(workspace, execute, success, token, area),
+                    ExecuteAuthorizedAsync = async token =>
+                    {
+                        var result = await RunAsync(workspace, execute, success, token, area).ConfigureAwait(true);
+                        if (string.Equals(result.Code, "ok", StringComparison.Ordinal))
+                            active.EmulatorPackagesChanged();
+                        return result;
+                    },
                 };
             },
         });

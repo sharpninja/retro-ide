@@ -9,6 +9,14 @@ public sealed partial class WorkbenchController
 {
     private EmulatorsViewModel? _emulatorsView;
 
+    private void NotifyEmulatorPackagesChanged(Registration origin)
+    {
+        Dispatcher.UIThread.VerifyAccess();
+        if (!_disposed && ReferenceEquals(Resolve(origin.View.ViewKey), origin) && _emulatorsView is { } view &&
+            view.ParentViewKey == origin.View.ViewKey && ReferenceEquals(GetView<IView>(view.ViewKey), view))
+            view.RefreshPackages();
+    }
+
     internal void RegisterEmulators(WorkbenchViewModel workbench, EmulatorsViewModel view)
     {
         Dispatcher.UIThread.VerifyAccess();

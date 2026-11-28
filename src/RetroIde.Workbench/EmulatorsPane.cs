@@ -93,6 +93,7 @@ internal static class EmulatorsPane
             () => view.Projects, () => view.SelectedProject, value => view.SelectedProject = value,
             value => ProjectLabel(value.Path)));
         var active = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        Avalonia.Automation.AutomationProperties.SetAutomationId(active, "emulator.project.active");
         Watch(pane, view, () =>
         {
             active.IsVisible = view.ActivePin is not null;

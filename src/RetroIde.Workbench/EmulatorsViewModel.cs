@@ -21,6 +21,7 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
     private readonly ILogger _logger;
     private CancellationTokenSource? _activeCommand;
     private Task _pendingWork = Task.CompletedTask;
+    private bool _reloadRequested;
     private bool _closing;
 
     internal EmulatorsViewModel(WorkbenchViewModel workbench, FeatureRegistry registry, InteractionBlocks interaction, ILogger logger) : base(workbench)
@@ -126,12 +127,29 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
     private Task ChangeAsync<T>(Feature<T> feature, T input, CancellationToken token) where T : class => BlockAsync(async commandToken =>
     {
         var result = await SendAsync(feature, input, commandToken).ConfigureAwait(true);
-        if (result is { Code: "ok" })
+        if (result is not { Code: "ok" } || commandToken.IsCancellationRequested)
+            return;
+        _reloadRequested = false;
+        try { await ReloadCoreAsync(commandToken).ConfigureAwait(true); }
+        finally
         {
-            await ReloadCoreAsync(commandToken).ConfigureAwait(true);
-            Receive(result);
+            if (commandToken.IsCancellationRequested)
+                _reloadRequested = true;
         }
+        Receive(result);
     }, token);
+
+    internal void RefreshPackages()
+    {
+        if (_closing || ParentViewKey is null)
+            return;
+        if (IsBusy)
+        {
+            _reloadRequested = true;
+            return;
+        }
+        _ = StartWorkAsync(ReloadCoreAsync, CancellationToken.None, blockInteraction: false);
+    }
 
     private async Task ReloadCoreAsync(CancellationToken token)
     {
@@ -188,28 +206,51 @@ internal sealed partial class EmulatorsViewModel : DockedToolViewModel
         return _pendingWork;
     }
 
-    private Task BlockAsync(Func<CancellationToken, Task> operation, CancellationToken token)
+    private Task BlockAsync(Func<CancellationToken, Task> operation, CancellationToken token) =>
+        IsAvailable() ? StartWorkAsync(operation, token) : Task.CompletedTask;
+
+    private Task StartWorkAsync(Func<CancellationToken, Task> operation, CancellationToken token, bool blockInteraction = true)
     {
-        if (!IsAvailable())
-            return Task.CompletedTask;
         var command = CancellationTokenSource.CreateLinkedTokenSource(token);
         _activeCommand = command;
         IsBusy = true;
-        _interaction.Begin(PaneId);
-        _pendingWork = RunBlockedAsync(operation, command);
+        if (blockInteraction)
+            _interaction.Begin(PaneId);
+        _pendingWork = RunBlockedAsync(operation, command, blockInteraction);
         return _pendingWork;
     }
 
-    private async Task RunBlockedAsync(Func<CancellationToken, Task> operation, CancellationTokenSource command)
+    private async Task RunBlockedAsync(Func<CancellationToken, Task> operation, CancellationTokenSource command, bool blockInteraction)
     {
-        try { await operation(command.Token).ConfigureAwait(true); }
-        catch (OperationCanceledException) when (command.IsCancellationRequested) { }
+        try
+        {
+            await RunWorkAsync(operation, command.Token).ConfigureAwait(true);
+            while (_reloadRequested && !_closing && ParentViewKey is not null)
+            {
+                _reloadRequested = false;
+                using var refresh = new CancellationTokenSource();
+                _activeCommand = refresh;
+                // An external mutation can succeed while a local command is being cancelled.
+                await RunWorkAsync(ReloadCoreAsync, refresh.Token).ConfigureAwait(true);
+            }
+        }
         finally
         {
             _activeCommand = null;
             command.Dispose();
-            _interaction.End(PaneId);
+            if (blockInteraction)
+                _interaction.End(PaneId);
             IsBusy = false;
+        }
+    }
+
+    private async Task RunWorkAsync(Func<CancellationToken, Task> operation, CancellationToken token)
+    {
+        try { await operation(token).ConfigureAwait(true); }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) when (RuntimeFailures.CanRecover(error))
+        {
+            RuntimeFailures.Report(_logger, error, "Update emulator management view");
         }
     }
 

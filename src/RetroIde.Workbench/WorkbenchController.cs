@@ -503,6 +503,7 @@ public sealed partial class WorkbenchController : SimpleControllerBase, IWorkben
         public bool TryFocus(string toolId) => Controller.CanFocus(toolId) && Controller._layout.Focus(toolId);
         public WorkspaceExplorer Explorer => Controller._workspaceExplorer;
         public EmulatorWorkspace? Emulators => Controller.Emulators;
+        public void EmulatorPackagesChanged() => Controller.NotifyEmulatorPackagesChanged(this);
 
         /// <inheritdoc />
         public GitSelection? SelectedGit { get; private set; }

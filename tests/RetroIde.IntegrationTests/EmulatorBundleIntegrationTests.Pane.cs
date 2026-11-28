@@ -4,12 +4,14 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using RetroIde.Testing;
 using RetroIde.Workbench;
 using Xunit;
+using Pin = RetroIde.Application.Emulators.EmulatorBundleStore.Pin;
 
 namespace RetroIde.IntegrationTests;
 
@@ -57,11 +59,53 @@ public sealed partial class EmulatorBundleIntegrationTests
                 string.Equals(AutomationProperties.GetAutomationId(control), "emulator.projects.items", StringComparison.Ordinal));
             Assert.Contains(picker.GetVisualDescendants().OfType<TextBlock>(), text =>
                 string.Equals(text.Text, project.FullName.Replace('\\', '/'), StringComparison.Ordinal));
+            await VerifyRemotePackageChangesAsync(root, git, session, window, http, rootId, pin, deadline.Token);
         }
         finally
         {
             window.Close();
             await closed.Task.WaitAsync(token);
+        }
+    }
+
+    private static async Task VerifyRemotePackageChangesAsync(BundleStoreFixture root, GitWorktreeFixture git, WorkbenchSession session,
+        WorkbenchWindow window, GitWorkspaceStateTests.WorkspaceConnection http, Guid project,
+        Pin first, CancellationToken token)
+    {
+        await using var stdio = await http.ConnectStdioAsync(Path.Combine(root.Directory, "pane-package-stdio.json"));
+        var next = await PublishPackageAsync(root, git, NextPin);
+        await http.ChangeAsync("emulator_refresh_bucket", BucketArguments());
+        await http.ChangeAsync("emulator_install_bundle", PackageArguments(next), stdio);
+
+        await http.ChangeAsync("emulator_select_bundle", ProjectArguments(project, next));
+        await AssertDisplayedPinAsync(next);
+        await AssertBindingDisplayedAsync(window, http, project, token);
+
+        await http.ChangeAsync("emulator_rollback_bundle", ProjectArguments(project, first), stdio);
+        await AssertDisplayedPinAsync(first);
+        await AssertBindingDisplayedAsync(window, http, project, token);
+        await http.ChangeAsync("emulator_remove_bundle", PackageArguments(first), stdio);
+        var missing = session.Localization.Text("emulator.pane.binding-unavailable");
+        var unavailable = Stopwatch.StartNew();
+        while (!BindingIsUnavailable() && unavailable.Elapsed < TimeSpan.FromSeconds(5))
+            await Task.Delay(25, token);
+        Assert.True(BindingIsUnavailable());
+        Assert.Equal("unavailable", session.EmulatorsView.ActiveBinding?.Status, StringComparer.Ordinal);
+        Assert.Equal(first, session.EmulatorsView.ActivePin);
+
+        bool BindingIsUnavailable() => window.GetVisualDescendants().OfType<TextBlock>().Any(text =>
+            string.Equals(AutomationProperties.GetAutomationId(text), "emulator.project.binding", StringComparison.Ordinal) &&
+            string.Equals(text.Text, missing, StringComparison.Ordinal));
+
+        async Task AssertDisplayedPinAsync(Pin pin)
+        {
+            var wait = Stopwatch.StartNew();
+            while (session.EmulatorsView.ActivePin != pin && wait.Elapsed < TimeSpan.FromSeconds(5))
+                await Task.Delay(25, token);
+            Assert.Equal(pin, session.EmulatorsView.ActivePin);
+            Assert.Contains(window.GetVisualDescendants().OfType<TextBlock>(), text =>
+                string.Equals(AutomationProperties.GetAutomationId(text), "emulator.project.active", StringComparison.Ordinal) &&
+                string.Equals(text.Text, $"{pin.Bucket}/{pin.Bundle} {pin.Version}", StringComparison.Ordinal));
         }
     }
 
