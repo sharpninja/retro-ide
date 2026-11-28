@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using Avalonia.Headless.XUnit;
 using ModelContextProtocol.Client;
@@ -71,6 +73,50 @@ public sealed partial class EmulatorBundleIntegrationTests
         var stale = await owner.CallAsync("emulator_configure_bucket", args);
         Assert.Equal("stale_revision", stale.GetProperty("code").GetString(), StringComparer.Ordinal);
         Assert.Empty((await owner.CallAsync("emulator_list_buckets")).GetProperty("data").GetProperty("buckets").EnumerateArray());
+    }
+
+    /// <remarks>TEST-RETRO-009#ac-test-bundle-integrity; TEST-RETRO-015#ac-test-mcp-operation.</remarks>
+    [AvaloniaFact]
+    public async Task A_package_refresh_can_be_started_polled_cancelled_and_read_through_the_same_grant()
+    {
+        using var root = new BundleStoreFixture();
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(root.CancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(30));
+        var token = deadline.Token;
+        await using var session = OpenEmulatorWorkbench(root);
+        await using var http = await GitWorkspaceStateTests.WorkspaceConnection.ConnectAsync(session, token);
+        await using var bridge = await http.ConnectStdioAsync(Path.Combine(root.Directory, "cancel-package-stdio.json"), shareGrant: true);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var endpoint = (IPEndPoint)listener.LocalEndpoint;
+        await http.ChangeAsync("emulator_configure_bucket", BucketArguments($"http://127.0.0.1:{endpoint.Port}/package.git"));
+
+        var arguments = BucketArguments();
+        arguments["background"] = true;
+        var started = await http.ChangeAsync("emulator_refresh_bucket", arguments);
+        var id = started.GetProperty("data").GetProperty("operationId").GetGuid();
+        var handle = new Dictionary<string, object?>(StringComparer.Ordinal) { ["operationId"] = id };
+        using var socket = await listener.AcceptTcpClientAsync(token);
+        var running = (await http.CallAsync("workbench_operation_status", handle, bridge)).GetProperty("data");
+        Assert.Equal("running", running.GetProperty("state").GetString(), StringComparer.Ordinal);
+        Assert.True(running.GetProperty("canCancel").GetBoolean());
+        await http.ChangeAsync("workbench_operation_cancel", new(handle, StringComparer.Ordinal), bridge);
+
+        JsonElement result;
+        do
+        {
+            result = await http.CallAsync("workbench_operation_result", handle);
+            if (string.Equals(result.GetProperty("code").GetString(), "operation_pending", StringComparison.Ordinal))
+                await Task.Delay(25, token);
+            else
+                break;
+        } while (true);
+        Assert.Equal("ok", result.GetProperty("code").GetString(), StringComparer.Ordinal);
+        var original = result.GetProperty("data");
+        Assert.Equal(id, original.GetProperty("operationId").GetGuid());
+        Assert.Equal("cancelled", original.GetProperty("code").GetString(), StringComparer.Ordinal);
+        var buckets = (await http.CallAsync("emulator_list_buckets")).GetProperty("data").GetProperty("buckets");
+        Assert.Equal(JsonValueKind.Null, Assert.Single(buckets.EnumerateArray()).GetProperty("revision").ValueKind);
     }
 
     private static WorkbenchSession OpenEmulatorWorkbench(BundleStoreFixture root) =>

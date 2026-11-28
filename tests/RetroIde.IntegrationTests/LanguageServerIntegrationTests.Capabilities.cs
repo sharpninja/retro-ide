@@ -89,10 +89,28 @@ public sealed partial class LanguageServerIntegrationTests
     {
         var path = Path.Combine(fixture, $"fixture-capabilities-{step}");
         await WaitForFileAsync(path, token);
-        using var response = JsonDocument.Parse(await File.ReadAllTextAsync(path, token));
+        using var response = await ReadCapabilityTraceAsync(path, token);
         Assert.Equal(accepted, response.RootElement.TryGetProperty("result", out _));
         if (!accepted)
             Assert.Equal(-32602, response.RootElement.GetProperty("error").GetProperty("code").GetInt32());
+    }
+
+    private static async Task<JsonDocument> ReadCapabilityTraceAsync(string path, CancellationToken token)
+    {
+        while (true)
+        {
+            try
+            {
+                // The fixture publishes a complete file by renaming it in this directory.
+                await using var trace = new FileStream(path, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete, bufferSize: 4096, FileOptions.Asynchronous);
+                return await JsonDocument.ParseAsync(trace, cancellationToken: token);
+            }
+            catch (IOException error) when (OperatingSystem.IsWindows() && (error.HResult & 0xffff) is 32 or 33)
+            {
+                await Task.Delay(25, token);
+            }
+        }
     }
 
     private static async Task<JsonElement> OpenCapabilityFixtureAsync(Connection client, Guid root, string path) =>
