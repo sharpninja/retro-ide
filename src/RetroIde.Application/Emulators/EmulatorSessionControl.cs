@@ -10,25 +10,31 @@ internal sealed partial class EmulatorSessionControl
     private readonly ILogger _logger;
     private readonly SessionIdentity _identity;
     private readonly SessionClosePolicy _closePolicy;
+    private readonly CancellationToken _sessionLifetime;
     // The backend owns normal operation receipts and keeps them across connections.
     // Retain the uncertain operations this connection has explicitly reconciled.
     private readonly Dictionary<Guid, (PendingMutation Request, MutationResolution Receipt)> _resolutions = [];
     private SessionState _state;
     private PendingMutation? _uncertain;
 
-    internal EmulatorSessionControl(IEmulatorSession connection, SessionState initialState, ILogger logger)
+    internal EmulatorSessionControl(IEmulatorSession connection, SessionState initialState, ILogger logger,
+        CancellationToken sessionLifetime = default)
     {
         _connection = connection;
         _identity = initialState.Identity;
         _closePolicy = initialState.ClosePolicy;
         _state = initialState;
         _logger = logger;
+        _sessionLifetime = sessionLifetime;
     }
 
     internal SessionState State => Volatile.Read(ref _state);
 
     internal async ValueTask<AdapterResult<SessionState>> ReadAsync(CancellationToken token)
     {
+        if (_sessionLifetime.IsCancellationRequested)
+            return Fail<SessionState>(AdapterErrorCodes.Disconnected, "The emulator connection has closed.");
+
         try
         {
             var previous = State;

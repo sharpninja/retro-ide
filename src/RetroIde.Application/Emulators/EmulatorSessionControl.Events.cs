@@ -8,6 +8,8 @@ internal sealed partial class EmulatorSessionControl
     internal async IAsyncEnumerable<AdapterResult<SessionEvent>> WatchAsync(EventCursor? after,
         [EnumeratorCancellation] CancellationToken token)
     {
+        using var subscriptionLifetime = _sessionLifetime.CanBeCanceled ? CancellationTokenSource.CreateLinkedTokenSource(token, _sessionLifetime) : null;
+        token = subscriptionLifetime?.Token ?? token;
         var start = State;
         var cursor = after ?? start.Cursor;
         if (cursor.Session != _identity)

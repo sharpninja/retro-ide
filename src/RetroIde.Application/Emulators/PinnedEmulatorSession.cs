@@ -3,14 +3,25 @@ using RetroIde.Emulation;
 
 namespace RetroIde.Application.Emulators;
 
-internal sealed class PinnedEmulatorSession(IEmulatorSession session, SessionState initialState,
-    EmulatorBundleStore.BundleLease bundle, ILogger logger) : IAsyncDisposable
+internal sealed class PinnedEmulatorSession : IAsyncDisposable
 {
-    private EmulatorBundleStore.BundleLease? _bundle = bundle;
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly ILogger _logger;
+    private EmulatorBundleStore.BundleLease? _bundle;
 
-    internal IEmulatorSession Connection { get; } = session;
-    internal SessionState InitialState { get; } = initialState;
-    internal EmulatorSessionControl Control { get; } = new(session, initialState, logger);
+    internal PinnedEmulatorSession(IEmulatorSession session, SessionState initialState,
+        EmulatorBundleStore.BundleLease bundle, ILogger logger)
+    {
+        _bundle = bundle;
+        _logger = logger;
+        Connection = session;
+        InitialState = initialState;
+        Control = new(session, initialState, logger, _lifetime.Token);
+    }
+
+    internal IEmulatorSession Connection { get; }
+    internal SessionState InitialState { get; }
+    internal EmulatorSessionControl Control { get; }
 
     internal AdapterResult<DebuggerPresentationProfile> ReadDebuggerProfile(MachineDescriptor machine)
     {
@@ -24,7 +35,7 @@ internal sealed class PinnedEmulatorSession(IEmulatorSession session, SessionSta
         try { return owned.Installation.ReadDebuggerProfile(profile); }
         catch (Exception error) when (RuntimeFailures.CanRecover(error))
         {
-            RuntimeFailures.Report(logger, error, "read pinned debugger profile");
+            RuntimeFailures.Report(_logger, error, "read pinned debugger profile");
             return AdapterResult<DebuggerPresentationProfile>.Failure(new(AdapterErrorCodes.Incompatible,
                 "The pinned bundle's debugger profile could not be verified."));
         }
@@ -36,7 +47,15 @@ internal sealed class PinnedEmulatorSession(IEmulatorSession session, SessionSta
             return;
 
         using (owned)
-            await ReleaseConnectionAsync(Connection, logger).ConfigureAwait(false);
+        using (_lifetime)
+        {
+            try { await _lifetime.CancelAsync().ConfigureAwait(false); }
+            catch (Exception error) when (RuntimeFailures.CanRecover(error))
+            {
+                RuntimeFailures.Report(_logger, error, "cancel emulator session subscriptions");
+            }
+            finally { await ReleaseConnectionAsync(Connection, _logger).ConfigureAwait(false); }
+        }
     }
 
     internal static async ValueTask ReleaseConnectionAsync(IEmulatorSession connection, ILogger logger)

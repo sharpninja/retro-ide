@@ -36,6 +36,8 @@ internal sealed partial class EmulatorSessionControl
         Func<T, int, bool> validFormat, [EnumeratorCancellation] CancellationToken token)
         where TPort : class, IEmulatorPort where T : class
     {
+        using var subscriptionLifetime = _sessionLifetime.CanBeCanceled ? CancellationTokenSource.CreateLinkedTokenSource(token, _sessionLifetime) : null;
+        token = subscriptionLifetime?.Token ?? token;
         var opened = await InvokeMediaAsync<TPort, MediaSubscription<T>>(request, capability, operation, async (port, descriptor) =>
         {
             var maxBytes = PacketLimit(descriptor, hardLimit);

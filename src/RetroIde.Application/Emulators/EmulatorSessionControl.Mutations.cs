@@ -44,7 +44,6 @@ internal sealed partial class EmulatorSessionControl
                         "A changed emulator operation must use a new operation ID.", scope.OperationId);
                 if (previous.Receipt.Disposition == MutationDisposition.Applied)
                     return AdapterResult<MutationReceipt>.Success(new(scope, previous.Receipt.StateRevision));
-
             }
             if (_uncertain is not null)
                 return Fail<MutationReceipt>(AdapterErrorCodes.UnknownOutcome,
@@ -94,9 +93,9 @@ internal sealed partial class EmulatorSessionControl
 
         try
         {
-            if (_uncertain is not { } pending || pending.Scope.OperationId != scope.OperationId)
-                return Fail<MutationResolution>(AdapterErrorCodes.InvalidState, "This session has no matching uncertain operation.", scope.OperationId);
-            if (pending.Scope != scope)
+            var pending = _uncertain?.Scope.OperationId == scope.OperationId ? _uncertain : null;
+            var original = pending ?? (_resolutions.TryGetValue(scope.OperationId, out var previous) ? previous.Request : null);
+            if (original is not null && original.Scope != scope)
                 return Fail<MutationResolution>(AdapterErrorCodes.PermissionDenied, "Use the original actor and precondition to reconcile this operation.", scope.OperationId);
 
             var state = await ReadAsync(token).ConfigureAwait(false);
@@ -114,10 +113,13 @@ internal sealed partial class EmulatorSessionControl
             if (!result.Succeeded || result.Value.Scope != scope || !Enum.IsDefined(result.Value.Disposition) ||
                 result.Value.StateRevision < scope.ExpectedRevision.GetValueOrDefault())
                 return Fail<MutationResolution>(AdapterErrorCodes.Incompatible, "The emulator returned an invalid operation resolution.", scope.OperationId);
-            if (result.Value.Disposition != MutationDisposition.Unknown)
+            // A fresh attachment can look up the host's receipt without knowing the old payload.
+            // Only a request known locally can seed or update our retry history.
+            if (original is not null && result.Value.Disposition != MutationDisposition.Unknown)
             {
-                _uncertain = null;
-                _resolutions[scope.OperationId] = (pending, result.Value);
+                if (pending is not null)
+                    _uncertain = null;
+                _resolutions[scope.OperationId] = (original, result.Value);
             }
             return result;
         }
