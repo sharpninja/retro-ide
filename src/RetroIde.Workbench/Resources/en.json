@@ -19,6 +19,7 @@
     "emulator.pane.binding-ready": "Binding verified",
     "emulator.pane.binding-unavailable": "The pinned binding is unavailable on this host.",
     "emulator.pane.binding-incompatible": "The pinned binding could not be verified.",
+    "emulator.pane.debugger-profiles": "Verified debugger profiles",
     "emulator.pane.incompatible": "Incompatible with this host",
     "emulator.pane.result-invalid": "Could not display the emulator management result. Check the application log.",
     "command.emulator.pane.focus.label": "Emulators",

@@ -20,11 +20,12 @@ internal static class EmulatorsPane
     private const string BindingReady = "emulator.pane.binding-ready";
     private const string BindingUnavailable = "emulator.pane.binding-unavailable";
     private const string BindingIncompatible = "emulator.pane.binding-incompatible";
+    private const string VerifiedProfiles = "emulator.pane.debugger-profiles";
     private const string Incompatible = "emulator.pane.incompatible";
 
     internal static readonly string[] TextSlugs =
         [Buckets, BucketId, Repository, Configuration, Releases, Installed, Project, Previous, Active, Incompatible,
-         BindingReady, BindingUnavailable, BindingIncompatible,
+         BindingReady, BindingUnavailable, BindingIncompatible, VerifiedProfiles,
          "emulator.pane.result-invalid"];
 
     internal static Control Create(EmulatorsViewModel view)
@@ -102,23 +103,7 @@ internal static class EmulatorsPane
         var activeSection = Labelled(active, locale, Active);
         Watch(pane, view, () => activeSection.IsVisible = view.ActivePin is not null);
         pane.Children.Add(activeSection);
-        var binding = new TextBlock { TextWrapping = TextWrapping.Wrap };
-        Avalonia.Automation.AutomationProperties.SetAutomationId(binding, "emulator.project.binding");
-        void ShowBinding()
-        {
-            binding.IsVisible = view.ActiveBinding is not null;
-            binding.Text = view.ActiveBinding switch
-            {
-                { Status: "ready" } value =>
-                    $"{locale.Text(BindingReady)} · {value.AdapterId} · {value.RuntimeIdentifier} · {value.ContractVersion}",
-                { Status: "incompatible" } => locale.Text(BindingIncompatible),
-                not null => locale.Text(BindingUnavailable),
-                _ => null,
-            };
-        }
-        Watch(pane, view, ShowBinding);
-        locale.Observe(binding, ShowBinding);
-        pane.Children.Add(binding);
+        AddBinding(pane, view);
         pane.Children.Add(Picker(pane, view, Previous, "emulator.previous.items",
             () => view.PreviousPins, () => view.SelectedPrevious, value => view.SelectedPrevious = value,
             value => (DisplayPin(value), value.ManifestRevision)));
@@ -130,6 +115,36 @@ internal static class EmulatorsPane
                 Action(pane, WorkbenchCommands.RollbackEmulatorBundle, view.RollbackCommand, locale),
             },
         });
+    }
+
+    private static void AddBinding(StackPanel pane, EmulatorsViewModel view)
+    {
+        var locale = view.Localization;
+        var binding = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        Avalonia.Automation.AutomationProperties.SetAutomationId(binding, "emulator.project.binding");
+        var profiles = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        Avalonia.Automation.AutomationProperties.SetAutomationId(profiles, "emulator.project.debugger-profiles");
+        void ShowBinding()
+        {
+            binding.IsVisible = view.ActiveBinding is not null;
+            binding.Text = view.ActiveBinding switch
+            {
+                { Status: "ready" } value =>
+                    $"{locale.Text(BindingReady)} · {value.AdapterId} · {value.RuntimeIdentifier} · {value.ContractVersion}",
+                { Status: "incompatible" } => locale.Text(BindingIncompatible),
+                not null => locale.Text(BindingUnavailable),
+                _ => null,
+            };
+            var verified = view.ActiveBinding?.VerifiedDebuggerProfiles;
+            profiles.IsVisible = verified is { Length: > 0 };
+            profiles.Text = verified is { Length: > 0 }
+                ? $"{locale.Text(VerifiedProfiles)} · {string.Join(", ", verified.Select(static profile => $"{profile.Id} ({profile.SchemaVersion})"))}"
+                : null;
+        }
+        Watch(pane, view, ShowBinding);
+        locale.Observe(binding, ShowBinding);
+        pane.Children.Add(binding);
+        pane.Children.Add(profiles);
     }
 
     private static Control Picker<T>(Control anchor, EmulatorsViewModel view, string slug, string automationId,

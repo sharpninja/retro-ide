@@ -8,6 +8,8 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
+using RetroIde.Application.Emulators;
+using RetroIde.Emulation;
 using RetroIde.Testing;
 using RetroIde.Workbench;
 using Xunit;
@@ -55,6 +57,7 @@ public sealed partial class EmulatorBundleIntegrationTests
             while (await SelectedPinAsync(http, rootId) != pin)
                 await Task.Delay(25, deadline.Token);
             await AssertBindingDisplayedAsync(window, http, rootId, deadline.Token);
+            await AssertSelectedDebuggerProfileAsync(session, window, http, rootId, pin, deadline.Token);
             var picker = Assert.Single(window.GetVisualDescendants().OfType<ComboBox>(), control =>
                 string.Equals(AutomationProperties.GetAutomationId(control), "emulator.projects.items", StringComparison.Ordinal));
             Assert.Contains(picker.GetVisualDescendants().OfType<TextBlock>(), text =>
@@ -66,6 +69,35 @@ public sealed partial class EmulatorBundleIntegrationTests
             window.Close();
             await closed.Task.WaitAsync(token);
         }
+    }
+
+    private static async Task AssertSelectedDebuggerProfileAsync(WorkbenchSession session, WorkbenchWindow window,
+        GitWorkspaceStateTests.WorkspaceConnection http, Guid rootId, Pin pin, CancellationToken token)
+    {
+        var result = await http.CallAsync("emulator_get_project_bundle", new(StringComparer.Ordinal) { ["rootId"] = rootId });
+        var binding = result.GetProperty("data").GetProperty("binding");
+        Assert.True(binding.TryGetProperty("verifiedDebuggerProfiles", out var profiles));
+        var reference = Assert.Single(profiles.EnumerateArray());
+        Assert.Equal("amiga-aga", reference.GetProperty("id").GetString(), StringComparer.Ordinal);
+        Assert.Equal(1, reference.GetProperty("schemaVersion").GetInt32());
+        Assert.Contains(window.GetVisualDescendants().OfType<TextBlock>(), text =>
+            string.Equals(AutomationProperties.GetAutomationId(text), "emulator.project.debugger-profiles", StringComparison.Ordinal) &&
+            text.IsEffectivelyVisible && text.Text?.Contains("amiga-aga (1)", StringComparison.Ordinal) == true);
+
+        var project = Assert.Single(session.EmulatorsView.Projects, item => item.Id == rootId);
+        var manager = Assert.IsType<EmulatorWorkspace>(session.Controller.Emulators);
+        var bindingFactory = new BindingFixture("uae", SessionClosePolicy.Detach);
+        var opened = await manager.OpenSelectedAsync(project, new("pane-fixture", new EmulatorConnection.Attach("fixture.endpoint")),
+            _ => bindingFactory, token);
+        Assert.True(opened.Succeeded, opened.Error?.Message);
+        await using var selected = opened.Value!;
+        Assert.Equal(pin.Version, selected.InitialState.Identity.BundleVersion, StringComparer.Ordinal);
+        var descriptor = await selected.Control.DescribeMachineAsync(new(selected.InitialState.Identity, Guid.NewGuid(), "desktop", null), token);
+        Assert.True(descriptor.Succeeded, descriptor.Error?.Message);
+        Assert.Equal(new DebuggerProfileReference("amiga-aga", 1), descriptor.Value!.Profile);
+        var layout = selected.ReadDebuggerProfile(descriptor.Value);
+        Assert.Equal("$", layout.Value?.Disassembly.Prefix, StringComparer.Ordinal);
+        Assert.Equal(16, layout.Value?.BytesPerRow);
     }
 
     private static async Task VerifyRemotePackageChangesAsync(BundleStoreFixture root, GitWorktreeFixture git, WorkbenchSession session,

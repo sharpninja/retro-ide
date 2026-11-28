@@ -73,6 +73,24 @@ internal sealed partial class EmulatorBundleStore(string root)
         return access?.Installation;
     }
 
+    internal T? Inspect<T>(Pin pin, string runtimeIdentifier, Version adapterApi, Func<InstalledBundle, T> project) where T : class
+    {
+        pin = Normalize(pin, runtimeIdentifier);
+        var directory = InstallPath(pin, runtimeIdentifier);
+        if (!Directory.Exists(directory))
+            return null;
+
+        try
+        {
+            var result = project(ReadInstalled(directory, pin, runtimeIdentifier, adapterApi));
+            return Directory.Exists(directory) ? result : null;
+        }
+        catch (Exception error) when (error is IOException or InvalidDataException && !Directory.Exists(directory))
+        {
+            return null;
+        }
+    }
+
     private static Pin Normalize(Pin pin, string runtimeIdentifier)
     {
         if (!EmulatorBundleManifest.IsIdentifier(runtimeIdentifier))
@@ -164,7 +182,7 @@ internal sealed partial class EmulatorBundleStore(string root)
     {
         var path = Path.Combine(folder, name);
         RequirePathType(path, directoryExpected: false);
-        using var stream = File.OpenRead(path);
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
         var length = stream.Length;
         if (length > maximumBytes)
             throw new InvalidDataException($"The installed bundle {name} exceeds its storage limit.");

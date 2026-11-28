@@ -121,7 +121,7 @@ internal sealed class EmulatorWorkspace
         if (pin is null)
             return AdapterResult<PinnedEmulatorSession>.Failure(new(AdapterErrorCodes.Unavailable, "Select an emulator bundle for this project."));
 
-        var binding = ResolveBinding(pin);
+        var binding = ResolveBinding(() => _store.Acquire(pin, RuntimeInformation.RuntimeIdentifier, AdapterApi));
         if (!binding.Succeeded)
             return AdapterResult<PinnedEmulatorSession>.Failure(binding.Error);
         var coordinator = new EmulatorSessionCoordinator(activateBinding, _logger);
@@ -143,28 +143,45 @@ internal sealed class EmulatorWorkspace
 
     private ProjectBinding BindingDetails(Pin pin)
     {
-        var resolved = ResolveBinding(pin);
-        if (!resolved.Succeeded)
-            return new(resolved.Error.Code);
-        using var binding = resolved.Value;
-        var install = binding.Installation;
-        return new("ready", install.Manifest.AdapterId, install.Receipt.RuntimeIdentifier, AdapterApi.ToString());
+        var resolved = ResolveBinding(() => _store.Inspect(pin, RuntimeInformation.RuntimeIdentifier, AdapterApi,
+            install => new ProjectBinding("ready", install.Manifest.AdapterId, install.Receipt.RuntimeIdentifier,
+                AdapterApi.ToString(), VerifiedProfiles(install))));
+        return resolved.Succeeded ? resolved.Value : new(resolved.Error.Code);
     }
 
-    private AdapterResult<EmulatorBundleStore.BundleLease> ResolveBinding(Pin pin)
+    private DebuggerProfileReference[] VerifiedProfiles(EmulatorBundleStore.InstalledBundle install)
+    {
+        var profiles = new List<DebuggerProfileReference>();
+        foreach (var (id, asset) in install.Manifest.DebuggerProfiles.OrderBy(static profile => profile.Key, StringComparer.Ordinal))
+        {
+            var reference = new DebuggerProfileReference(id, asset.SchemaVersion);
+            try
+            {
+                if (install.ReadDebuggerProfile(reference).Succeeded)
+                    profiles.Add(reference);
+            }
+            catch (Exception error) when (RuntimeFailures.CanRecover(error))
+            {
+                RuntimeFailures.Report(_logger, error, "verify installed debugger profile", LogLevel.Warning);
+            }
+        }
+        return profiles.ToArray();
+    }
+
+    private AdapterResult<T> ResolveBinding<T>(Func<T?> resolve) where T : class
     {
         try
         {
-            var binding = _store.Acquire(pin, RuntimeInformation.RuntimeIdentifier, AdapterApi);
+            var binding = resolve();
             return binding is null
-                ? AdapterResult<EmulatorBundleStore.BundleLease>.Failure(new(AdapterErrorCodes.Unavailable,
+                ? AdapterResult<T>.Failure(new(AdapterErrorCodes.Unavailable,
                     "The project's pinned emulator bundle is unavailable on this host."))
-                : AdapterResult<EmulatorBundleStore.BundleLease>.Success(binding);
+                : AdapterResult<T>.Success(binding);
         }
         catch (Exception error) when (RuntimeFailures.CanRecover(error))
         {
             ReportFailure(error);
-            return AdapterResult<EmulatorBundleStore.BundleLease>.Failure(new(AdapterErrorCodes.Incompatible,
+            return AdapterResult<T>.Failure(new(AdapterErrorCodes.Incompatible,
                 "The project's pinned emulator binding could not be verified."));
         }
     }
@@ -203,7 +220,8 @@ internal sealed class EmulatorWorkspace
     internal sealed record BucketChange(string BucketId);
     internal sealed record InstalledState(Pin Pin, string Name, string AdapterId, string RuntimeIdentifier, bool IsCompatible);
     internal sealed record RemovalState(Pin Pin);
-    internal sealed record ProjectBinding(string Status, string? AdapterId = null, string? RuntimeIdentifier = null, string? ContractVersion = null);
+    internal sealed record ProjectBinding(string Status, string? AdapterId = null, string? RuntimeIdentifier = null, string? ContractVersion = null,
+        DebuggerProfileReference[]? VerifiedDebuggerProfiles = null);
     internal sealed record SelectionState(Guid RootId,
         [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] EmulatorProjectSelectionStore.Snapshot? Selection,
         ProjectBinding? Binding = null);

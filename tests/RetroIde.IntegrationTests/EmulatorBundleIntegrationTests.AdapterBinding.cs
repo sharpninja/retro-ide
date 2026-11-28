@@ -127,8 +127,12 @@ public sealed partial class EmulatorBundleIntegrationTests
         var (workspace, project, installation) = await PrepareSelectedBindingAsync(root).ConfigureAwait(true);
         var selected = workspace.ReadSelection(project);
         Assert.Equal(FirstPin, selected.Selection?.Active);
-        Assert.Equal(new EmulatorWorkspace.ProjectBinding("ready", installation.Manifest.AdapterId, RuntimeInformation.RuntimeIdentifier, "1.0"),
-            selected.Binding);
+        var binding = Assert.IsType<EmulatorWorkspace.ProjectBinding>(selected.Binding);
+        Assert.Equal("ready", binding.Status, StringComparer.Ordinal);
+        Assert.Equal(installation.Manifest.AdapterId, binding.AdapterId, StringComparer.Ordinal);
+        Assert.Equal(RuntimeInformation.RuntimeIdentifier, binding.RuntimeIdentifier, StringComparer.Ordinal);
+        Assert.Equal("1.0", binding.ContractVersion, StringComparer.Ordinal);
+        Assert.Equal(new DebuggerProfileReference("amiga-aga", 1), Assert.Single(binding.VerifiedDebuggerProfiles!));
 
         Assert.Equal(EmulatorBundleStore.Removal.Removed, root.Store.Remove(FirstPin, RuntimeInformation.RuntimeIdentifier, token));
         var missing = workspace.ReadSelection(project);
@@ -138,6 +142,25 @@ public sealed partial class EmulatorBundleIntegrationTests
         var result = await workspace.OpenSelectedAsync(project, new("fixture-profile", launch),
             _ => throw new InvalidOperationException("An unavailable bundle must not activate."), token).ConfigureAwait(true);
         Assert.Equal(AdapterErrorCodes.Unavailable, result.Error?.Code, StringComparer.Ordinal);
+    }
+
+    /// <remarks>TEST-RETRO-009#ac-test-bundle-versions; TEST-RETRO-015#ac-test-mcp-same-instance.</remarks>
+    [Fact]
+    public async Task Removing_a_bundle_does_not_wait_for_a_metadata_snapshot_or_publish_an_old_binding()
+    {
+        using var root = new BundleStoreFixture();
+        var (workspace, project, _) = await PrepareSelectedBindingAsync(root).ConfigureAwait(true);
+        var runtime = RuntimeInformation.RuntimeIdentifier;
+        var inspected = root.Store.Inspect(FirstPin, runtime, AdapterApi, installation =>
+        {
+            Assert.Equal(FirstPin, installation.Receipt.Pin);
+            Assert.Equal(EmulatorBundleStore.Removal.Removed, root.Store.Remove(FirstPin, runtime, root.CancellationToken));
+            return installation;
+        });
+
+        Assert.Null(inspected);
+        Assert.Equal(FirstPin, workspace.ReadSelection(project).Selection?.Active);
+        Assert.Equal(AdapterErrorCodes.Unavailable, workspace.ReadSelection(project).Binding?.Status, StringComparer.Ordinal);
     }
 
     private static async Task<(EmulatorWorkspace Workspace, WorkspaceExplorer.Root Project, EmulatorBundleStore.InstalledBundle Installation)>

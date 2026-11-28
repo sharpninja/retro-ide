@@ -17,16 +17,17 @@ internal sealed partial class EmulatorBundleStore
             token.ThrowIfCancellationRequested();
             try
             {
-                using var access = OpenShared(directory);
                 if (!Directory.Exists(directory))
                     continue;
                 var receipt = ReadReceipt(directory);
                 var pin = receipt.Pin.Normalized();
                 if (!NativeGit.SamePath(directory, InstallPath(pin, runtimeIdentifier)))
                     throw new InvalidDataException("The bundle receipt does not match the installed directory.");
-                releases.Add(ReadInstalled(directory, pin, runtimeIdentifier, adapterApi: null, receipt));
+                var installed = ReadInstalled(directory, pin, runtimeIdentifier, adapterApi: null, receipt);
+                if (Directory.Exists(directory))
+                    releases.Add(installed);
             }
-            catch (IOException error) when (!Directory.Exists(directory) || BundleFileLock.IsContended(error)) { }
+            catch (Exception error) when (error is IOException or InvalidDataException && !Directory.Exists(directory)) { }
             catch (Exception error) when (error is IOException or InvalidDataException or JsonException or ArgumentException or UnauthorizedAccessException)
             {
                 report(error);
