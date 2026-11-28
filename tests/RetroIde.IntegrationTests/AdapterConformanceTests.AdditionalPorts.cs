@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using RetroIde.Application.Emulators;
 using RetroIde.Emulation;
 using Xunit;
 
@@ -155,5 +157,43 @@ public sealed partial class AdapterConformanceTests
         Assert.Equal(Assert.Single(guest.Value!.Containers).Id, Assert.Single(guest.Value.Services).ContainerId, StringComparer.Ordinal);
         Assert.True((await control.ExecuteAsync(new(adapter.Scope("desktop"), new(ExecutionAction.Pause)), cancellation).ConfigureAwait(true)).Succeeded);
         Assert.DoesNotContain(unknown, adapter.PortRequests);
+    }
+
+    /// <remarks>TEST-RETRO-010#ac-test-control-semantics; TEST-RETRO-010#ac-test-port-conformance.</remarks>
+    [Fact]
+    public async Task Reconciled_input_and_console_retries_compare_ordered_payload_values()
+    {
+        var adapter = new ControlAdapter();
+        adapter.EnableAdditionalPorts();
+        adapter.Disposition = MutationDisposition.Applied;
+        var control = adapter.StartControl();
+        var token = TestContext.Current.CancellationToken;
+        var capture = new IInputPort.Capture("keyboard", Guid.NewGuid());
+        var scope = adapter.Scope("desktop") with { ExpectedRevision = null };
+        var axes = ImmutableDictionary.Create<string, short>(StringComparer.Ordinal).Add("x", 5).Add("y", -5);
+        var controller = new IInputPort.InputEvent.Controller(1, axes);
+        var key = new IInputPort.InputEvent.Key("A", true);
+        var input = new IInputPort.Batch(capture, 0, [controller, key]);
+        var sameAxes = ImmutableDictionary.Create<string, short>(StringComparer.Ordinal).Add("y", -5).Add("x", 5);
+        await AssertRecoveredPayloadAsync(adapter, control, scope, input, input with { Events = [key, controller] },
+            input with { Events = [controller with { Axes = sameAxes }, key] }, control.SendInputAsync, token);
+
+        var console = new IConsolePort.ChannelInput("serial", [0x41, 0x42]);
+        await AssertRecoveredPayloadAsync(adapter, control, adapter.Scope("desktop"), console, console with { Data = [0x42, 0x41] },
+            console with { Data = [0x41, 0x42] }, control.SendConsoleAsync, token);
+        Assert.Equal(new byte[] { 0x41, 0x42 }, adapter.ConsoleInput.ToArray());
+    }
+
+    private static async Task AssertRecoveredPayloadAsync<T>(ControlAdapter adapter, EmulatorSessionControl control, SessionOperation scope,
+        T original, T changed, T equivalent,
+        Func<MutationRequest<T>, CancellationToken, ValueTask<AdapterResult<MutationReceipt>>> send, CancellationToken token) where T : class
+    {
+        adapter.DropNextPortReply = true;
+        Assert.Equal(AdapterErrorCodes.UnknownOutcome, (await send(new(scope, original), token)).Error?.Code, StringComparer.Ordinal);
+        var recovered = await control.ReconcileAsync(scope, token);
+        Assert.Equal(MutationDisposition.Applied, recovered.Value?.Disposition);
+        Assert.Equal(AdapterErrorCodes.InvalidArgument, (await send(new(scope, changed), token)).Error?.Code, StringComparer.Ordinal);
+        Assert.Equal(new MutationReceipt(scope, recovered.Value!.StateRevision), (await send(new(scope, equivalent), token)).Value);
+        Assert.Equal(recovered.Value.StateRevision, adapter.Current.StateRevision);
     }
 }

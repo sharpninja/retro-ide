@@ -117,4 +117,25 @@ public sealed class MachineMemoryMapTests
         Assert.Equal(new MutationReceipt(scope, 2), (await control.WriteMemoryAsync(ram, token).ConfigureAwait(true)).Value);
         Assert.Equal(ram, Assert.Single(adapter.Writes));
     }
+
+    /// <remarks>TEST-RETRO-010#ac-test-control-semantics; TEST-RETRO-017#ac-test-live-machine-maps.</remarks>
+    [Fact]
+    public async Task A_reconciled_mapped_write_keeps_its_exact_address_and_bytes()
+    {
+        var adapter = new MachineDebugAdapterFixture { DropNextWriteReply = true };
+        var control = adapter.OpenControl();
+        var token = TestContext.Current.CancellationToken;
+        var scope = adapter.NewScope() with { ExpectedRevision = adapter.State.StateRevision };
+        var request = new MutationRequest<MemoryWriteRequest>(scope, new(new("main", 0x00, "cpu", MapRevision: 7), [1, 2]));
+        Assert.Equal(AdapterErrorCodes.UnknownOutcome, (await control.WriteMemoryAsync(request, token)).Error?.Code, StringComparer.Ordinal);
+        Assert.Equal(MutationDisposition.Applied, (await control.ReconcileAsync(scope, token)).Value?.Disposition);
+
+        var altered = request with { Payload = request.Payload with { Data = [2, 1] } };
+        Assert.Equal(AdapterErrorCodes.InvalidArgument, (await control.WriteMemoryAsync(altered, token)).Error?.Code, StringComparer.Ordinal);
+        var moved = request with { Payload = request.Payload with { Address = request.Payload.Address with { Offset = 2 } } };
+        Assert.Equal(AdapterErrorCodes.InvalidArgument, (await control.WriteMemoryAsync(moved, token)).Error?.Code, StringComparer.Ordinal);
+        var sameBytes = request with { Payload = request.Payload with { Data = [1, 2] } };
+        Assert.Equal(new MutationReceipt(scope, 2), (await control.WriteMemoryAsync(sameBytes, token)).Value);
+        Assert.Equal(request, Assert.Single(adapter.Writes));
+    }
 }

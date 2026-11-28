@@ -6,7 +6,7 @@ using RetroIde.Emulation;
 
 namespace RetroIde.IntegrationTests;
 
-internal sealed class MachineDebugAdapterFixture : IEmulatorSession, IMachineDescriptorPort, IMemoryPort
+internal sealed class MachineDebugAdapterFixture : IEmulatorSession, IMachineDescriptorPort, IMemoryPort, IOperationReceiptPort
 {
     internal static CapabilityDescriptor DescriptorCapability { get; } = new(IMachineDescriptorPort.Capability,
         null, [IMachineDescriptorPort.Describe], ImmutableDictionary<string, ulong>.Empty);
@@ -15,6 +15,9 @@ internal sealed class MachineDebugAdapterFixture : IEmulatorSession, IMachineDes
         ImmutableDictionary<string, ulong>.Empty.Add("address-bits", 16).Add("max-read-bytes", 256).Add("max-write-bytes", 2));
     private static readonly CapabilityDescriptor AuxMemory = new(IMemoryPort.Capability, "aux", [IMemoryPort.InspectMapped],
         ImmutableDictionary<string, ulong>.Empty.Add("max-read-bytes", 64));
+    private static readonly CapabilityDescriptor Receipts = new(IOperationReceiptPort.Capability, null,
+        [IOperationReceiptPort.Reconcile], ImmutableDictionary<string, ulong>.Empty);
+    private MutationReceipt? _lostWrite;
 
     internal MachineDebugAdapterFixture(bool advertised = true)
     {
@@ -26,6 +29,7 @@ internal sealed class MachineDebugAdapterFixture : IEmulatorSession, IMachineDes
     internal MachineDescriptor Machine { get; set; }
     internal SessionState State { get; set; }
     internal Action? BeforeRead { get; set; }
+    internal bool DropNextWriteReply { get; set; }
     internal Action<SessionEvent>? OnEvent { get; set; }
     internal int DescriptionRequests { get; private set; }
     internal List<MemoryReadRequest> Reads { get; } = [];
@@ -37,7 +41,7 @@ internal sealed class MachineDebugAdapterFixture : IEmulatorSession, IMachineDes
 
     internal SessionState MakeState(ulong sequence, ulong revision, bool advertised = true) =>
         new(Identity, SessionLifecycle.Connected, ExecutionStatus.Paused, revision, SessionClosePolicy.Detach,
-            new CapabilitySnapshot(1, advertised ? [DescriptorCapability, MainMemory, AuxMemory] : [MainMemory, AuxMemory]),
+            new CapabilitySnapshot(1, advertised ? [DescriptorCapability, MainMemory, AuxMemory, Receipts] : [MainMemory, AuxMemory, Receipts]),
             new EventCursor(Identity, sequence));
 
     internal static MachineDescriptor DescribeTarget(SessionIdentity target, ulong mapRevision = 7, bool upperBank = false,
@@ -109,8 +113,18 @@ internal sealed class MachineDebugAdapterFixture : IEmulatorSession, IMachineDes
                 "The fixture state or map changed.", request.Scope.OperationId)));
         Writes.Add(request);
         State = State with { StateRevision = State.StateRevision + 1, Cursor = new(Identity, State.Cursor.Sequence + 1) };
-        return ValueTask.FromResult(AdapterResult<MutationReceipt>.Success(new(request.Scope, State.StateRevision)));
+        var receipt = new MutationReceipt(request.Scope, State.StateRevision);
+        if (!DropNextWriteReply)
+            return ValueTask.FromResult(AdapterResult<MutationReceipt>.Success(receipt));
+        DropNextWriteReply = false;
+        _lostWrite = receipt;
+        return ValueTask.FromResult(AdapterResult<MutationReceipt>.Failure(new(AdapterErrorCodes.Timeout, "The write reply was lost.")));
     }
+
+    public ValueTask<AdapterResult<MutationResolution>> ReconcileAsync(SessionOperation operation, CancellationToken cancellationToken) =>
+        ValueTask.FromResult(_lostWrite is { } write && write.Scope == operation
+            ? AdapterResult<MutationResolution>.Success(new(operation, MutationDisposition.Applied, write.StateRevision))
+            : AdapterResult<MutationResolution>.Failure(new(AdapterErrorCodes.Unavailable, "No matching fixture write.")));
 
     public IAsyncEnumerable<SessionEvent> ReadEventsAsync(EventCursor? after, CancellationToken cancellationToken)
     {
@@ -125,7 +139,8 @@ internal sealed class MachineDebugAdapterFixture : IEmulatorSession, IMachineDes
 
     public bool TryGetPort<TPort>(CapabilityId capability, [NotNullWhen(true)] out TPort? port) where TPort : class, IEmulatorPort
     {
-        port = capability == IMachineDescriptorPort.Capability || capability == IMemoryPort.Capability ? this as TPort : null;
+        port = capability == IMachineDescriptorPort.Capability || capability == IMemoryPort.Capability || capability == IOperationReceiptPort.Capability
+            ? this as TPort : null;
         return port is not null;
     }
 

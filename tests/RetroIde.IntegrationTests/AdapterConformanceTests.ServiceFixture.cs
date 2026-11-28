@@ -11,7 +11,8 @@ public sealed partial class AdapterConformanceTests
         [
             Advertise(ISnapshotReplayPort.Capability, null, [ISnapshotReplayPort.List, ISnapshotReplayPort.Save, ISnapshotReplayPort.Seek]),
             Advertise(IConsolePort.Capability, null, [IConsolePort.List, IConsolePort.ListArtifacts]),
-            Advertise(IConsolePort.Capability, "serial", [IConsolePort.Read], Limit("max-records", 5)),
+            Advertise(IConsolePort.Capability, "serial", [IConsolePort.Read, IConsolePort.Send],
+                Limit("max-records", 5).Add("max-input-bytes", 4)),
             Advertise(ITestAutomationPort.Capability, null, [ITestAutomationPort.List, ITestAutomationPort.ReadResult]),
             Advertise(ITestAutomationPort.Capability, "boot-test", [ITestAutomationPort.Run], Limit("max-iterations", 2)),
             Advertise(IGuestServicesPort.Capability, null, [IGuestServicesPort.List]),
@@ -21,6 +22,7 @@ public sealed partial class AdapterConformanceTests
         private ISnapshotReplayPort.Replay _replay = new("fixture.replay", ReplayStart, 100, 0, true);
         private ISnapshotReplayPort.Snapshot? _snapshot;
         private Guid _fixtureRun;
+        internal ImmutableArray<byte> ConsoleInput { get; private set; } = [];
 
         ValueTask<AdapterResult<ISnapshotReplayPort.Catalog>> ISnapshotReplayPort.ReadAsync(SessionOperation scope, CancellationToken cancellationToken) =>
             Success(new ISnapshotReplayPort.Catalog(_snapshot is null ? [] : [_snapshot], _replay));
@@ -36,7 +38,7 @@ public sealed partial class AdapterConformanceTests
             };
 
         ValueTask<AdapterResult<IConsolePort.Channels>> IConsolePort.ListAsync(SessionOperation scope, CancellationToken cancellationToken) =>
-            Success(new IConsolePort.Channels([new("serial", IConsolePort.Origin.Guest, "UTF-8", false),
+            Success(new IConsolePort.Channels([new("serial", IConsolePort.Origin.Guest, "UTF-8", true),
                 new("host", IConsolePort.Origin.Backend, "UTF-8", false)]));
 
         ValueTask<AdapterResult<IConsolePort.Records>> IConsolePort.ReadAsync(ScopedQuery<IConsolePort.ChannelRead> request, CancellationToken cancellationToken) =>
@@ -46,7 +48,7 @@ public sealed partial class AdapterConformanceTests
             CancellationToken cancellationToken) => AsyncEnumerable.Empty<IConsolePort.Records>();
 
         ValueTask<AdapterResult<MutationReceipt>> IConsolePort.SendAsync(MutationRequest<IConsolePort.ChannelInput> request,
-            CancellationToken cancellationToken) => Unsupported<MutationReceipt>();
+            CancellationToken cancellationToken) => ApplyPort(request.Scope, () => ConsoleInput = request.Payload.Data);
 
         ValueTask<AdapterResult<IConsolePort.Artifacts>> IConsolePort.ListArtifactsAsync(SessionOperation scope, CancellationToken cancellationToken) =>
             Success(new IConsolePort.Artifacts([new(new("fixture.log", ArtifactReference.Origin.Backend), "fixture.log", "text/plain", 1)]));
