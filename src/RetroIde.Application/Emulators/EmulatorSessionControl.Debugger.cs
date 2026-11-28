@@ -108,10 +108,20 @@ internal sealed partial class EmulatorSessionControl
     internal ValueTask<AdapterResult<IDebuggerPort.Decoded>> DisassembleAsync(ScopedQuery<IDebuggerPort.DisassemblyRange> request, CancellationToken token)
     {
         var range = request.Payload;
+        MachineDescriptor? checkedMap = null;
         return MachineMap.Identifier(range.Start.CpuId) && MachineMap.Identifier(range.Start.SpaceId) &&
             range.Start.MapRevision.HasValue && range.InstructionCount is > 0 and <= 256
             ? InvokePortAsync<IDebuggerPort, IDebuggerPort.Decoded>(request.Scope, IDebuggerPort.Capability, range.Start.CpuId,
-                IDebuggerPort.Disassemble, (port, _) => CheckedDisassemblyAsync(port, request, token), token)
+                IDebuggerPort.Disassemble, (port, _) => CheckedDisassemblyAsync(port, request, checkedMap!, token), token,
+                async (_, cancellation) =>
+                {
+                    var map = await DescribeMachineAsync(RefreshScope(request.Scope), cancellation).ConfigureAwait(false);
+                    if (!map.Succeeded)
+                        return map.Error with { OperationId = request.Scope.OperationId };
+                    checkedMap = map.Value;
+                    return MachineMap.CheckMappedAccess(map.Value, request.Scope, range.Start, DisassemblyUnit(map.Value, range.Start),
+                        MemoryAccess.Inspect);
+                })
             : InvalidPortInput<IDebuggerPort.Decoded>(request.Scope);
     }
 
@@ -124,18 +134,11 @@ internal sealed partial class EmulatorSessionControl
     }
 
     private async ValueTask<AdapterResult<IDebuggerPort.Decoded>> CheckedDisassemblyAsync(IDebuggerPort port,
-        ScopedQuery<IDebuggerPort.DisassemblyRange> request, CancellationToken token)
+        ScopedQuery<IDebuggerPort.DisassemblyRange> request, MachineDescriptor map, CancellationToken token)
     {
         var scope = request.Scope;
         var range = request.Payload;
-        var map = await DescribeMachineAsync(RefreshScope(scope), token).ConfigureAwait(false);
-        if (!map.Succeeded)
-            return AdapterResult<IDebuggerPort.Decoded>.Failure(map.Error with { OperationId = scope.OperationId });
-
-        var unit = map.Value.MemorySpaces.FirstOrDefault(space => string.Equals(space.Id, range.Start.SpaceId, StringComparison.Ordinal))
-            ?.BytesPerAddress ?? 1;
-        if (MachineMap.CheckMappedAccess(map.Value, scope, range.Start, unit, MemoryAccess.Inspect) is { } invalid)
-            return AdapterResult<IDebuggerPort.Decoded>.Failure(invalid);
+        var unit = DisassemblyUnit(map, range.Start);
 
         var result = await port.DisassembleAsync(request, token).ConfigureAwait(false);
         if (!result.Succeeded)
@@ -150,13 +153,16 @@ internal sealed partial class EmulatorSessionControl
         {
             if (item.Bytes.IsDefaultOrEmpty || item.Bytes.Length > 256 || !SameSpace(item.Address, range.Start) ||
                 item.Address.Offset < range.Start.Offset || item.Address.Offset <= previousEnd ||
-                MachineMap.CheckMappedAccess(map.Value, scope, item.Address, item.Bytes.Length, MemoryAccess.Inspect) is not null)
+                MachineMap.CheckMappedAccess(map, scope, item.Address, item.Bytes.Length, MemoryAccess.Inspect) is not null)
                 return Fail<IDebuggerPort.Decoded>(AdapterErrorCodes.Incompatible,
                     "The emulator returned instructions outside the selected mapping.", scope.OperationId);
             previousEnd = item.Address.Offset + (ulong)(item.Bytes.Length / unit - 1);
         }
         return result;
     }
+
+    private static int DisassemblyUnit(MachineDescriptor machine, MemoryAddress start) =>
+        machine.MemorySpaces.FirstOrDefault(space => string.Equals(space.Id, start.SpaceId, StringComparison.Ordinal))?.BytesPerAddress ?? 1;
 
     private static bool SameSpace(MemoryAddress address, MemoryAddress start) =>
         address.MapRevision == start.MapRevision && string.Equals(address.CpuId, start.CpuId, StringComparison.Ordinal) &&

@@ -6,6 +6,50 @@ namespace RetroIde.IntegrationTests;
 /// <summary>Verifies exact target description, device addresses, and live map refresh.</summary>
 public sealed class MachineDescriptorConformanceTests
 {
+    /// <remarks>TEST-RETRO-017#ac-test-machine-descriptor-contract; TEST-RETRO-017#ac-test-machine-descriptor-compatibility.</remarks>
+    [Fact]
+    public async Task The_first_machine_watch_reply_cannot_publish_a_withdrawn_descriptor()
+    {
+        var token = TestContext.Current.CancellationToken;
+        var adapter = new MachineDebugAdapterFixture();
+        var control = adapter.OpenControl();
+        var oldMachine = adapter.Machine;
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var reply = new TaskCompletionSource<AdapterResult<MachineDescriptor>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        adapter.DescribeOverride = cancellation =>
+        {
+            started.TrySetResult();
+            return new(reply.Task.WaitAsync(cancellation));
+        };
+        var withdrawn = adapter.MakeState(2, 2, advertised: false);
+        withdrawn = withdrawn with { Capabilities = withdrawn.Capabilities with { Revision = 2 } };
+        var restored = adapter.MakeState(3, 3);
+        restored = restored with { Capabilities = restored.Capabilities with { Revision = 3 } };
+        await using var watch = control.WatchMachineAsync(adapter.NewScope(), null, token).GetAsyncEnumerator(token);
+        var initial = watch.MoveNextAsync().AsTask();
+        try
+        {
+            await started.Task.WaitAsync(token);
+            adapter.State = withdrawn;
+            Assert.Equal(withdrawn, (await control.ReadAsync(token)).Value);
+        }
+        finally { reply.TrySetResult(AdapterResult<MachineDescriptor>.Success(oldMachine)); }
+
+        Assert.True(await initial);
+        Assert.Equal(AdapterErrorCodes.Unsupported, watch.Current.Error?.Code, StringComparer.Ordinal);
+        adapter.DescribeOverride = null;
+        adapter.Events[1] = [new SessionStateChanged(withdrawn), new SessionStateChanged(restored)];
+        adapter.OnEvent = item =>
+        {
+            adapter.State = ((SessionStateChanged)item).State;
+            if (item.Cursor == restored.Cursor)
+                adapter.Machine = MachineDebugAdapterFixture.DescribeTarget(adapter.Identity, 8, upperBank: true);
+        };
+        Assert.True(await watch.MoveNextAsync());
+        Assert.Equal(8UL, watch.Current.Value?.MapRevision);
+        Assert.False(await watch.MoveNextAsync());
+    }
+
     /// <summary>Checks a multi-CPU target's identities, reference timing, byte order, and addressable ranges.</summary>
     /// <remarks>TEST-RETRO-017#ac-test-machine-descriptor-contract.</remarks>
     [Fact]

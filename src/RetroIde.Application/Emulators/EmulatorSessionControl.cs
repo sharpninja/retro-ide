@@ -11,6 +11,7 @@ internal sealed partial class EmulatorSessionControl
     private readonly SessionIdentity _identity;
     private readonly SessionClosePolicy _closePolicy;
     private readonly CancellationToken _sessionLifetime;
+    private readonly EmulatorSubscriptions _subscriptions;
     // The backend owns normal operation receipts and keeps them across connections.
     // Retain the uncertain operations this connection has explicitly reconciled.
     private readonly Dictionary<Guid, (PendingMutation Request, MutationResolution Receipt)> _resolutions = [];
@@ -26,9 +27,12 @@ internal sealed partial class EmulatorSessionControl
         _state = initialState;
         _logger = logger;
         _sessionLifetime = sessionLifetime;
+        _subscriptions = new(logger);
     }
 
     internal SessionState State => Volatile.Read(ref _state);
+
+    internal Task DrainSubscriptionsAsync() => _subscriptions.DrainAsync();
 
     internal async ValueTask<AdapterResult<SessionState>> ReadAsync(CancellationToken token)
     {

@@ -29,11 +29,13 @@ internal sealed class MachineDebugAdapterFixture : IEmulatorSession, IMachineDes
     internal MachineDescriptor Machine { get; set; }
     internal SessionState State { get; set; }
     internal Action? BeforeRead { get; set; }
+    internal Func<CancellationToken, ValueTask<AdapterResult<MachineDescriptor>>>? DescribeOverride { get; set; }
     internal bool DropNextWriteReply { get; set; }
     internal Action<SessionEvent>? OnEvent { get; set; }
     internal int DescriptionRequests { get; private set; }
     internal List<MemoryReadRequest> Reads { get; } = [];
     internal List<MutationRequest<MemoryWriteRequest>> Writes { get; } = [];
+    internal int WriteAttempts { get; private set; }
     internal Dictionary<ulong, SessionEvent[]> Events { get; } = [];
     internal List<ulong> Subscriptions { get; } = [];
     internal EmulatorSessionControl OpenControl() => new(this, State, NullLogger.Instance);
@@ -91,7 +93,7 @@ internal sealed class MachineDebugAdapterFixture : IEmulatorSession, IMachineDes
     public ValueTask<AdapterResult<MachineDescriptor>> DescribeAsync(SessionOperation scope, CancellationToken cancellationToken)
     {
         DescriptionRequests++;
-        return ValueTask.FromResult(AdapterResult<MachineDescriptor>.Success(Machine));
+        return DescribeOverride is { } describe ? describe(cancellationToken) : ValueTask.FromResult(AdapterResult<MachineDescriptor>.Success(Machine));
     }
 
     public ValueTask<AdapterResult<MemoryBlock>> ReadAsync(MemoryReadRequest request, CancellationToken cancellationToken)
@@ -108,6 +110,7 @@ internal sealed class MachineDebugAdapterFixture : IEmulatorSession, IMachineDes
 
     public ValueTask<AdapterResult<MutationReceipt>> WriteAsync(MutationRequest<MemoryWriteRequest> request, CancellationToken cancellationToken)
     {
+        WriteAttempts++;
         if (request.Payload.Address.MapRevision != Machine.MapRevision || request.Scope.ExpectedRevision != State.StateRevision)
             return ValueTask.FromResult(AdapterResult<MutationReceipt>.Failure(new(AdapterErrorCodes.RevisionConflict,
                 "The fixture state or map changed.", request.Scope.OperationId)));

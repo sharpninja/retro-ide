@@ -7,6 +7,7 @@ internal sealed class PinnedEmulatorSession : IAsyncDisposable
 {
     private readonly CancellationTokenSource _lifetime = new();
     private readonly ILogger _logger;
+    private readonly Lazy<Task> _dispose;
     private EmulatorBundleStore.BundleLease? _bundle;
 
     internal PinnedEmulatorSession(IEmulatorSession session, SessionState initialState,
@@ -14,6 +15,7 @@ internal sealed class PinnedEmulatorSession : IAsyncDisposable
     {
         _bundle = bundle;
         _logger = logger;
+        _dispose = new(DisposeCoreAsync);
         Connection = session;
         InitialState = initialState;
         Control = new(session, initialState, logger, _lifetime.Token);
@@ -41,7 +43,9 @@ internal sealed class PinnedEmulatorSession : IAsyncDisposable
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync() => new(_dispose.Value);
+
+    private async Task DisposeCoreAsync()
     {
         if (Interlocked.Exchange(ref _bundle, null) is not { } owned)
             return;
@@ -54,7 +58,11 @@ internal sealed class PinnedEmulatorSession : IAsyncDisposable
             {
                 RuntimeFailures.Report(_logger, error, "cancel emulator session subscriptions");
             }
-            finally { await ReleaseConnectionAsync(Connection, _logger).ConfigureAwait(false); }
+            finally
+            {
+                try { await Control.DrainSubscriptionsAsync().ConfigureAwait(false); }
+                finally { await ReleaseConnectionAsync(Connection, _logger).ConfigureAwait(false); }
+            }
         }
     }
 

@@ -25,8 +25,8 @@ public sealed partial class EmulatorBundleIntegrationTests
         await using var session = OpenEmulatorWorkbench(root);
         await using var http = await Connection.ConnectAsync(session, token);
         await http.ChangeAsync("emulator_configure_bucket", BucketArguments(new Uri(git.Remote).AbsoluteUri));
-        var first = await InstallAsync(FirstPin);
-        var next = await InstallAsync(NextPin);
+        var first = await InstallPanePackageAsync(http, root, git, FirstPin);
+        var next = await InstallPanePackageAsync(http, root, git, NextPin);
         var alpha = await OpenProjectAsync(http, root.Directory, "alpha");
         var beta = await OpenProjectAsync(http, root.Directory, "beta");
         await http.ChangeAsync("emulator_select_bundle", ProjectArguments(alpha, first));
@@ -50,13 +50,75 @@ public sealed partial class EmulatorBundleIntegrationTests
         }
         finally { window.Close(); }
 
-        async Task<Pin> InstallAsync(Pin pin)
+    }
+
+    /// <remarks>TEST-RETRO-015#ac-test-mcp-same-instance.</remarks>
+    [AvaloniaFact]
+    public async Task Package_changes_from_both_transports_coalesce_while_a_local_reload_is_in_flight()
+    {
+        using var root = new BundleStoreFixture();
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(root.CancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(40));
+        var token = deadline.Token;
+        using var git = await GitWorktreeFixture.CreateAsync("git", token);
+        await using var session = OpenEmulatorWorkbench(root);
+        await using var http = await Connection.ConnectAsync(session, token);
+        await using var stdio = await http.ConnectStdioAsync(Path.Combine(root.Directory, "package-overlap.json"));
+        await http.ChangeAsync("emulator_configure_bucket", BucketArguments(new Uri(git.Remote).AbsoluteUri));
+        var first = await InstallPanePackageAsync(http, root, git, FirstPin);
+        var next = await InstallPanePackageAsync(http, root, git, NextPin);
+        var project = await OpenProjectAsync(http, root.Directory, "project");
+        await http.ChangeAsync("emulator_select_bundle", ProjectArguments(project, first));
+        var view = session.EmulatorsView;
+        while (view.IsBusy || view.ActivePin != first)
+            await Task.Delay(25, token);
+
+        var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var reads = 0;
+        view.CommandRequested += PauseFirstRead;
+        try
         {
-            var release = await PublishPackageAsync(root, git, pin);
-            await http.ChangeAsync("emulator_refresh_bucket", BucketArguments());
-            await http.ChangeAsync("emulator_install_bundle", PackageArguments(release));
-            return release;
+            var reloaded = view.ReloadCommand.ExecuteAsync(null);
+            await held.Task.WaitAsync(token);
+            await http.ChangeAsync("emulator_select_bundle", ProjectArguments(project, next));
+            await http.ChangeAsync("emulator_remove_bundle", PackageArguments(next), stdio);
+            Assert.True(view.IsBusy);
+            Assert.Equal(1, reads);
+            release.SetResult();
+            await reloaded.WaitAsync(token);
+            Assert.Equal(2, reads);
+            Assert.Equal(next, view.ActivePin);
+            Assert.Equal("unavailable", view.ActiveBinding?.Status, StringComparer.Ordinal);
+            Assert.Equal(first, Assert.Single(view.PreviousPins));
         }
+        finally
+        {
+            release.TrySetResult();
+            view.CommandRequested -= PauseFirstRead;
+        }
+
+        void PauseFirstRead(object? sender, ViewCommandRequested request)
+        {
+            if (request.Payload is not EmulatorFeatures.ProjectInput || request.Completion is not { } completion || ++reads != 1)
+                return;
+            request.Completion = HoldAsync(completion);
+            held.SetResult();
+        }
+
+        async Task HoldAsync(Task completion)
+        {
+            await completion;
+            await release.Task.WaitAsync(token);
+        }
+    }
+
+    private static async Task<Pin> InstallPanePackageAsync(Connection http, BundleStoreFixture root, GitWorktreeFixture git, Pin pin)
+    {
+        var release = await PublishPackageAsync(root, git, pin);
+        await http.ChangeAsync("emulator_refresh_bucket", BucketArguments());
+        await http.ChangeAsync("emulator_install_bundle", PackageArguments(release));
+        return release;
     }
 
     private static async Task<Guid> OpenProjectAsync(Connection http, string parent, string name)

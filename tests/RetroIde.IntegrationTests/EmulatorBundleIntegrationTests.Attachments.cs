@@ -97,6 +97,37 @@ public sealed partial class EmulatorBundleIntegrationTests
         catch (OperationCanceledException) when (!deadline.IsCancellationRequested) { }
     }
 
+    /// <remarks>TEST-RETRO-010#ac-test-media-ports; TEST-RETRO-010#ac-test-session-contract.</remarks>
+    [Fact]
+    public async Task Closing_the_pin_drains_subscriptions_even_while_both_consumers_are_paused()
+    {
+        using var root = new BundleStoreFixture();
+        var token = root.CancellationToken;
+        var (workspace, project, installation) = await PrepareSelectedBindingAsync(root);
+        var identity = new SessionIdentity(installation.Manifest.AdapterId, FirstPin.Bundle, FirstPin.Version, Guid.NewGuid());
+        var host = new AttachedHost(identity) { PublishFirstItems = true };
+        var target = new EmulatorSessionPlan("fixture-profile", new EmulatorConnection.Attach("fixture.endpoint", identity));
+        await using var session = (await workspace.OpenSelectedAsync(project, target, _ => host, token)).Value!;
+        var connection = Assert.IsType<AttachedConnection>(session.Connection);
+        var scope = new SessionOperation(identity, Guid.NewGuid(), "desktop", null);
+        await using var events = session.Control.WatchAsync(null, token).GetAsyncEnumerator(token);
+        await using var video = session.Control.WatchVideoAsync(new(scope, "display"), token).GetAsyncEnumerator(token);
+        Assert.True(await events.MoveNextAsync());
+        Assert.True(events.Current.Succeeded);
+        Assert.True(await video.MoveNextAsync());
+        Assert.True(video.Current.Succeeded, video.Current.Error?.Message);
+
+        await session.DisposeAsync();
+
+        Assert.True(connection.EventsEnded);
+        Assert.True(connection.Video.Ended);
+        Assert.True(connection.Video.Disposed);
+        Assert.True(connection.ReleasedAfterSubscriptions);
+        Assert.Equal(EmulatorBundleStore.Removal.Removed, root.Store.Remove(FirstPin, RuntimeInformation.RuntimeIdentifier, token));
+        Assert.False(await events.MoveNextAsync());
+        await AwaitStoppedMediaAsync(video.MoveNextAsync().AsTask(), token);
+    }
+
     private sealed class AttachedHost(SessionIdentity identity) : IEmulatorAdapterFactory
     {
         private static readonly ImmutableDictionary<string, ulong> Limits = ImmutableDictionary<string, ulong>.Empty;
@@ -112,6 +143,7 @@ public sealed partial class EmulatorBundleIntegrationTests
 
         internal SessionIdentity Identity { get; } = identity;
         internal bool DropNextReply { get; set; }
+        internal bool PublishFirstItems { get; init; }
         internal int Applied => _history.Count;
 
         public ValueTask<AdapterResult<AdapterDescriptor>> DescribeAsync(CancellationToken cancellationToken) =>
@@ -122,6 +154,12 @@ public sealed partial class EmulatorBundleIntegrationTests
 
         internal SessionState Read() =>
             new(Identity, SessionLifecycle.Connected, _status, _revision, SessionClosePolicy.Detach, Capabilities, new(Identity, _revision));
+
+        internal SessionState PublishInitialEvent()
+        {
+            _revision++;
+            return Read();
+        }
 
         internal AdapterResult<MutationReceipt> Execute(MutationRequest<ExecutionCommand> request)
         {
@@ -169,7 +207,8 @@ public sealed partial class EmulatorBundleIntegrationTests
         internal bool Disposed { get; private set; }
         internal TaskCompletionSource EventsStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal bool EventsEnded { get; private set; }
-        internal WaitingVideo Video { get; } = new(host.Identity);
+        internal bool ReleasedAfterSubscriptions { get; private set; }
+        internal WaitingVideo Video { get; } = new(host.Identity, host.PublishFirstItems);
 
         public ValueTask<AdapterResult<SessionState>> GetStateAsync(CancellationToken cancellationToken) =>
             ValueTask.FromResult(AdapterResult<SessionState>.Success(host.Read()));
@@ -179,6 +218,8 @@ public sealed partial class EmulatorBundleIntegrationTests
             try
             {
                 EventsStarted.TrySetResult();
+                if (host.PublishFirstItems)
+                    yield return new SessionStateChanged(host.PublishInitialEvent());
                 await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(false);
                 yield break;
             }
@@ -210,11 +251,12 @@ public sealed partial class EmulatorBundleIntegrationTests
         public ValueTask DisposeAsync()
         {
             Disposed = true;
+            ReleasedAfterSubscriptions = EventsEnded && Video.Disposed;
             return ValueTask.CompletedTask;
         }
     }
 
-    private sealed class WaitingVideo(SessionIdentity identity) : IEmulatorMediaStream<VideoFormat>
+    private sealed class WaitingVideo(SessionIdentity identity, bool publishFirst) : IEmulatorMediaStream<VideoFormat>
     {
         public SessionIdentity Session { get; } = identity;
         public Guid StreamId { get; } = Guid.NewGuid();
@@ -228,6 +270,9 @@ public sealed partial class EmulatorBundleIntegrationTests
             try
             {
                 Started.TrySetResult();
+                if (publishFirst)
+                    yield return new MediaPacket<VideoFormat>(Session, StreamId, FirstSequence, new("fixture", 1, 60),
+                        new(1, 1, 4, VideoPixelFormat.Bgra32), [0, 0, 0, 255]);
                 await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(false);
                 yield break;
             }

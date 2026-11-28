@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using RetroIde.Emulation;
+using System.Collections.Immutable;
 using Xunit;
 
 namespace RetroIde.IntegrationTests;
@@ -7,6 +8,55 @@ namespace RetroIde.IntegrationTests;
 /// <summary>Verifies the live region, mapping, permission and address-width checks used by inspection.</summary>
 public sealed class MachineMemoryMapTests
 {
+    /// <remarks>TEST-RETRO-010#ac-test-control-semantics; TEST-RETRO-017#ac-test-live-machine-maps.</remarks>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task A_mapped_operation_revalidates_state_after_its_description_reply(bool write, bool withdraw)
+    {
+        var token = TestContext.Current.CancellationToken;
+        var adapter = new MachineDebugAdapterFixture();
+        var control = adapter.OpenControl();
+        var scope = adapter.NewScope() with { ExpectedRevision = adapter.State.StateRevision };
+        var address = new MemoryAddress("main", 0, "cpu", MapRevision: 7);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var reply = new TaskCompletionSource<AdapterResult<MachineDescriptor>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        adapter.DescribeOverride = cancellation =>
+        {
+            started.TrySetResult();
+            return new(reply.Task.WaitAsync(cancellation));
+        };
+        var result = ReadOrWriteAsync();
+        try
+        {
+            await started.Task.WaitAsync(token);
+            var operation = write ? IMemoryPort.WriteMapped : IMemoryPort.InspectMapped;
+            adapter.State = withdraw
+                ? adapter.State with
+                {
+                    Cursor = new(adapter.Identity, 2), Capabilities = new(2, adapter.State.Capabilities.Items.Select(item =>
+                        item.Id == IMemoryPort.Capability && string.Equals(item.SubjectId, "main", StringComparison.Ordinal)
+                            ? item with { Operations = item.Operations.Remove(operation) } : item).ToImmutableArray()),
+                }
+                : adapter.MakeState(2, 2);
+            adapter.Events[1] = [new SessionStateChanged(adapter.State)];
+            Assert.True(Assert.Single(await control.WatchAsync(new(adapter.Identity, 1), token).ToArrayAsync(token)).Succeeded);
+        }
+        finally { reply.TrySetResult(AdapterResult<MachineDescriptor>.Success(adapter.Machine)); }
+
+        var error = await result;
+        Assert.Empty(adapter.Reads);
+        Assert.Equal(0, adapter.WriteAttempts);
+        Assert.Equal(withdraw ? AdapterErrorCodes.Unsupported : AdapterErrorCodes.RevisionConflict, error?.Code, StringComparer.Ordinal);
+        Assert.Equal(scope.OperationId, error?.OperationId);
+
+        async Task<AdapterError?> ReadOrWriteAsync() => write
+            ? (await control.WriteMemoryAsync(new(scope, new(address, [1])), token)).Error
+            : (await control.ReadMemoryAsync(new(scope, address, 1), token)).Error;
+    }
+
     /// <summary>Proves that a mapped read cannot cross an overlay, hit a device, or reuse another CPU's map.</summary>
     /// <remarks>TEST-RETRO-017#ac-test-machine-descriptor-contract; TEST-RETRO-017#ac-test-live-machine-maps.</remarks>
     [Fact]

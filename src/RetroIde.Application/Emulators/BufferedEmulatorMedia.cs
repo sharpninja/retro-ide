@@ -7,24 +7,38 @@ namespace RetroIde.Application.Emulators;
 
 internal static class BufferedEmulatorMedia
 {
-    internal static async IAsyncEnumerable<AdapterResult<MediaPacket<T>>> ReadAsync<T>(IEmulatorMediaStream<T> source,
-        int capacity, int maxBytes, Func<T, int, bool> validFormat, ILogger logger, [EnumeratorCancellation] CancellationToken token)
-        where T : class
+    internal sealed class Subscription<T> : IAsyncDisposable where T : class
     {
-        var buffer = Channel.CreateBounded<MediaPacket<T>>(new BoundedChannelOptions(capacity)
+        private readonly Channel<MediaPacket<T>> _buffer;
+        private readonly CancellationTokenSource _lifetime;
+        private readonly Task<AdapterError?> _pump;
+        private readonly IEmulatorMediaStream<T> _source;
+        private readonly ulong _firstSequence;
+        private readonly ILogger _logger;
+
+        internal Subscription(IEmulatorMediaStream<T> source, int capacity, int maxBytes,
+            Func<T, int, bool> validFormat, ILogger logger, CancellationToken token)
         {
-            SingleReader = true,
-            SingleWriter = true,
-            FullMode = BoundedChannelFullMode.DropOldest,
-        });
-        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(token);
-        var pump = Task.Run(() => PumpAsync(source, buffer.Writer, maxBytes, validFormat, logger, lifetime.Token), CancellationToken.None);
-        MediaPacket<T>? previous = null;
-        try
-        {
-            await foreach (var item in buffer.Reader.ReadAllAsync(token).ConfigureAwait(false))
+            _source = source;
+            _firstSequence = source.FirstSequence;
+            _logger = logger;
+            _buffer = Channel.CreateBounded<MediaPacket<T>>(new BoundedChannelOptions(capacity)
             {
-                var skipped = previous is null ? item.Sequence != source.FirstSequence : item.Sequence - previous.Sequence != 1;
+                SingleReader = true,
+                SingleWriter = true,
+                FullMode = BoundedChannelFullMode.DropOldest,
+            });
+            _lifetime = CancellationTokenSource.CreateLinkedTokenSource(token);
+            _pump = Task.Run(() => PumpAsync(source, _buffer.Writer, maxBytes, validFormat, logger, _lifetime.Token), CancellationToken.None);
+        }
+
+        internal async IAsyncEnumerable<AdapterResult<MediaPacket<T>>> ReadAsync([EnumeratorCancellation] CancellationToken token)
+        {
+            MediaPacket<T>? previous = null;
+            await foreach (var item in _buffer.Reader.ReadAllAsync(token).ConfigureAwait(false))
+            {
+                token.ThrowIfCancellationRequested();
+                var skipped = previous is null ? item.Sequence != _firstSequence : item.Sequence - previous.Sequence != 1;
                 var changed = previous is not null &&
                     (!string.Equals(item.Timestamp.ClockDomain, previous.Timestamp.ClockDomain, StringComparison.Ordinal) ||
                      item.Timestamp.TicksPerSecond != previous.Timestamp.TicksPerSecond ||
@@ -34,17 +48,23 @@ internal static class BufferedEmulatorMedia
                 yield return AdapterResult<MediaPacket<T>>.Success(
                     skipped || changed ? item with { Discontinuous = true } : item);
             }
-            if (await pump.ConfigureAwait(false) is { } error)
+            if (await _pump.ConfigureAwait(false) is { } error)
                 yield return AdapterResult<MediaPacket<T>>.Failure(error);
         }
-        finally
+
+        public async ValueTask DisposeAsync()
         {
-            try { await lifetime.CancelAsync().ConfigureAwait(false); }
-            catch (Exception error) when (RuntimeFailures.CanRecover(error))
+            using (_lifetime)
             {
-                RuntimeFailures.Report(logger, error, "cancel emulator media pump");
+                try { await _lifetime.CancelAsync().ConfigureAwait(false); }
+                catch (Exception error) when (RuntimeFailures.CanRecover(error))
+                {
+                    RuntimeFailures.Report(_logger, error, "cancel emulator media pump");
+                }
+
+                try { await _pump.ConfigureAwait(false); }
+                finally { await _source.DisposeAsync().ConfigureAwait(false); }
             }
-            await pump.ConfigureAwait(false);
         }
     }
 

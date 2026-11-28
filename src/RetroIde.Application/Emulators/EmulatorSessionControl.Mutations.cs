@@ -49,25 +49,9 @@ internal sealed partial class EmulatorSessionControl
                 return Fail<MutationReceipt>(AdapterErrorCodes.UnknownOutcome,
                     "Reconcile the outstanding emulator mutation before issuing another.", scope.OperationId);
 
-            var snapshot = await ReadAsync(token).ConfigureAwait(false);
-            if (!snapshot.Succeeded)
-                return AdapterResult<MutationReceipt>.Failure(snapshot.Error with { OperationId = scope.OperationId });
-
-            var state = snapshot.Value;
-            if (state.Lifecycle != SessionLifecycle.Connected)
-                return Fail<MutationReceipt>(AdapterErrorCodes.Disconnected, "The emulator session is disconnected.", scope.OperationId);
-            if (requireRevision && scope.ExpectedRevision is null)
-                return Fail<MutationReceipt>(AdapterErrorCodes.InvalidArgument, "This mutation requires an expected state revision.", scope.OperationId);
-            if (scope.ExpectedRevision is { } expected && expected != state.StateRevision)
-                return Fail<MutationReceipt>(AdapterErrorCodes.RevisionConflict, "Emulator state changed before dispatch.", scope.OperationId, state.StateRevision);
-
-            var capability = Advertised(state, target.Capability, target.SubjectId, target.Operation);
-            if (capability is null || !_connection.TryGetPort<TPort>(capability.Id, out var port))
-                return Fail<MutationReceipt>(AdapterErrorCodes.Unsupported, "This operation is not advertised for the selected target.", scope.OperationId);
-            if (check is not null && await check(capability, token).ConfigureAwait(false) is { } rejected)
-                return AdapterResult<MutationReceipt>.Failure(rejected);
-
-            var result = await DispatchAsync(target, cancellation => invoke(port, cancellation), token).ConfigureAwait(false);
+            var result = await WithPreparedPortAsync<TPort, MutationReceipt>(scope, target.Capability, target.SubjectId, target.Operation,
+                check, selection => DispatchAsync(target, cancellation => invoke(selection.Port, cancellation), token), token,
+                requireRevision).ConfigureAwait(false);
             if (retry && result.Succeeded)
                 _resolutions[scope.OperationId] = (target, new(scope, MutationDisposition.Applied, result.Value.StateRevision));
             return result;

@@ -57,46 +57,53 @@ internal sealed partial class EmulatorSessionControl
     private async IAsyncEnumerable<AdapterResult<SessionEvent>> ReadSubscriptionAsync(EventCursor cursor, ulong? revision,
         [EnumeratorCancellation] CancellationToken token)
     {
-        var subscription = Subscribe(cursor, token);
+        var lease = _subscriptions.Begin();
+        if (lease is null)
+            yield break;
+        await using var cleanup = lease.ConfigureAwait(false);
+        AdapterResult<IAsyncEnumerator<SessionEvent>> subscription;
+        EventSubscription? reader = null;
+        try
+        {
+            subscription = Subscribe(cursor, token);
+            if (subscription.Succeeded)
+                reader = new(this, subscription.Value, token);
+        }
+        finally { lease.SetOpened(reader); }
         if (!subscription.Succeeded)
         {
             yield return AdapterResult<SessionEvent>.Failure(subscription.Error);
             yield break;
         }
 
-        var reader = subscription.Value;
-        try
+        while (!token.IsCancellationRequested && await reader!.ReadAsync().ConfigureAwait(false) is { } item)
         {
-            while (await ReadNextAsync(reader, token).ConfigureAwait(false) is { } item)
+            if (!item.Succeeded)
             {
-                if (!item.Succeeded)
-                {
-                    yield return item;
-                    yield break;
-                }
-                var observed = item.Value;
-                if (!ValidEvent(observed, cursor, revision))
-                {
-                    yield return Fail<SessionEvent>(AdapterErrorCodes.Incompatible, "The emulator returned an invalid event or cursor.");
-                    yield break;
-                }
-                if (observed is SessionEventGap || observed.Cursor.Sequence - cursor.Sequence != 1)
-                {
-                    yield return AdapterResult<SessionEvent>.Success(observed as SessionEventGap ??
-                        new SessionEventGap(observed.Cursor, observed.StateRevision));
-                    yield break;
-                }
-
-                cursor = observed.Cursor;
-                revision = observed.StateRevision;
-                if (observed is SessionStateChanged changed)
-                    Publish(changed.State);
-                if (observed is MachineMapChanged map)
-                    ObserveMapRevision(map.MapRevision);
                 yield return item;
+                yield break;
             }
+            var observed = item.Value;
+            if (!ValidEvent(observed, cursor, revision))
+            {
+                yield return Fail<SessionEvent>(AdapterErrorCodes.Incompatible, "The emulator returned an invalid event or cursor.");
+                yield break;
+            }
+            if (observed is SessionEventGap || observed.Cursor.Sequence - cursor.Sequence != 1)
+            {
+                yield return AdapterResult<SessionEvent>.Success(observed as SessionEventGap ??
+                    new SessionEventGap(observed.Cursor, observed.StateRevision));
+                yield break;
+            }
+
+            cursor = observed.Cursor;
+            revision = observed.StateRevision;
+            if (observed is SessionStateChanged changed)
+                Publish(changed.State);
+            if (observed is MachineMapChanged map)
+                ObserveMapRevision(map.MapRevision);
+            yield return item;
         }
-        finally { await EndSubscriptionAsync(reader, token).ConfigureAwait(false); }
     }
 
     private bool ValidEvent(SessionEvent observed, EventCursor after, ulong? revision) =>
@@ -146,5 +153,36 @@ internal sealed partial class EmulatorSessionControl
 
         RuntimeFailures.Report(_logger, error, "read emulator events");
         return Fail<T>(AdapterErrorCodes.Disconnected, "The emulator event subscription disconnected.");
+    }
+
+    private sealed class EventSubscription(EmulatorSessionControl owner, IAsyncEnumerator<SessionEvent> reader, CancellationToken token)
+        : IAsyncDisposable
+    {
+        private readonly object _gate = new();
+        private Task<AdapterResult<SessionEvent>?>? _pending;
+        private bool _stopped;
+
+        internal Task<AdapterResult<SessionEvent>?> ReadAsync()
+        {
+            lock (_gate)
+                return _stopped ? Task.FromResult<AdapterResult<SessionEvent>?>(null)
+                    : _pending = owner.ReadNextAsync(reader, token).AsTask();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            Task? pending;
+            lock (_gate)
+            {
+                _stopped = true;
+                pending = _pending;
+            }
+            try
+            {
+                if (pending is not null)
+                    await pending.ConfigureAwait(false);
+            }
+            finally { await owner.EndSubscriptionAsync(reader, token).ConfigureAwait(false); }
+        }
     }
 }

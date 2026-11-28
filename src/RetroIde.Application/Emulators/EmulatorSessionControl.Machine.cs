@@ -10,19 +10,47 @@ internal sealed partial class EmulatorSessionControl
 
     internal bool IsCurrentMap(ulong revision) => revision == Volatile.Read(ref _mapRevision);
 
-    internal ValueTask<AdapterResult<MachineDescriptor>> DescribeMachineAsync(SessionOperation scope, CancellationToken token) =>
-        InvokePortAsync<IMachineDescriptorPort, MachineDescriptor>(scope, IMachineDescriptorPort.Capability, subject: null,
-            IMachineDescriptorPort.Describe, async (port, _) =>
-            {
-                var result = await port.DescribeAsync(scope, token).ConfigureAwait(false);
-                if (!result.Succeeded)
-                    return result;
-                var machine = result.Value;
-                if (machine.Version != IMachineDescriptorPort.Capability.Version || machine.Session != _identity || !MachineMap.IsValid(machine))
-                    return Fail<MachineDescriptor>(AdapterErrorCodes.Incompatible, "The emulator's machine description is incompatible.", scope.OperationId);
-                return ObserveMapRevision(machine.MapRevision) ? result
-                    : Fail<MachineDescriptor>(AdapterErrorCodes.Incompatible, "The emulator returned an older memory map.", scope.OperationId);
-            }, token);
+    internal async ValueTask<AdapterResult<MachineDescriptor>> DescribeMachineAsync(SessionOperation scope, CancellationToken token) =>
+        (await ObserveMachineAsync(scope, token).ConfigureAwait(false)).Result;
+
+    private async ValueTask<(AdapterResult<MachineDescriptor> Result, SessionState Observed)> ObserveMachineAsync(
+        SessionOperation scope, CancellationToken token)
+    {
+        while (true)
+        {
+            var observed = State;
+            var superseded = false;
+            var result = await InvokePortAsync<IMachineDescriptorPort, MachineDescriptor>(scope, IMachineDescriptorPort.Capability,
+                subject: null, IMachineDescriptorPort.Describe, async selection =>
+                {
+                    var reply = await selection.Port.DescribeAsync(scope, token).ConfigureAwait(false);
+                    observed = State;
+                    if (CheckPortState(observed, scope) is { } invalid)
+                        return AdapterResult<MachineDescriptor>.Failure(invalid);
+                    if (!CanDescribe(observed))
+                        return Fail<MachineDescriptor>(AdapterErrorCodes.Unsupported,
+                            "The machine description is no longer advertised.", scope.OperationId);
+                    superseded = !SameRoutingState(selection.State, observed);
+                    return superseded
+                        ? Fail<MachineDescriptor>(AdapterErrorCodes.RevisionConflict, "The emulator state changed during machine discovery.",
+                            scope.OperationId, observed.StateRevision)
+                        : ValidateMachineReply(reply, scope);
+                }, token).ConfigureAwait(false);
+            if (!superseded)
+                return (result, observed);
+        }
+    }
+
+    private AdapterResult<MachineDescriptor> ValidateMachineReply(AdapterResult<MachineDescriptor> reply, SessionOperation scope)
+    {
+        if (!reply.Succeeded)
+            return reply;
+        var machine = reply.Value;
+        if (machine.Version != IMachineDescriptorPort.Capability.Version || machine.Session != _identity || !MachineMap.IsValid(machine))
+            return Fail<MachineDescriptor>(AdapterErrorCodes.Incompatible, "The emulator's machine description is incompatible.", scope.OperationId);
+        return ObserveMapRevision(machine.MapRevision) ? reply
+            : Fail<MachineDescriptor>(AdapterErrorCodes.Incompatible, "The emulator returned an older memory map.", scope.OperationId);
+    }
 
     internal async IAsyncEnumerable<AdapterResult<MachineDescriptor>> WatchMachineAsync(SessionOperation scope, EventCursor? after,
         [EnumeratorCancellation] CancellationToken token)
@@ -39,8 +67,7 @@ internal sealed partial class EmulatorSessionControl
             yield break;
         }
 
-        var initial = await DescribeMachineAsync(scope, token).ConfigureAwait(false);
-        var previous = State;
+        var (initial, previous) = await ObserveMachineAsync(scope, token).ConfigureAwait(false);
         yield return initial;
         var gap = false;
         await foreach (var item in WatchAsync(cursor, token).ConfigureAwait(false))
@@ -56,18 +83,19 @@ internal sealed partial class EmulatorSessionControl
                     gap = true;
                     break;
                 case MachineMapChanged:
-                    var mapped = await DescribeMachineAsync(RefreshScope(scope), token).ConfigureAwait(false);
-                    previous = State;
+                    var (mapped, mappedState) = await ObserveMachineAsync(RefreshScope(scope), token).ConfigureAwait(false);
+                    previous = mappedState;
                     yield return mapped;
                     break;
                 case SessionStateChanged:
                     var current = State;
-                    var refresh = gap || current.Lifecycle != previous.Lifecycle || CanDescribe(current) != CanDescribe(previous);
+                    var refresh = gap || current.Lifecycle != previous.Lifecycle || CanDescribe(current) != CanDescribe(previous) ||
+                        (CanDescribe(current) && current.Capabilities.Revision != previous.Capabilities.Revision);
                     gap = false;
                     if (refresh)
                     {
-                        var description = await DescribeMachineAsync(RefreshScope(scope), token).ConfigureAwait(false);
-                        previous = State;
+                        var (description, describedState) = await ObserveMachineAsync(RefreshScope(scope), token).ConfigureAwait(false);
+                        previous = describedState;
                         yield return description;
                     }
                     else
@@ -94,11 +122,8 @@ internal sealed partial class EmulatorSessionControl
             return ValueTask.FromResult(Fail<MemoryBlock>(AdapterErrorCodes.InvalidArgument, "The memory read is invalid.", request.Scope.OperationId));
 
         return InvokePortAsync<IMemoryPort, MemoryBlock>(request.Scope, IMemoryPort.Capability, address.SpaceId,
-            mapped ? IMemoryPort.InspectMapped : IMemoryPort.InspectRaw, async (port, descriptor) =>
+            mapped ? IMemoryPort.InspectMapped : IMemoryPort.InspectRaw, async (port, _) =>
             {
-                var error = await CheckMemoryRequestAsync(request, descriptor, token).ConfigureAwait(false);
-                if (error is not null)
-                    return AdapterResult<MemoryBlock>.Failure(error);
                 var result = await port.ReadAsync(request, token).ConfigureAwait(false);
                 if (!result.Succeeded)
                     return result;
@@ -108,7 +133,7 @@ internal sealed partial class EmulatorSessionControl
                     (request.Scope.ExpectedRevision is not { } expected || block.StateRevision == expected)
                     ? result : Fail<MemoryBlock>(AdapterErrorCodes.Incompatible, "The emulator returned bytes for an incompatible request.",
                         request.Scope.OperationId);
-            }, token);
+            }, token, (descriptor, cancellation) => CheckMemoryRequestAsync(request, descriptor, cancellation));
     }
 
     private async ValueTask<AdapterError?> CheckMemoryRequestAsync(MemoryReadRequest request, CapabilityDescriptor descriptor, CancellationToken token)

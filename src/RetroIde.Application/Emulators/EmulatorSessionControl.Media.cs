@@ -38,14 +38,36 @@ internal sealed partial class EmulatorSessionControl
     {
         using var subscriptionLifetime = _sessionLifetime.CanBeCanceled ? CancellationTokenSource.CreateLinkedTokenSource(token, _sessionLifetime) : null;
         token = subscriptionLifetime?.Token ?? token;
-        var opened = await InvokeMediaAsync<TPort, MediaSubscription<T>>(request, capability, operation, async (port, descriptor) =>
+        var lease = _subscriptions.Begin();
+        if (lease is null)
+            yield break;
+        await using var cleanup = lease.ConfigureAwait(false);
+        AdapterResult<MediaSubscription<T>> opened;
+        IAsyncDisposable? resource = null;
+        BufferedEmulatorMedia.Subscription<T>? buffer = null;
+        try
         {
-            var maxBytes = PacketLimit(descriptor, hardLimit);
-            var result = await open(port, request, token).ConfigureAwait(false);
-            return result.Succeeded
-                ? AdapterResult<MediaSubscription<T>>.Success(new(result.Value, maxBytes))
-                : AdapterResult<MediaSubscription<T>>.Failure(result.Error);
-        }, token).ConfigureAwait(false);
+            opened = await InvokeMediaAsync<TPort, MediaSubscription<T>>(request, capability, operation, async (port, descriptor) =>
+            {
+                var maxBytes = PacketLimit(descriptor, hardLimit);
+                var result = await open(port, request, token).ConfigureAwait(false);
+                return result.Succeeded
+                    ? AdapterResult<MediaSubscription<T>>.Success(new(result.Value, maxBytes))
+                    : AdapterResult<MediaSubscription<T>>.Failure(result.Error);
+            }, token).ConfigureAwait(false);
+            if (opened.Succeeded)
+            {
+                var subscription = opened.Value;
+                var source = subscription.Source;
+                resource = source;
+                if (source.Session == _identity && source.StreamId != Guid.Empty && !token.IsCancellationRequested)
+                {
+                    buffer = new(source, capacity, subscription.MaxBytes, validFormat, _logger, token);
+                    resource = buffer;
+                }
+            }
+        }
+        finally { lease.SetOpened(resource); }
 
         if (!opened.Succeeded)
         {
@@ -53,21 +75,15 @@ internal sealed partial class EmulatorSessionControl
             yield break;
         }
 
-        var subscription = opened.Value;
-        try
+        token.ThrowIfCancellationRequested();
+        if (buffer is null)
         {
-            if (subscription.Source.Session != _identity || subscription.Source.StreamId == Guid.Empty)
-            {
-                yield return Fail<MediaPacket<T>>(AdapterErrorCodes.Incompatible,
-                    "The media subscription belongs to a different emulator session.", request.Scope.OperationId);
-                yield break;
-            }
-
-            await foreach (var item in BufferedEmulatorMedia.ReadAsync(subscription.Source, capacity, subscription.MaxBytes,
-                validFormat, _logger, token).ConfigureAwait(false))
-                yield return item.Succeeded ? item : AdapterResult<MediaPacket<T>>.Failure(item.Error with { OperationId = request.Scope.OperationId });
+            yield return Fail<MediaPacket<T>>(AdapterErrorCodes.Incompatible,
+                "The media subscription belongs to a different emulator session.", request.Scope.OperationId);
+            yield break;
         }
-        finally { await ReleaseMediaAsync(subscription.Source).ConfigureAwait(false); }
+        await foreach (var item in buffer.ReadAsync(token).ConfigureAwait(false))
+            yield return item.Succeeded ? item : AdapterResult<MediaPacket<T>>.Failure(item.Error with { OperationId = request.Scope.OperationId });
     }
 
     private async ValueTask<AdapterResult<T>> InvokeMediaAsync<TPort, T>(MediaStreamRequest request, CapabilityId capability,
@@ -77,15 +93,6 @@ internal sealed partial class EmulatorSessionControl
         if (string.IsNullOrWhiteSpace(request.OutputId))
             return Fail<T>(AdapterErrorCodes.InvalidArgument, "Select a media output.", request.Scope.OperationId);
         return await InvokePortAsync(request.Scope, capability, request.OutputId, operation, invoke, token).ConfigureAwait(false);
-    }
-
-    private async ValueTask ReleaseMediaAsync<T>(IEmulatorMediaStream<T> source) where T : class
-    {
-        try { await source.DisposeAsync().ConfigureAwait(false); }
-        catch (Exception error) when (RuntimeFailures.CanRecover(error))
-        {
-            RuntimeFailures.Report(_logger, error, "release emulator media subscription");
-        }
     }
 
     private static int PacketLimit(CapabilityDescriptor descriptor, int hardLimit) =>
